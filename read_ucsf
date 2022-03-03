@@ -32,6 +32,21 @@ else:
 
 
 
+class CPeak():
+    def __init__(self):
+        self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
+        self.peak_points_pos = []      # peak position in points
+        self.is_visible = False         # if peak height is 50 time biger than noise level = True
+        self.is_center = False          # if peak is in the highest st point = True
+        self.peak_intens = 0            # peak height  
+
+
+
+
+
+
+
+
 
 """Reading functions"""
 
@@ -41,20 +56,22 @@ def read_peaklist(peak_list, s_dim):
     with open(peak_list, 'r') as pl:
         p_lines = pl.readlines()
         p_list = []
+        p_pos=CPeak()
         for indexl, line in enumerate(p_lines):
             if indexl > 1 :
-                p_pos = line.split()
-                # print ("p_pos", p_pos)
-                if len(p_pos)>s_dim: 
+                p_pos.peak_pos = line.split()
+                # print ("p_pos.peak_pos", p_pos.peak_pos)
+                if len(p_pos.peak_pos)>s_dim: 
                     s = s_dim-1
-                    e = len(p_pos)-1
-                    del p_pos[0]
-                    del p_pos[s_dim:len(p_pos)]
-                p_pos.insert(0,p_pos.pop())
-                # print ("p_pos", p_pos)
-                for i in range(len(p_pos)):
-                    p_pos[i]=float(p_pos[i])
+                    e = len(p_pos.peak_pos)-1
+                    del p_pos.peak_pos[0]
+                    del p_pos.peak_pos[s_dim:len(p_pos.peak_pos)]
+                p_pos.peak_pos.insert(0,p_pos.peak_pos.pop())
+                # print ("p_pos.peak_pos", p_pos.peak_pos)
+                for i in range(len(p_pos.peak_pos)):
+                    p_pos.peak_pos[i]=float(p_pos.peak_pos[i])
                 p_list.append(deepcopy(p_pos))
+                # print (p_pos.peak_pos)
                 
     return p_list
 
@@ -206,22 +223,26 @@ def ppm2points(ppm, points_num, center_data, sw_ppm):
     return point_value
 
 
-def calc_peak_points(points_num, peak_pos, sw_ppm, center_data):
-    peak_point=[]
-    for peak_num in range(len(peak_pos)):
-        one_peak=[]
-        for p in range(len(peak_pos[peak_num])):
-            one_dim = ppm2points(peak_pos[peak_num][p],points_num[p],center_data[p],sw_ppm[p])
-            one_peak.append(deepcopy(one_dim))
-        peak_point.append(deepcopy(one_peak))
+def calc_peak_points(points_num, peaks, sw_ppm, center_data):
+    # peak_point=[]
+    for peak_num in range(len(peaks)):
+        # one_peak=[]
+        for p in range(len(peaks[peak_num].peak_pos)):
+            one_dim = ppm2points(peaks[peak_num].peak_pos[p],points_num[p],center_data[p],sw_ppm[p])
+            # one_peak.append(deepcopy(one_dim))
+            peaks[peak_num].peak_points_pos.append(deepcopy(one_dim))
+        # peak_point.append(deepcopy(one_peak))
+        # print (peaks[peak_num].peak_pos, peaks[peak_num].peak_points_pos)
 
     # print ("peak_point", peak_point)
-    return peak_point
+    return peaks
 
 
-def find_noise_point(peak_point, s_dim, points_num, number_of_points_for_noise):
+def find_noise_point(peaks, s_dim, points_num, number_of_points_for_noise):
 
-    dumpster=peak_point[:]                              # list of wrong points: e.g. it's peak or really close to peak
+    dumpster=[]                              # list of wrong points: e.g. it's peak or really close to peak
+    for i in range(len(peaks)):
+        dumpster.append(deepcopy(peaks[i].peak_points_pos))
     suspect_peaks=[]                                        # list of peaks which probably are too close to our random point
     list_of_points=[]                 # list of good points with noise
 
@@ -238,11 +259,11 @@ def find_noise_point(peak_point, s_dim, points_num, number_of_points_for_noise):
         # print (first_try)
         if first_try not in dumpster:
             # print ("first_try - ok")
-            for indexi, one_peak in enumerate(peak_point):
-                if first_try[0] in range (one_peak[0]-3, one_peak[0]+3):
-                    suspect_peaks.append(deepcopy(one_peak))
-                    for i in range(1,len(one_peak)):
-                        if first_try[i] not in range (one_peak[i]-3, one_peak[i]+3):
+            for indexi, one_peak in enumerate(peaks):
+                if first_try[0] in range (one_peak.peak_points_pos[0]-3, one_peak.peak_points_pos[0]+3):
+                    suspect_peaks.append(deepcopy(one_peak.peak_points_pos))
+                    for i in range(1,len(one_peak.peak_points_pos)):
+                        if first_try[i] not in range (one_peak.peak_points_pos[i]-3, one_peak.peak_points_pos[i]+3):
                             suspect_peaks.pop()
                             break
             # print ("suspect_peaks", ii, suspect_peaks)
@@ -254,12 +275,12 @@ def find_noise_point(peak_point, s_dim, points_num, number_of_points_for_noise):
             suspect_peaks.clear()
             ii+=1
     # print (list_of_points)
-    print ("ile wyrzuciles?", len(peak_point), "--->", len(dumpster))
+    print ("ile wyrzuciles?", len(peaks), "--->", len(dumpster))
 
     return list_of_points
 
 
-def calc_points_list(peak_point, s_dim, tile_size, points_num):
+def calc_list_of_points(peak_point, s_dim, tile_size, points_num):
     n_tiles=[]                                 # number of tiles along axis [direct, 1, 2, 3]
     L=[]                                        # tile number with our peak -1
     R=[]                                        # point number with peak in tile  
@@ -285,7 +306,6 @@ def calc_points_list(peak_point, s_dim, tile_size, points_num):
     # print ("\n\nlisty L", L, "\nn_tiles", n_tiles, "\nR", R, "\n\n")
 
     return L, R, n_tiles
-
 
 
 def read_intens(file_name, s_dim, tile_size, L, R, n_tiles, peak_pos_list):
@@ -337,6 +357,19 @@ def read_intens(file_name, s_dim, tile_size, L, R, n_tiles, peak_pos_list):
     return intens_list
 
 
+# def find_peak_maximum(peak_point, s_dim, points_num, number_of_points_for_noise):
+
+#     dumpster=peak_point[:]                              # list of wrong points: e.g. it's peak or really close to peak
+#     suspect_peaks=[]                                        # list of peaks which probably are too close to our random point
+#     list_of_points=[]                 # list of good points with noise
+
+#     first_try = [None]*s_dim
+
+
+
+#     return list_of_points
+
+
 def try_point (try_list):
     # for indexi, i in enumerate (try_list):
     for i in range(692,400692,4):
@@ -356,7 +389,7 @@ def try_point (try_list):
 """File Reading"""
 print ("File reading - start")
 Spectra_dim = read_dim(file_name)                                           # reading dimension of spectrum from ucsf file
-Peak_position = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
+Peaks = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
 Points_number = read_points_number(file_name, Spectra_dim)                  # reading integer number of data points along axis from ucsf file (fnz)
 Tile_size = read_tile_size(file_name, Spectra_dim)                          # reading integer tile size along this axis from ucsf file
 Spectrometer_fq = read_spectrometer_frequency(file_name, Spectra_dim)       # reading float spectrometer frequency for this nucleus (MHz) from ucsf file
@@ -365,16 +398,21 @@ Centr_data = read_centr_data(file_name, Spectra_dim)                        # re
 print ("File reading - finished")
 
 
-Peak_Point = calc_peak_points(Points_number, Peak_position, SW_size_ppm, Centr_data)
+Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data)
 
 """Noise calculation"""
 print ("Noise calculation - start")
-List_of_noise_points = find_noise_point(Peak_Point, Spectra_dim, Points_number, number_of_points_for_noise)
-L_list, R_list, N_Tiles = calc_points_list(List_of_noise_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
-Peak_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_noise_points)
+List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
+L_list, R_list, N_Tiles = calc_list_of_points(List_of_noise_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
+Points_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_noise_points)
 print ("Noise calculation - finished")
 
-
+# """Center peaks and read intens"""
+# print ("Center peaks and read intens - start")
+# List_of_points = find_peak_maximum(Peak_Point, Spectra_dim, Points_number, number_of_points_for_noise)
+# L_list, R_list, N_Tiles = calc_list_of_points(List_of_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
+# Peak_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_points)
+# print ("Center peaks and read intens - finished")
 # print (peak_position)
 
 
