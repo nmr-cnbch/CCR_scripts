@@ -33,11 +33,11 @@ else:
 
 
 
-class CPeak():
+class CPeak:
     def __init__(self):
         self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
         self.peak_points_pos = []      # peak position in points
-        self.is_visible = False         # if peak height is 50 time biger than noise level = True
+        self.is_visible = True         # if peak height is 50 time biger than noise level = True
         self.is_center = False          # if peak is in the highest st point = True
         self.peak_intens = 0            # peak height  
         self.descript = ""              
@@ -56,7 +56,7 @@ def read_peaklist(peak_list, s_dim):
     with open(peak_list, 'r') as pl:
         p_lines = pl.readlines()
         p_list = []
-        p_pos=CPeak()
+        p_pos = CPeak()
         for indexl, line in enumerate(p_lines):
             if indexl > 1 :
                 p_pos.peak_pos = line.split()
@@ -72,8 +72,7 @@ def read_peaklist(peak_list, s_dim):
                 for i in range(len(p_pos.peak_pos)):
                     p_pos.peak_pos[i]=float(p_pos.peak_pos[i])
                 p_list.append(deepcopy(p_pos))
-                # print (p_pos.peak_pos)
-                
+                # print (p_pos.peak_pos)       
     return p_list
 
 
@@ -307,36 +306,44 @@ def read_intens(file_name, s_dim, tile_size, L, R, n_tiles, peak_pos_list):
         
     # print ("\nintens_list", intens_list)
 
-    average_noise_level = round(sum(list(map(abs,intens_list)))/len(intens_list), -1)
-    # print ("\naverage noise level", average_noise_level, "from absolute value of intensity")
-    print ("average noise level", average_noise_level)
-
     return intens_list
 
 
-# def find_peak_maximum(peak_point, s_dim, points_num, number_of_points_for_noise):
+def find_points_around(try_position, s_dim, points_num):
+    list_of_points=[]
+    range_list = [0, -1, 1]
+    
+    if s_dim == 4:
+        for i in range_list:
+            for j in range_list:
+                for k in range_list:
+                    for l in range_list:
+                        if try_position[0]+i>=0 and try_position[1]+j>=0 and try_position[2]+k>=0 and try_position[3]+l>=0:
+                            one_point=[try_position[0]+i,try_position[1]+j,try_position[2]+k,try_position[3]+l]
+                            list_of_points.append(deepcopy(one_point))
+        # print (len(list_of_points), "z", 3**4)
+    
+    elif s_dim == 3:
+        for i in range_list:
+            for j in range_list:
+                for k in range_list:
+                    if try_position[0]+i>=0 and try_position[1]+j>=0 and try_position[2]+k>=0 :
+                        one_point = [try_position[0]+i,try_position[1]+j,try_position[2]+k]
+                        list_of_points.append(deepcopy(one_point))
+        # print (len(list_of_points), "z", 3**3)
+    
+    elif s_dim == 2:
+        for i in range_list:
+            for j in range_list:
+                if try_position[0]+i>=0 and try_position[1]+j>=0 :
+                    one_point = [try_position[0]+i,try_position[1]+j]
+                    list_of_points.append(deepcopy(one_point))
+        # print (len(list_of_points), "z", 3**2)
+    else:
+        print ("This dimentionality of spectra is not supported")
 
-#     dumpster=peak_point[:]                              # list of wrong points: e.g. it's peak or really close to peak
-#     suspect_peaks=[]                                        # list of peaks which probably are too close to our random point
-#     list_of_points=[]                 # list of good points with noise
+    return list_of_points
 
-#     first_try = [None]*s_dim
-
-
-
-#     return list_of_points
-
-
-def try_point (try_list):
-    # for indexi, i in enumerate (try_list):
-    for i in range(692,400692,4):
-        with open(file_name, "rb") as ucsf_file:
-            ucsf_file.seek(i)                                       
-            ucsf_data = ucsf_file.read(4)
-            # print (ucsf_data)
-            [bytes2float] = struct.unpack('>f', ucsf_data)
-            # print ("bytes2float", bytes2float)
-            print ("try_point =", i, "\t---> intensyty =", bytes2float)
 
 
 
@@ -357,14 +364,34 @@ print ("Noise calculation - start")
 List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
 L_list, R_list, N_Tiles = calc_list_of_points(List_of_noise_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
 Points_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_noise_points)
+average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
+print ("average noise level", average_noise_level)
 print ("Noise calculation - finished")
 
-# """Center peaks and read intens"""
-# print ("Center peaks and read intens - start")
-# Peaks = find_peak_maximum(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
-# L_list, R_list, N_Tiles = calc_list_of_points(Peaks, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
-# Peak_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, Peaks)
-# print ("Center peaks and read intens - finished")
+
+"""Center peaks and read intens"""
+print ("Center peaks and read intens - start")
+
+for indexpeak, one_peak in enumerate(Peaks):
+    Try_position = one_peak.peak_points_pos
+    while one_peak.is_center == False:
+        List_of_around_points = find_points_around(Try_position,Spectra_dim, Points_number)
+        # one_peak.is_center = True
+        L_list, R_list, N_Tiles = calc_list_of_points(List_of_around_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
+        Points_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, Peaks)
+        if Points_intens[0] > average_noise_level*50:
+            if Points_intens.index(max(Points_intens)) != 0:
+                Try_position = List_of_around_points[Points_intens.index(max(Points_intens))]
+                print ("Peak:", indexpeak, "must move")
+            else:
+                one_peak.is_center = True
+                print ("Peak:", indexpeak, "is in the highest place")
+        else: 
+            one_peak.is_visible = False
+            print ("Peak:", indexpeak, "is not visible")
+            break
+
+print ("Center peaks and read intens - finished")
 # print (peak_position)
 
 
