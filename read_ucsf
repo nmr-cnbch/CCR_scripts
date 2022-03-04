@@ -11,6 +11,7 @@ Created on Feb 15 12:55 2022
 
 import binascii
 from copy import deepcopy
+from curses import endwin
 from importlib.resources import read_binary
 import math
 from random import randint
@@ -39,6 +40,7 @@ class CPeak():
         self.is_visible = False         # if peak height is 50 time biger than noise level = True
         self.is_center = False          # if peak is in the highest st point = True
         self.peak_intens = 0            # peak height  
+        self.descript = ""              
 
 
 
@@ -49,8 +51,6 @@ class CPeak():
 
 
 """Reading functions"""
-
-
 
 def read_peaklist(peak_list, s_dim):
     with open(peak_list, 'r') as pl:
@@ -64,6 +64,7 @@ def read_peaklist(peak_list, s_dim):
                 if len(p_pos.peak_pos)>s_dim: 
                     s = s_dim-1
                     e = len(p_pos.peak_pos)-1
+                    p_pos.descript = p_pos.peak_pos[0]
                     del p_pos.peak_pos[0]
                     del p_pos.peak_pos[s_dim:len(p_pos.peak_pos)]
                 p_pos.peak_pos.insert(0,p_pos.peak_pos.pop())
@@ -76,36 +77,30 @@ def read_peaklist(peak_list, s_dim):
     return p_list
 
 
-def read_dim(file_name):                                                # dimension of spectrum 
+def read_ucsf_info(file_name):
+    nucl_name = []
+    points_num = []
+    tile_size = []
+    spectr_fq =[]
+    sw = []
+    sw_ppm = []
+    centr_data = []
+
     with open(file_name, "rb") as ucsf_file:
+        """Read spectra dimentionality"""
         ucsf_file.seek(10)
         ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
-        # hex_data = binascii.hexlify(ucsf_data)
-        # bytes2int = int.from_bytes(ucsf_data, byteorder='big')
-        # print ("dimension of spectrum", ucsf_data, "\t", bytes2int)
-        spectra_dim = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value   
-    return spectra_dim
+        spectra_dim = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value 
 
-
-def read_format(file_name):                     #format version number
-    with open(file_name, "rb") as ucsf_file:
+        """Read spectra format"""
         ucsf_file.seek(13)
         ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
-        # hex_data = binascii.hexlify(ucsf_data)
-        # bytes2int = int.from_bytes(ucsf_data, byteorder='big')
-        # print ("format version number", ucsf_data, "\t", bytes2int)
         spectra_format = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value  
-    return spectra_format
 
-
-def read_nucl_name(file_name, s_dim):                     #nucleus name
-    nucl_name = []
-    with open(file_name, "rb") as ucsf_file:
-        for i in range(0,s_dim):
+        """Read nucleus name"""
+        for i in range(0,spectra_dim):
             ucsf_file.seek(180+128*i)                                       # nucleus name (1H, 13C, 15N, 31P); first is after 180 bytes, next one is after additional 128 bytes
             ucsf_data = ucsf_file.read(6)                                   # 6 byte per information 
-            # hex_data = binascii.hexlify(ucsf_data)
-            # text_string = hex_data.decode('utf-8')
             text_data = ucsf_data.decode('utf-8')                           # convert bytes to string    
             # print ("nucleus name", ucsf_data, "\t", text_data)
             # print (text_data)
@@ -116,104 +111,66 @@ def read_nucl_name(file_name, s_dim):                     #nucleus name
         # for ii in range(len(nucl_name)):
         #     print("bbb", nucl_name[ii])
         # print (nucl_name)
-    return nucl_name        
 
-
-def read_points_number(file_name, s_dim):
-    with open(file_name, "rb") as ucsf_file:
-        points_num =[]
-        for i in range(0,s_dim):
+        """Read number of points per asix"""
+        for i in range(0,spectra_dim):
             ucsf_file.seek(188+128*i)                                       # integer number of data points along axis; first is after 188 bytes, next one is after additional 128 bytes
             ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
             bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
             # print ("points_num", ucsf_data, "\t", bytes2int)
             points_num.append(deepcopy(bytes2int)) 
         points_num.insert(0,points_num.pop())
-        # print (points_num)
-    return points_num
 
-
-def read_tile_size(file_name, s_dim):                     #integer tile size along this axis
-    with open(file_name, "rb") as ucsf_file:
-        tile_size =[]
-        for i in range(0,s_dim):
+        """Read integer tile size along this axis"""
+        for i in range(0,spectra_dim):
             ucsf_file.seek(196+128*i)                                       # integer tile size along this axis; first is after 196 bytes, next one is after additional 128 bytes
             ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-            # hex_data = binascii.hexlify(ucsf_data)
-            # text_string = hex_data.decode('utf-8')
-            # text_data = ucsf_data.decode('utf-8')
             bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
             # print ("tile size", ucsf_data, "\t", bytes2int)
             tile_size.append(deepcopy(bytes2int))
         tile_size.insert(0,tile_size.pop())
         # print (tile_size)
-    return tile_size
 
-
-def read_spectrometer_frequency(file_name, s_dim):                     #float spectrometer frequency for this nucleus (MHz) 
-    with open(file_name, "rb") as ucsf_file:
-        sfq =[]
-        for i in range(0,s_dim):
+        """Read float spectrometer frequency for this nucleus (MHz) """
+        for i in range(0,spectra_dim):
             ucsf_file.seek(200+128*i)                                       # float spectrometer frequency for this nucleus (MHz) ; first is after 196 bytes, next one is after additional 128 bytes
             ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-            # hex_data = binascii.hexlify(ucsf_data)
-            # text_string = hex_data.decode('utf-8')
-            # text_data = ucsf_data.decode('utf-8')
             [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-            # bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
-            # print ("sfq", ucsf_data, "\t", bytes2float)
-            sfq.append(deepcopy(bytes2float))
-        sfq.insert(0,sfq.pop())
-        # print (sfq)
-    return sfq
+            spectr_fq.append(deepcopy(bytes2float))
+        spectr_fq.insert(0,spectr_fq.pop())
+        # print (spectr_fq)
 
-
-def read_SW(file_name, s_dim, spectr_fq, points_num):                     #float spectral width (Hz) 
-    sw = []
-    sw_ppm = []
-    with open(file_name, "rb") as ucsf_file:
-        for i in range(0,s_dim):
+        """Read float spectral width (Hz)"""
+        for i in range(0,spectra_dim):
             ucsf_file.seek(204+128*i)                                       # float spectral width (Hz) ; first is after 196 bytes, next one is after additional 128 bytes
             ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-            # hex_data = binascii.hexlify(ucsf_data)
-            # text_string = hex_data.decode('utf-8')
-            # text_data = ucsf_data.decode('utf-8')
             [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-            # bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
-            # print ("sw", ucsf_data, "\t", bytes2float)
             sw.append(deepcopy(bytes2float))
         sw.insert(0,sw.pop())
+
+        """Read float center of data (ppm)"""
+        for i in range(0,spectra_dim):
+            ucsf_file.seek(208+128*i)                                       # float center of data (ppm) ; first is after 196 bytes, next one is after additional 128 bytes
+            ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+            [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
+            centr_data.append(deepcopy(bytes2float))
+        centr_data.insert(0,centr_data.pop())
+        # print (centr_data)
+
+    """Change spectral width from Hz to ppm"""
     for p in range(len(sw)):
         sw_sparky = sw[p]-(sw[p]/points_num[p])
         sw_ppm.append(deepcopy(sw_sparky/spectr_fq[p]))
     # print (sw, "\n", sw_ppm)
-    return sw, sw_ppm
+    return spectra_dim, nucl_name, points_num, tile_size, spectr_fq, sw, sw_ppm, centr_data
 
 
-def read_centr_data(file_name, s_dim):                     #float center of data (ppm) 
-    with open(file_name, "rb") as ucsf_file:
-        centr_data =[]
-        for i in range(0,s_dim):
-            ucsf_file.seek(208+128*i)                                       # float center of data (ppm) ; first is after 196 bytes, next one is after additional 128 bytes
-            ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-            # hex_data = binascii.hexlify(ucsf_data)
-            # text_string = hex_data.decode('utf-8')
-            # text_data = ucsf_data.decode('utf-8')
-            [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-            # bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
-            # print ("centr_data", ucsf_data, '\t', bytes2float)
-            centr_data.append(deepcopy(bytes2float))
-        centr_data.insert(0,centr_data.pop())
-        # print (centr_data)
-    return centr_data
+
 
 
 
 
 """Calculating functions"""
-
-
-
 
 def ppm2points(ppm, points_num, center_data, sw_ppm): 
     sw_div_fnz = sw_ppm/(points_num-1)
@@ -387,15 +344,10 @@ def try_point (try_list):
 
 # print ("\n\nSTART")
 """File Reading"""
-print ("File reading - start")
-Spectra_dim = read_dim(file_name)                                           # reading dimension of spectrum from ucsf file
+print ("File reading - start", end=" ")
+Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, Centr_data = read_ucsf_info (file_name)
 Peaks = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
-Points_number = read_points_number(file_name, Spectra_dim)                  # reading integer number of data points along axis from ucsf file (fnz)
-Tile_size = read_tile_size(file_name, Spectra_dim)                          # reading integer tile size along this axis from ucsf file
-Spectrometer_fq = read_spectrometer_frequency(file_name, Spectra_dim)       # reading float spectrometer frequency for this nucleus (MHz) from ucsf file
-SW_size, SW_size_ppm = read_SW(file_name, Spectra_dim, Spectrometer_fq, Points_number)     # reading float spectral width (Hz) from ucsf file
-Centr_data = read_centr_data(file_name, Spectra_dim)                        # reading float center of data (ppm) from ucsf file
-print ("File reading - finished")
+print ("---> finished")
 
 
 Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data)
@@ -409,9 +361,9 @@ print ("Noise calculation - finished")
 
 # """Center peaks and read intens"""
 # print ("Center peaks and read intens - start")
-# List_of_points = find_peak_maximum(Peak_Point, Spectra_dim, Points_number, number_of_points_for_noise)
-# L_list, R_list, N_Tiles = calc_list_of_points(List_of_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
-# Peak_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_points)
+# Peaks = find_peak_maximum(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
+# L_list, R_list, N_Tiles = calc_list_of_points(Peaks, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
+# Peak_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, Peaks)
 # print ("Center peaks and read intens - finished")
 # print (peak_position)
 
