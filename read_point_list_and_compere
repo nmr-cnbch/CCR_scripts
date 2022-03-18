@@ -7,33 +7,43 @@ Created on Mar 15 12:55 2022
 """
 """ Program do czytania widm w formacie ucsf i wypisywanie wartości dla danych punktów w widmie """
 
-""" terminal: python3 read_ucsf [spectra path] [peak list] --np [] [] """
+""" terminal: python3 read_point_list_and_compere [peak list1] [peak list2] [peak list3]...[peak listN] --dim [] --comp2list [] []"""
 
 
 from copy import deepcopy
+import math
 import sys
 import os.path
 
+if len(sys.argv)==1:
+    sys.exit("""
+    For run script type in command line:
+        python3 read_point_list_and_compere [peak list1 path] [peak list2 path] [peak list3 path]...[peak listN path] --dim []
+                        
+        --dim [] - dimentionality of peak list
 
-from numpy import integer
+    additionaly you can add:
+        --comp2list [] []  - to additionaly compare two of peak list from above\n""")
 
 file_path = []
 for indexa, argument in enumerate(sys.argv):
     if indexa>0:
         if os.path.isfile(argument):
             file_path.append(deepcopy(sys.argv[indexa]))
-if "--dim" in sys.argv:
+if "--dim" in sys.argv:                                     # number of dimentions
     i = sys.argv.index("--dim")
     Spectra_dim=int(sys.argv[i+1])
+if "--comp2list" in sys.argv:                               # order of two list to additional comparison: 0, 1, 2...
+    j = sys.argv.index("--comp2list")
+    comparison_of_lists = [int(sys.argv[j+1]), int(sys.argv[j+2])]
+print ("Input Files:",*file_path, sep="\n")
 
-print (file_path)
 
 
 
 class CPeak:
     def __init__(self):
-        self.peak_ppm_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
-        self.peak_points_pos = []      # peak position in points
+        self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
         self.peak_intens = 0            # peak height  
         self.descript = ""              
         self.aa_number = 0 
@@ -42,49 +52,100 @@ class CPeak:
 
 """Reading functions"""
 
-def read_peaklist(peak_list, s_dim):
+def read_peaklist(peak_list, s_dim,max_sentence_len):
     with open(peak_list, 'r') as pl:
         p_lines = pl.readlines()
         p_list = []
-        aa_max_number = 0
+        aa_max_number = 1
         for indexl, line in enumerate(p_lines):
             if indexl > 1 :
                 p_pos = CPeak()
                 item = line.split()
                 p_pos.descript = item[0]
                 aa = p_pos.descript.split("-")
-                p_pos.aa_number = aa[s_dim-1][1:-2]
+                p_pos.aa_number = int(aa[s_dim-1][1:-2])
                 if p_pos.aa_number>aa_max_number:
                     aa_max_number=p_pos.aa_number
                 if item[s_dim].isdigit():
-                    p_pos.peak_points_pos.append(deepcopy(item[s_dim]))
+                    p_pos.peak_pos.append(deepcopy(int(item[s_dim])))
                     for i in range(1,s_dim):
-                        p_pos.peak_points_pos.append(deepcopy(item[i]))
+                        p_pos.peak_pos.append(deepcopy(int(item[i])))
                 else: 
-                    p_pos.peak_ppm_pos.append(deepcopy(item[s_dim]))
+                    p_pos.peak_pos.append(deepcopy(float(item[s_dim])))
                     for i in range(1,s_dim):
-                        p_pos.peak_ppm_pos.append(deepcopy(item[i]))
+                        p_pos.peak_pos.append(deepcopy(float(item[i])))
                 if len(item)>s_dim+1:
-                    p_pos.peak_intens = item[s_dim+1]
+                    p_pos.peak_intens = float(item[s_dim+1])
                 p_list.append(deepcopy(p_pos))
-    return p_list, aa_max_number
+                if max_sentence_len < len(p_pos.descript):
+                    max_sentence_len = len(p_pos.descript)
+                elif max_sentence_len < len(p_pos.peak_pos):
+                    max_sentence_len = len(p_pos.peak_pos)
+    return p_list, aa_max_number, max_sentence_len
 
-def compere_peaklist(peak_list, s_dim, aa_max_number):
-    for aa_num in range(aa_max_number):
-        one_aa = [None]*len(peak_list)          # a list of length equal to the number of compared lists
-        for indexl, list in enumerate(peak_list):       # loop through peak lists
-            i = list.index(aa_num)
-            print (i)
+def compere_peaklist(peak_list, s_dim, aa_max_number, max_sentence_len):
+    peak_list_name = []
+    for i in file_path:
+        item = i.split("/")
+        p_name = item[len(item)-1][:-5]
+        peak_list_name.append(deepcopy(p_name))
+        if max_sentence_len < len(p_name):
+            max_sentence_len = len(p_name)
+    with open ("./compere_{}.txt".format(peak_list_name[0]), 'w') as outputfile:
+        print ("File with comparition of:", *peak_list_name, sep=" ", end="\n\n", file=outputfile)
+        print ("AA_num {:^{sentence_len}}".format("Description", sentence_len=max_sentence_len), end=" ", file=outputfile)
+        for j in peak_list_name:
+            print ('{:^{sentence_len}}'.format(str(j), sentence_len=max_sentence_len), end=" ", file=outputfile)
+        if comparison_of_lists:
+            print ("Positions are the same?\t{},{} are the same?".format(comparison_of_lists[0],comparison_of_lists[1]),sep=" ", end="\n\n", file=outputfile)
+            # print ("AA_num", "Description", *peak_list_name, "Positions are the same?", "{},{} are the same?".format(comparison_of_lists[0],comparison_of_lists[1]),sep=" ", end="\n\n", file=outputfile)
+        else:
+            print ("Positions are the same?", sep=" ", end="\n\n", file=outputfile)
+        for aa_num in range(1, aa_max_number):
+            # print (aa_num)
+            des = "None"
+            one_aa = ["None"]*len(peak_list)          # a list of length equal to the number of compared lists
+            # print (peak_list)
+            for indexl, list in enumerate(peak_list):       # loop through peak lists
+                for indexp, peak in enumerate(list):
+                    if peak.aa_number == aa_num:
+                        one_aa[indexl]=peak.peak_pos
+                        des = peak.descript
+            # print (one_aa)
+            no_peaks = one_aa.count("None")
+            half_len_one_aa = math.ceil(len(one_aa)/2)
+            # print (no_peaks)
+            if no_peaks > half_len_one_aa:
+                compere_result = "None"
+            elif no_peaks < half_len_one_aa:
+                if all(x == one_aa[0] for x in one_aa):
+                    compere_result = "OK"
+                else:
+                    compere_result = "Change"
+
+            print ('{:^6} {:^{sentence_len}}'.format(aa_num, des,sentence_len=max_sentence_len), end=" ", file=outputfile)
+            for k in one_aa:
+                print ('{:^{sentence_len}}'.format(str(k), sentence_len=max_sentence_len), end=" ", file=outputfile)
+            if comparison_of_lists:
+                if one_aa[comparison_of_lists[0]]== one_aa[comparison_of_lists[1]]:
+                    print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
+                else:
+                    print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
+            else: 
+                print ("{:^23}".format(compere_result), end="\n", file=outputfile)
+                    
+
 
     return 
 
 
 """                      MAIN PROGRAM                      """
 Peak_Lists = []
-AA_max_number = 0
+AA_max_number = 1
+Max_sentence_len = 0
 for file_name in file_path:
-    p_list, aa_max = read_peaklist(file_name,Spectra_dim)
-    Peak_Lists.append
+    p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
+    Peak_Lists.append(deepcopy(p_list))
     if aa_max>AA_max_number:
         AA_max_number=aa_max
-compere_peaklist(Peak_Lists,Spectra_dim,AA_max_number)
+compere_peaklist(Peak_Lists,Spectra_dim,AA_max_number,Max_sentence_len)
