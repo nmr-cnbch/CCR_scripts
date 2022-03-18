@@ -12,12 +12,13 @@ Created on Feb 15 12:55 2022
 
 from copy import deepcopy
 from curses import endwin
+from enum import Flag
 from importlib.resources import read_binary
 from random import randint
 import readline
 import struct
 import sys
-import csv
+from itertools import product
 
 import numpy
 # import struct
@@ -273,7 +274,7 @@ def calc_list_of_points(peak_point, s_dim, tile_size, points_num):
     return L, R, n_tiles
 
 
-def read_intens(file_name, s_dim, tile_size, L, R, n_tiles, peak_pos_list):
+def read_intens(peak_pos_list, file_name, s_dim, tile_size, L, R, n_tiles):
 
     intens_list=[]
 
@@ -323,38 +324,22 @@ def read_intens(file_name, s_dim, tile_size, L, R, n_tiles, peak_pos_list):
     return intens_list
 
 
-def find_points_around(try_position, s_dim):
+def find_points_around(try_position, orgin_pos, vector_set, s_dim):
     list_of_points=[]
-    range_list = [0, -1, 1]
-    
-    if s_dim == 4:
-        for i in range_list:
-            for j in range_list:
-                for k in range_list:
-                    for l in range_list:
-                        if try_position[0]+i>=0 and try_position[1]+j>=0 and try_position[2]+k>=0 and try_position[3]+l>=0:
-                            one_point=[try_position[0]+i,try_position[1]+j,try_position[2]+k,try_position[3]+l]
-                            list_of_points.append(deepcopy(one_point))
-        # print (len(list_of_points), "z", 3**4)
-    
-    elif s_dim == 3:
-        for i in range_list:
-            for j in range_list:
-                for k in range_list:
-                    if try_position[0]+i>=0 and try_position[1]+j>=0 and try_position[2]+k>=0 :
-                        one_point = [try_position[0]+i,try_position[1]+j,try_position[2]+k]
-                        list_of_points.append(deepcopy(one_point))
-        # print (len(list_of_points), "z", 3**3)
-    
-    elif s_dim == 2:
-        for i in range_list:
-            for j in range_list:
-                if try_position[0]+i>=0 and try_position[1]+j>=0 :
-                    one_point = [try_position[0]+i,try_position[1]+j]
-                    list_of_points.append(deepcopy(one_point))
-        # print (len(list_of_points), "z", 3**2)
-    else:
-        print ("This dimentionality of spectra is not supported")
+
+    for i in range (len(vector_set)):
+        Flag = False
+        one_point = []
+        for j in range (s_dim):
+            new_point = try_position[j] + vector_set[i][j]
+            if abs(new_point-orgin_pos[j])<=2:
+                one_point.append(deepcopy(new_point))
+            else:
+                Flag = True
+        if Flag==False:
+            list_of_points.append(deepcopy(one_point))
+    # print ("\n\n wersja 1",list_of_points)
+
 
     return list_of_points
 
@@ -368,16 +353,19 @@ def Print_Peak_List(peaks, s_dim, points_num, sw_ppm, center_data):
             print ("\tw{}".format(i+1), end="", file=listfile)
         print ("\tData Height\n", file=listfile)
         for indexpeak, one_peak in enumerate(peaks):
-            print ("{}".format(one_peak.descript), end="\t", file=listfile)
             if one_peak.is_visible == True:
+                print ("{}".format(one_peak.descript), end="\t", file=listfile)
                 if one_peak.was_moved == True:
-                    for i in range(s_dim):
+                    for i in range(1,s_dim):
                         ppm_position = points2ppm(one_peak.new_points_pos[i], points_num[i],center_data[i],sw_ppm[i])
                         print ("{:.3f}".format(ppm_position), end="\t", file=listfile)
+                    ppm_position = points2ppm(one_peak.new_points_pos[0], points_num[0],center_data[0],sw_ppm[0])
+                    print ("{:.3f}".format(ppm_position), end="\t", file=listfile)
                         
                 else: 
-                    for i in range(s_dim):
-                         print ("{:.3f}".format(one_peak.peak_ppm_pos[i]), end="\t", file=listfile)
+                    for i in range(1,s_dim):
+                        print ("{:.3f}".format(one_peak.peak_ppm_pos[i]), end="\t", file=listfile)
+                    print ("{:.3f}".format(one_peak.peak_ppm_pos[0]), end="\t", file=listfile)
                 print (one_peak.intens, file=listfile) 
     return
 
@@ -397,47 +385,61 @@ Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data)
 print ("\nNoise calculation - start")
 List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
 L_list, R_list, N_Tiles = calc_list_of_points(List_of_noise_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
-Points_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_noise_points)
+Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles)
 average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
-print ("average noise level", average_noise_level)
+print ("average noise level = {:.2e}".format(average_noise_level))
+print ("50*average noise level = {:.2e}".format(50*average_noise_level))
 print ("Noise calculation - finished")
 
 
 """Center peaks and read intens"""
 print ("\nCenter peaks and read intens - start")
-open('peakcenter.txt', 'w').close()
-peak_not_moved = 0
-peak_moved = 0
+Peak_not_moved = 0
+Peak_moved = 0
+Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
+print ("vector_set", Vector_set, len(Vector_set))
+
+with open('peakcenter.txt', 'w') as txtfile:
+    print ("Peak_not_moved =     \nPeak_moved =     ",file=txtfile)
 for indexpeak, one_peak in enumerate(Peaks):
     Try_position = one_peak.peak_points_pos
+    Orgin_pos = one_peak.peak_points_pos
     try_pos=[]
     try_intens=[]
-    try_pos.append(deepcopy(Try_position))
+    # try_pos.append(deepcopy(Try_position))
     while one_peak.is_center == False:
-        List_of_around_points = find_points_around(Try_position,Spectra_dim)
+        List_of_around_points = find_points_around(Try_position, Orgin_pos, Vector_set, Spectra_dim)
         # one_peak.is_center = True
+        try_index = List_of_around_points.index(Try_position)
+        print ("try_index", try_index)
         L_list, R_list, N_Tiles = calc_list_of_points(List_of_around_points, Spectra_dim, Tile_size, Points_number) # L_list: tile number with our peak -1; R_list: point number with peak in tile; Tiles_num: number of tiles along axis [direct, 1, 2, 3]
-        # print ("\n\n----> punkty dookoła piku", indexpeak)
-        # print (len(List_of_around_points))
-        Points_intens = read_intens(file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles, List_of_around_points)
-        try_intens.append(deepcopy(Points_intens[0]))
-        if Points_intens[0] > average_noise_level*50:
-            if Points_intens.index(max(Points_intens)) != 0:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
+        print ("\n\n----> punkty dookoła piku", indexpeak)
+        print (List_of_around_points)
+        Points_intens = read_intens(List_of_around_points, file_name, Spectra_dim, Tile_size, L_list, R_list, N_Tiles)
+        try_pos.append(deepcopy(Try_position))
+        try_intens.append(deepcopy(Points_intens[try_index]))
+        
+        if Points_intens[try_index] > average_noise_level*50:
+            if Points_intens.index(max(Points_intens)) != try_index:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
+                # print (Try_position)
                 Try_position = List_of_around_points[Points_intens.index(max(Points_intens))]
-                # print ("Peak:", indexpeak, "must move")
+                print ("Peak:", indexpeak, "must move")
                 one_peak.was_moved = True
-                try_pos.append(deepcopy(Try_position))
+                # try_pos.append(deepcopy(Try_position))
+                # try_intens.append(deepcopy(Points_intens[Points_intens.index(max(Points_intens))]))
             else:
                 one_peak.is_center = True
-                one_peak.intens = Points_intens[0]
-                # print ("Peak:", indexpeak, "is in the highest place")
+                one_peak.intens = Points_intens[try_index]
+                print ("Peak:", indexpeak, "is in the highest place")
+                
                 if one_peak.was_moved == True:
                     one_peak.new_points_pos = Try_position
-                    peak_moved +=1
-                else: peak_not_moved +=1
+                    Peak_moved +=1
+                    # try_pos.append(deepcopy(Try_position))
+                else: Peak_not_moved +=1
         else: 
             one_peak.is_visible = False
-            # print ("Peak:", indexpeak, "is not visible")
+            print ("Peak:", indexpeak, "is not visible")
             break
 
     with open('peakcenter.txt', 'a') as txtfile:
@@ -448,7 +450,12 @@ for indexpeak, one_peak in enumerate(Peaks):
 
         for i in range(len(try_pos)):
             print ("\t", try_pos[i], try_intens[i], sep="\t", file=txtfile)
-        
+
+with open('peakcenter.txt', 'r+') as txtfile:
+    # file_data = txtfile.read()
+    txtfile.seek(0,0)
+    # txtfile.write()
+    print ("Peak_not_moved = {}\nPeak_moved = {}".format(Peak_not_moved,Peak_moved),file=txtfile)
 
 print ("Center peaks and read intens - finished")
 

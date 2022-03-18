@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mar 15 12:55 2022
+
+@author: Paulina Bartosinska-Marzec
+"""
+""" Program do czytania widm w formacie ucsf i wypisywanie wartości dla danych punktów w widmie """
+
+""" terminal: python3 read_ucsf [spectra path] [peak list] --np [] [] """
+
+
+from copy import deepcopy
+import sys
+import os.path
+
+
+from numpy import integer
+
+file_path = []
+for indexa, argument in enumerate(sys.argv):
+    if indexa>0:
+        if os.path.isfile(argument):
+            file_path.append(deepcopy(sys.argv[indexa]))
+if "--dim" in sys.argv:
+    i = sys.argv.index("--dim")
+    Spectra_dim=int(sys.argv[i+1])
+
+print (file_path)
+
+
+
+class CPeak:
+    def __init__(self):
+        self.peak_ppm_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
+        self.peak_points_pos = []      # peak position in points
+        self.peak_intens = 0            # peak height  
+        self.descript = ""              
+        self.aa_number = 0 
+
+
+
+"""Reading functions"""
+
+def read_peaklist(peak_list, s_dim):
+    with open(peak_list, 'r') as pl:
+        p_lines = pl.readlines()
+        p_list = []
+        aa_max_number = 0
+        for indexl, line in enumerate(p_lines):
+            if indexl > 1 :
+                p_pos = CPeak()
+                item = line.split()
+                p_pos.descript = item[0]
+                aa = p_pos.descript.split("-")
+                p_pos.aa_number = aa[s_dim-1][1:-2]
+                if p_pos.aa_number>aa_max_number:
+                    aa_max_number=p_pos.aa_number
+                if item[s_dim].isdigit():
+                    p_pos.peak_points_pos.append(deepcopy(item[s_dim]))
+                    for i in range(1,s_dim):
+                        p_pos.peak_points_pos.append(deepcopy(item[i]))
+                else: 
+                    p_pos.peak_ppm_pos.append(deepcopy(item[s_dim]))
+                    for i in range(1,s_dim):
+                        p_pos.peak_ppm_pos.append(deepcopy(item[i]))
+                if len(item)>s_dim+1:
+                    p_pos.peak_intens = item[s_dim+1]
+                p_list.append(deepcopy(p_pos))
+    return p_list, aa_max_number
+
+def compere_peaklist(peak_list, s_dim, aa_max_number):
+    for aa_num in range(aa_max_number):
+        one_aa = [None]*len(peak_list)          # a list of length equal to the number of compared lists
+        for indexl, list in enumerate(peak_list):       # loop through peak lists
+            i = list.index(aa_num)
+            print (i)
+
+    return 
+
+
+"""                      MAIN PROGRAM                      """
+Peak_Lists = []
+AA_max_number = 0
+for file_name in file_path:
+    p_list, aa_max = read_peaklist(file_name,Spectra_dim)
+    Peak_Lists.append
+    if aa_max>AA_max_number:
+        AA_max_number=aa_max
+compere_peaklist(Peak_Lists,Spectra_dim,AA_max_number)
