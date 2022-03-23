@@ -45,8 +45,8 @@ class CPeak:
     def __init__(self):
         self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
         self.peak_intens = 0            # peak height  
-        self.descript = ""              
-        self.aa_number = 0 
+        self.descript = ""              # description of peak which is in first column in Sparky-like peak list
+        self.aa_number = 0              # the number of the amino acid to which this peak corresponds
 
 
 
@@ -67,12 +67,12 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                 if p_pos.aa_number>aa_max_number:
                     aa_max_number=p_pos.aa_number
                 if item[s_dim].isdigit():
-                    p_pos.peak_pos.append(deepcopy(int(item[s_dim])))
-                    for i in range(1,s_dim):
+                    # p_pos.peak_pos.append(deepcopy(int(item[s_dim])))
+                    for i in range(1,s_dim+1):
                         p_pos.peak_pos.append(deepcopy(int(item[i])))
                 else: 
-                    p_pos.peak_pos.append(deepcopy(float(item[s_dim])))
-                    for i in range(1,s_dim):
+                    # p_pos.peak_pos.append(deepcopy(float(item[s_dim])))
+                    for i in range(1,s_dim+1):
                         p_pos.peak_pos.append(deepcopy(float(item[i])))
                 if len(item)>s_dim+1:
                     p_pos.peak_intens = float(item[s_dim+1])
@@ -101,16 +101,22 @@ def compere_peaklist(peak_list, s_dim, aa_max_number, max_sentence_len):
             # print ("AA_num", "Description", *peak_list_name, "Positions are the same?", "{},{} are the same?".format(comparison_of_lists[0],comparison_of_lists[1]),sep=" ", end="\n\n", file=outputfile)
         else:
             print ("Positions are the same?", sep=" ", end="\n\n", file=outputfile)
+        Flag_intens = False
         for aa_num in range(1, aa_max_number):
             # print (aa_num)
             des = "None"
             one_aa = ["None"]*len(peak_list)          # a list of length equal to the number of compared lists
+            int_aa = ["-"]*len(peak_list)          # a list of length equal to the number of compared lists
             # print (peak_list)
+            
             for indexl, list in enumerate(peak_list):       # loop through peak lists
                 for indexp, peak in enumerate(list):
                     if peak.aa_number == aa_num:
                         one_aa[indexl]=peak.peak_pos
                         des = peak.descript
+                        if peak.peak_intens:
+                            # Flag_intens = True
+                            int_aa[indexl]=peak.peak_intens
             # print (one_aa)
             no_peaks = one_aa.count("None")
             half_len_one_aa = math.ceil(len(one_aa)/2)
@@ -124,11 +130,16 @@ def compere_peaklist(peak_list, s_dim, aa_max_number, max_sentence_len):
                     compere_result = "Change"
 
             print ('{:^6} {:^{sentence_len}}'.format(aa_num, des,sentence_len=max_sentence_len), end=" ", file=outputfile)
-            for k in one_aa:
-                print ('{:^{sentence_len}}'.format(str(k), sentence_len=max_sentence_len), end=" ", file=outputfile)
+            for k in range(len(peak_list)):
+                if Flag_intens==True:
+                    print ('{:^{sentence_len}} {:^14}'.format(str(one_aa[k]), int_aa[k], sentence_len=max_sentence_len), end=" ", file=outputfile)
+                else: 
+                    print ('{:^{sentence_len}}'.format(str(one_aa[k]), sentence_len=max_sentence_len), end=" ", file=outputfile)
             if comparison_of_lists:
                 if one_aa[comparison_of_lists[0]]== one_aa[comparison_of_lists[1]]:
                     print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
+                elif one_aa[comparison_of_lists[0]]=="None" or one_aa[comparison_of_lists[0]]=="None":
+                    print ("{:^23} {:^17}".format(compere_result," "), end="\n", file=outputfile)
                 else:
                     print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
             else: 
