@@ -25,24 +25,45 @@ if len(sys.argv)==1:
     After this script prints peak lists in ppm value and points value.
     
     For run script type in command line:
-        python3 read_point_list_and_compere [peak list1 path] [peak list2 path] [peak list3 path]...[peak listN path]
+        python3 read_ucsf [ucsf path] [peak list path]
       
     additionaly you can add:
-        --ns []   - to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10\n""")
+        --np [num]\t- to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10
+        --plevel [num]\t- if you know level when starting appear, add this with scientific numer notation e.g. 1e+7
+        --noRemove\t- add this if you do not want remove invisible peaks\n""")
 
 
 
 file_name = sys.argv[1]
 peak_list = sys.argv[2]
 
-if len(sys.argv)>3:
-    if "--np" in sys.argv:
-        i = sys.argv.index("--np")
-        number_of_points_for_noise=int(sys.argv[i+1])
+
+if "--np" in sys.argv:
+    i = sys.argv.index("--np")
+    number_of_points_for_noise=int(sys.argv[i+1])
 else:
     number_of_points_for_noise=10
 
+if "--plevel" in sys.argv:
+    i = sys.argv.index("--plevel")
+    peak_level=float(sys.argv[i+1]) 
+
 print (number_of_points_for_noise)
+
+if "--noRemove" in sys.argv:
+    noRemoveFlag = True
+else:
+    noRemoveFlag = False
+
+item = peak_list.split("/")
+peak_list_name = item[len(item)-1][:-5]
+peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
+if not os.path.exists(peak_list_dir_new):
+    os.mkdir(peak_list_dir_new)
+
+
+
+
 
 
 class CPeak:
@@ -328,7 +349,7 @@ def find_points_around(try_position, orgin_pos, vector_set, s_dim):
 def intens_aroun_peak(try_position, orgin_pos, file_name, s_dim, tile_size, n_tiles):
     vector_set2 = [-1,0,1]
     list_of_around_points = []
-    for k in range(4):
+    for k in range(s_dim):
         for i in vector_set2:
             TestList = try_position[:]
             TestList[k] += i
@@ -342,11 +363,11 @@ def intens_aroun_peak(try_position, orgin_pos, file_name, s_dim, tile_size, n_ti
 
 
 def Print_Peak_List_ppm(peaks, s_dim, points_num, sw_ppm, center_data):
-    item = peak_list.split("/")
-    peak_list_name = item[len(item)-1][:-5]
-    peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
-    if not os.path.exists(peak_list_dir_new):
-        os.mkdir(peak_list_dir_new)
+    # item = peak_list.split("/")
+    # peak_list_name = item[len(item)-1][:-5]
+    # peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
+    # if not os.path.exists(peak_list_dir_new):
+    #     os.mkdir(peak_list_dir_new)
     new_peak_list = "{0}/{1}_new_ppm.list".format(peak_list_dir_new,peak_list_name)
     print ("new_peak_list", new_peak_list)
     with open(new_peak_list, 'w') as listfile:
@@ -376,11 +397,11 @@ def Print_Peak_List_ppm(peaks, s_dim, points_num, sw_ppm, center_data):
     return
 
 def Print_Peak_List_points(peaks, s_dim, type_list):
-    item = peak_list.split("/")
-    peak_list_name = item[len(item)-1][:-5]
-    peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
-    if not os.path.exists(peak_list_dir_new):
-        os.mkdir(peak_list_dir_new)
+    # item = peak_list.split("/")
+    # peak_list_name = item[len(item)-1][:-5]
+    # peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
+    # if not os.path.exists(peak_list_dir_new):
+    #     os.mkdir(peak_list_dir_new)
     new_peak_list = "{0}/{1}_{2}_points.list".format(peak_list_dir_new,peak_list_name,type_list)
     print ("{} peak list".format(type_list), new_peak_list)
     with open(new_peak_list, 'w') as listfile:
@@ -450,23 +471,27 @@ OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
 # Print_Peak_List_points(OldPeakList_points, Spectra_dim, "orgin")
 
 """Noise calculation"""
-print ("\nNoise calculation - start")
-List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
-Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, N_Tiles)
-average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
-print ("average noise level = {:.2e}".format(average_noise_level))
-print ("50*average noise level = {:.2e}".format(50*average_noise_level))
-print ("Noise calculation - finished")
+try:
+    print ("peak level starts from = {:.2e}".format(peak_level))
+except NameError:
+    print ("\nNoise calculation - start")
+    List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
+    Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, N_Tiles)
+    average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
+    print ("average noise level = {:.2e}".format(average_noise_level))
+    print ("50*average noise level = {:.2e}".format(50*average_noise_level))
+    peak_level = 50*average_noise_level
+    print ("Noise calculation - finished")
 
 
 """Center peaks and read intens"""
 print ("\nCenter peaks and read intens - start")
 Peak_not_moved = 0
 Peak_moved = 0
-Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
+# Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
 Vector_set2 = [-1,0,1]
 
-with open('peakcenter.txt', 'w') as txtfile:
+with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'w') as txtfile:
     print ("Peak_not_moved =     \nPeak_moved =     ",file=txtfile)
 for indexpeak, one_peak in enumerate(Peaks):
     Try_position = one_peak.peak_points_pos
@@ -477,10 +502,13 @@ for indexpeak, one_peak in enumerate(Peaks):
         List_of_around_points, Points_intens, try_index = intens_aroun_peak(Try_position, Orgin_pos, file_name, Spectra_dim, Tile_size, N_Tiles)
         try_pos.append(deepcopy(Try_position))
         try_intens.append(deepcopy(Points_intens[try_index]))
-
-        if abs(Points_intens[try_index]) > average_noise_level*50:
-            if Points_intens.index(max(Points_intens)) != try_index:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
-                Try_position = List_of_around_points[Points_intens.index(max(Points_intens))]
+        if Points_intens[try_index] > 0 :
+            maximum = max
+        else: 
+            maximum = min    
+        if abs(Points_intens[try_index]) > peak_level or noRemoveFlag==True:
+            if Points_intens.index(maximum(Points_intens)) != try_index:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
+                Try_position = List_of_around_points[Points_intens.index(maximum(Points_intens))]
                 # print ("Peak:", indexpeak, "must move")
                 one_peak.was_moved = True
             else:
@@ -491,7 +519,6 @@ for indexpeak, one_peak in enumerate(Peaks):
                 if one_peak.was_moved == True:
                     one_peak.new_points_pos = Try_position
                     Peak_moved +=1
-                    # try_pos.append(deepcopy(Try_position))
                 else: Peak_not_moved +=1
         else: 
             one_peak.is_visible = False
@@ -505,7 +532,7 @@ for indexpeak, one_peak in enumerate(Peaks):
     else: 
         one_peak.is_center = False
 
-    with open('peakcenter.txt', 'a') as txtfile:
+    with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'a') as txtfile:
         if one_peak.is_visible == False:
             print ("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript), file=txtfile)
         else:
@@ -516,7 +543,7 @@ for indexpeak, one_peak in enumerate(Peaks):
         if one_peak.is_center == False:
             print ("\t\t\t\t\t\t\tis not in the highest position", file=txtfile)
 
-with open('peakcenter.txt', 'r+') as txtfile:
+with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'r+') as txtfile:
     # file_data = txtfile.read()
     txtfile.seek(0,0)
     # txtfile.write()
@@ -535,7 +562,7 @@ print ("\nPrint peak list - finish")
 #### Check intensity of points around the peak
 # TestList = [30, 31, 157, 107]
 # moves = [-2,-1,0,1,2]
-# with open('intensmap.txt', 'w') as txtmap:
+# with open('{}/intensmap.txt'.format(peak_list_dir_new), 'w') as txtmap:
 #     print ("Maps of intensity of points around peak:{}\n\n".format(TestList),file=txtmap)
 
 #     duzalista = []

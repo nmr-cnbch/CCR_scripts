@@ -23,22 +23,63 @@ if len(sys.argv)==1:
         --dim [] - dimentionality of peak list
 
     additionaly you can add:
-        --comp2list [] []  - to additionaly compare two of peak list from above\n""")
+        --comp2list [num] [num]  - to additionaly compare two of peak list from above
+        --out_dir [path]  - 
+        --fl [path]  - \n""")
 
-file_path = []
-for indexa, argument in enumerate(sys.argv):
-    if indexa>0:
-        if os.path.isfile(argument):
-            file_path.append(deepcopy(sys.argv[indexa]))
+
+
+"""Commantline reading"""
+
+
+
+if "--fl" in sys.argv:                                     # number of dimentions
+    i = sys.argv.index("--fl")
+    FileOfList=[]
+    print ("Input:")
+    with open(sys.argv[i+1], 'r') as fl:
+        p_lines = fl.readlines()
+        File_Path = []
+        for indexl, line in enumerate(p_lines): 
+            if "---" in line:
+                FileOfList.append(deepcopy(File_Path))
+                File_Path.clear()
+            else:
+                File_Path.append(deepcopy(line[:-1]))
+        if len(File_Path)>0:
+            FileOfList.append(deepcopy(File_Path))
+    for files in FileOfList:
+        print (*files, sep="\n")
+else:
+    File_Path = []
+    for indexa, argument in enumerate(sys.argv):
+        if indexa>0:
+            if os.path.isfile(argument):
+                File_Path.append(deepcopy(sys.argv[indexa]))
+    print ("Input Files:",*File_Path, sep="\n")
+
 if "--dim" in sys.argv:                                     # number of dimentions
     i = sys.argv.index("--dim")
     Spectra_dim=int(sys.argv[i+1])
+
 if "--comp2list" in sys.argv:                               # order of two list to additional comparison: 0, 1, 2...
     j = sys.argv.index("--comp2list")
     comparison_of_lists = [int(sys.argv[j+1]), int(sys.argv[j+2])]
-print ("Input Files:",*file_path, sep="\n")
+
+if "--out_dir" in sys.argv:                                     # output director
+    i = sys.argv.index("--out_dir")
+    Output_Dir=sys.argv[i+1]
+    if not os.path.exists(Output_Dir):
+        os.mkdir(Output_Dir)
 
 
+
+
+
+
+
+
+"""Classes"""
 
 
 class CPeak:
@@ -54,6 +95,7 @@ class CPeak:
 
 def read_peaklist(peak_list, s_dim,max_sentence_len):
     with open(peak_list, 'r') as pl:
+        # print (peak_list)
         p_lines = pl.readlines()
         p_list = []
         aa_max_number = 1
@@ -63,7 +105,10 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                 item = line.split()
                 p_pos.descript = item[0]
                 aa = p_pos.descript.split("-")
-                p_pos.aa_number = int(aa[s_dim-1][1:-2])
+                try:
+                    p_pos.aa_number = int(aa[s_dim-1][1:-2])
+                except:
+                    p_pos.aa_number = int(aa[0][1:-1])
                 if p_pos.aa_number>aa_max_number:
                     aa_max_number=p_pos.aa_number
                 if item[s_dim].isdigit():
@@ -83,23 +128,25 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                     max_sentence_len = len(p_pos.peak_pos)
     return p_list, aa_max_number, max_sentence_len
 
-def compere_peaklist(peak_list, s_dim, aa_max_number, max_sentence_len):
+def compere_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, output_dir="./"):
     peak_list_name = []
+    compere_summary = []
     for i in file_path:
         item = i.split("/")
         p_name = item[len(item)-1][:-5]
         peak_list_name.append(deepcopy(p_name))
         if max_sentence_len < len(p_name):
             max_sentence_len = len(p_name)
-    with open ("./compere_{}.txt".format(peak_list_name[0]), 'w') as outputfile:
+    with open ("{}compere_{}.txt".format(output_dir, peak_list_name[0]), 'w') as outputfile:
+        print ("{}compere_{}.txt".format(output_dir, peak_list_name[0]))
         print ("File with comparition of:", *peak_list_name, sep=" ", end="\n\n", file=outputfile)
         print ("AA_num {:^{sentence_len}}".format("Description", sentence_len=max_sentence_len), end=" ", file=outputfile)
         for j in peak_list_name:
             print ('{:^{sentence_len}}'.format(str(j), sentence_len=max_sentence_len), end=" ", file=outputfile)
-        if comparison_of_lists:
+        try:
             print ("Positions are the same?\t{},{} are the same?".format(comparison_of_lists[0],comparison_of_lists[1]),sep=" ", end="\n\n", file=outputfile)
             # print ("AA_num", "Description", *peak_list_name, "Positions are the same?", "{},{} are the same?".format(comparison_of_lists[0],comparison_of_lists[1]),sep=" ", end="\n\n", file=outputfile)
-        else:
+        except NameError:
             print ("Positions are the same?", sep=" ", end="\n\n", file=outputfile)
         Flag_intens = False
         for aa_num in range(1, aa_max_number):
@@ -135,28 +182,51 @@ def compere_peaklist(peak_list, s_dim, aa_max_number, max_sentence_len):
                     print ('{:^{sentence_len}} {:^14}'.format(str(one_aa[k]), int_aa[k], sentence_len=max_sentence_len), end=" ", file=outputfile)
                 else: 
                     print ('{:^{sentence_len}}'.format(str(one_aa[k]), sentence_len=max_sentence_len), end=" ", file=outputfile)
-            if comparison_of_lists:
+            try:
                 if one_aa[comparison_of_lists[0]]== one_aa[comparison_of_lists[1]]:
                     print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
                 elif one_aa[comparison_of_lists[0]]=="None" or one_aa[comparison_of_lists[0]]=="None":
                     print ("{:^23} {:^17}".format(compere_result," "), end="\n", file=outputfile)
                 else:
                     print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
-            else: 
+            except NameError: 
                 print ("{:^23}".format(compere_result), end="\n", file=outputfile)
+            compere_summary.append(deepcopy(compere_result))
                     
 
 
-    return 
+    return compere_summary
 
 
 """                      MAIN PROGRAM                      """
-Peak_Lists = []
-AA_max_number = 1
-Max_sentence_len = 0
-for file_name in file_path:
-    p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
-    Peak_Lists.append(deepcopy(p_list))
-    if aa_max>AA_max_number:
-        AA_max_number=aa_max
-compere_peaklist(Peak_Lists,Spectra_dim,AA_max_number,Max_sentence_len)
+if "FileOfList" in globals():
+    print ("\nOutput Files:")
+    Compere_Set = []
+    for File_Set in FileOfList:
+        Peak_Lists = []
+        AA_max_number = 1
+        Max_sentence_len = 0
+        for file_name in File_Set:
+            p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
+            Peak_Lists.append(deepcopy(p_list))
+            if aa_max>AA_max_number:
+                AA_max_number=aa_max
+        try:
+            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,Output_Dir)))
+        except:
+            item = File_Set[0].split("/")
+            Output_Dir = ""
+            for i in range(len(item)-1):
+                Output_Dir += item[i]+"/"
+            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,Output_Dir)))
+else:
+    Peak_Lists = []
+    AA_max_number = 1
+    Max_sentence_len = 0
+    for file_name in File_Path:
+        p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
+        Peak_Lists.append(deepcopy(p_list))
+        if aa_max>AA_max_number:
+            AA_max_number=aa_max
+    print ("\nOutput Files:")
+    Result = compere_peaklist(Peak_Lists,File_Path,AA_max_number,Max_sentence_len)
