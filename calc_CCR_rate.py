@@ -9,10 +9,20 @@ Created on Jan 27 11:18 2022
     
     
 from copy import deepcopy
-from msilib import sequence
 import sys
+from typing import Sequence
 
+if len(sys.argv)==1:
+    sys.exit("""
+    For run script type in command line:
+        python3 calc_CCR_rate [peak list1 path] [peak list2 path] [peak list3 path]...[peak listN path] --dim []
+                        
+        --dim [] - dimentionality of peak list
 
+    additionaly you can add:
+        --comp2list [num] [num]\t- to additionaly compare two of peak list from above
+        --out_dir [path]\t- path to direction where output file will be put
+        --fl [path]\t- path to file with list of relativ path to peaklists - every set of file must separate by ------\n""")
 
 class CSpectrum:
     def __init__(self):
@@ -31,12 +41,15 @@ class CSpectrum:
         self.Hroi = [0,0]       # downfield and upfield of direct dimention
 
         self.peak = []            #informations about peaks from CPeak class
+            
                     
 class CPeak:
     def __init__(self):
         self.is_peak = False       # information about the presence of a peak
         self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
         self.peak_intens = [0,0]      # peak hight in auto [0] and cross [1] version
+        self.descript = ""              # description of peak which is in first column in Sparky-like peak list
+        self.aa_number = 0              # the number of the amino acid to which this peak corresponds
 
         self.is_overlap = ''       # information about the presents of overlaping of a peak: maybe, yes, no   
         self.overlap_peaks = []       #      
@@ -49,6 +62,82 @@ class CSequence:
         self.aa_name=''
         self.aa_num=-1
         self.ccr_rate=-99999
+
+
+
+
+def Res3to1(res):
+    if res=="PRO": i="P"
+    elif res=="ALA": i="A"
+    elif res=="SER": i="S"
+    elif res=="THR": i="T"
+    elif res=="CYS": i="C"
+    elif res=="CYSox": i="C"
+    elif res=="CYSred": i="C"
+    elif res=="GLY": i="G"
+    
+    elif res=="ASN": i="N"
+    elif res=="ASP": i="D"
+    elif res=="PHE": i="F"
+    elif res=="TYR": i="Y"
+    
+    elif res=="ILE": i="I"
+    elif res=="LEU": i="L"
+    
+    elif res=="ARG": i="R"
+    elif res=="GLN": i="Q"
+    elif res=="GLU": i="E"
+    elif res=="VAL": i="V"
+    elif res=="LYS": i="K"
+    elif res=="MET": i="M"
+    
+    elif res=="TRP": i="W"
+    elif res=="HIS": i="H"
+    
+    else:
+        print ("Wrong name of residue (",res,"), check the seq file - FASTA format")
+        sys.exit(1)
+    return i
+
+def Res1to3(res):
+    if res=="P": i="PRO"
+    elif res=="A": i="ALA"
+    elif res=="S": i="SER"
+    elif res=="T": i="THR"
+    elif res=="C": i="CYS"
+    elif res=="C_ox": i="CYSox"
+    elif res=="C_red": i="CYSred"
+    elif res=="G": i="GLY"
+    
+    elif res=="N": i="ASN"
+    elif res=="D": i="ASP"
+    elif res=="F": i="PHE"
+    elif res=="Y": i="TYR"
+    
+    elif res=="I": i="ILE"
+    elif res=="L": i="LEU"
+    
+    elif res=="R": i="ARG"
+    elif res=="Q": i="GLN"
+    elif res=="E": i="GLU"
+    elif res=="V": i="VAL"
+    elif res=="K": i="LYS"
+    elif res=="M": i="MET"
+    
+    elif res=="W": i="TRP"
+    elif res=="H": i="HIS"
+    
+    else:
+        print ("Wrong name of residue (",res,"), check the seq file")
+        sys.exit(1)
+    return i
+
+
+
+
+
+
+
 
 
 def ReadExpSet():               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum
@@ -128,61 +217,56 @@ def ReadSequnce():
             FASTAFlag=True
             #print "FASTAFlag"
             FASTAseq=[]
+            aa_no = 0
             for indexl,l_seq in enumerate(linia_seq):
                 if indexl+1<len(linia_seq):
                     oneletter=list(str(linia_seq[indexl+1]))
-                    for indexo, aa in enumerate(oneletter): 
-                        if oneletter[indexo].isalpha():
-                            FASTAseq.append(deepcopy(oneletter[indexo]))
-            print "seqence: ",
+                    for aa in oneletter: 
+                        if aa.isalpha():
+                            seq.aa_name = aa
+                            aa_no += 1
+                            seq.aa_num = aa_no
+                            sequence.append(deepcopy(seq))
+            print ("seqence: ")
             for indexf, fastaseq in enumerate(FASTAseq):            
-                iiii=Res1ToNr(fastaseq) # check whether seq file contains correct aa names 
-                seq.res_type.append(deepcopy(Res1to3(fastaseq)))
-                seq.res_nr.append(deepcopy(indexf+1))
-                seq.known.append(False)
-                seq.plane_nr.append(1000)
-                print "%d%s" % (indexf+1, fastaseq),
-            print "\n"
-                    
-        if FASTAFlag==False:
-            for l in range(len(linia_seq)):
-                if linia_seq[l]!="\n":
-                    iii=ResToNr(linia_seq[l].split()[0]) # check whether seq file contains correct aa names 
-                    seq.res_type.append(deepcopy(linia_seq[l].split()[0]))
-                    seq.res_nr.append(deepcopy(l+1))
-                    seq.known.append(False)
-                    seq.plane_nr.append(1000)
-        for dim in range(klasy.CPlane.main_dim):
-            seq.potentially_present[klasy.CPlane.peak_type.nucl_name[dim]]=True
-        for spec in specx:
-            for pt in spec.peak_type:
-                for dim in range(2):
-                    seq.potentially_present[pt.nucl_name[dim]]=True
+                aa_rest=Res1to3(fastaseq) # check whether seq file contains correct aa names 
+                print ("%d%s"%(indexf+1, aa_rest))
+    return sequence, aa_no
 
 
 
 
+def Read_peaklist(peak_list, s_dim):
+    with open(peak_list.auto_name, 'r') as pl:  # ????????????????
+        # print (peak_list)
+        p_lines = pl.readlines()
+        p_list = []
+        aa_max_number = 1
+        for indexl, line in enumerate(p_lines):
+            if indexl > 1 :
+                p_pos = CPeak()
+                item = line.split()
+                p_pos.descript = item[0]
+                aa = p_pos.descript.split("-")
+                try:
+                    p_pos.aa_number = int(aa[s_dim-1][1:-2])
+                except:
+                    p_pos.aa_number = int(aa[0][1:-1])
+                if p_pos.aa_number>aa_max_number:
+                    aa_max_number=p_pos.aa_number
+                if item[s_dim].isdigit():
+                    # p_pos.peak_pos.append(deepcopy(int(item[s_dim])))
+                    for i in range(1,s_dim+1):
+                        p_pos.peak_pos.append(deepcopy(int(item[i])))
+                else: 
+                    # p_pos.peak_pos.append(deepcopy(float(item[s_dim])))
+                    for i in range(1,s_dim+1):
+                        p_pos.peak_pos.append(deepcopy(float(item[i])))
+                if len(item)>s_dim+1:
+                    p_pos.peak_intens = float(item[s_dim+1])
+                p_list.append(deepcopy(p_pos))
+    return p_list, aa_max_number
 
-
-
-    return
-
-
-
-
-
-def ReadPeakList(peaklist_list):
-    peak = CPeak
-    for i in range(len(peaklist_list)):
-        with open(peaklist_list.auto_name, "r") as peaklist_file:
-            peaklist_lines = peaklist_file.readlines()
-            peaklist = []
-            for indexl, line in enumerate(peaklist_lines):
-                if indexl > 1 :
-                    peaklist_split = line.split()
-
-
-    return
 
 
 

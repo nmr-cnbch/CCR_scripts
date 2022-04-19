@@ -30,7 +30,8 @@ if len(sys.argv)==1:
     additionaly you can add:
         --np [num]\t- to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10
         --plevel [num]\t- if you know level when starting appear, add this with scientific numer notation e.g. 1e+7
-        --noRemove\t- add this if you do not want remove invisible peaks\n""")
+        --noRemove\t- add this if you do not want remove invisible peaks
+        --onlypoints\t- add this if you want only change ppm value to points value\n""")
 
 
 
@@ -54,6 +55,11 @@ if "--noRemove" in sys.argv:
     noRemoveFlag = True
 else:
     noRemoveFlag = False
+
+if "--onlypoints" in sys.argv:
+    OnlyPoints = True
+else:
+    OnlyPoints = False
 
 item = peak_list.split("/")
 peak_list_name = item[len(item)-1][:-5]
@@ -218,6 +224,11 @@ def ppm2points(ppm, points_num, center_data, sw_ppm):
     point_value = round((downfield-ppm)/(sw_div_fnz))
     return point_value
 
+def ppm2points_float(ppm, points_num, center_data, sw_ppm): 
+    sw_div_fnz = sw_ppm/(points_num-1)
+    downfield = center_data+points_num/2*sw_div_fnz
+    point_value = round((downfield-ppm)/(sw_div_fnz),2)
+    return point_value
 
 def points2ppm(point_value, points_num, center_data, sw_ppm): 
     sw_div_fnz = sw_ppm/(points_num-1)
@@ -226,12 +237,17 @@ def points2ppm(point_value, points_num, center_data, sw_ppm):
     return ppm_value
 
 
-def calc_peak_points(points_num, peaks, sw_ppm, center_data):
+def calc_peak_points(points_num, peaks, sw_ppm, center_data,s_dim,num_format="Integer"):
     for peak_num in range(len(peaks)):
         for p in range(len(peaks[peak_num].peak_ppm_pos)):
-            one_dim = ppm2points(peaks[peak_num].peak_ppm_pos[p],points_num[p],center_data[p],sw_ppm[p])
+            if num_format == "Integer":
+                one_dim = ppm2points(peaks[peak_num].peak_ppm_pos[p],points_num[p],center_data[p],sw_ppm[p])
+            elif num_format == "Float":
+                one_dim = ppm2points_float(peaks[peak_num].peak_ppm_pos[p],points_num[p],center_data[p],sw_ppm[p])
             peaks[peak_num].peak_points_pos.append(deepcopy(one_dim))
+    Print_Peak_List_points(peaks, s_dim, "orgin")
     return peaks
+
 
 
 def find_noise_point(peaks, s_dim, points_num, number_of_points_for_noise):
@@ -363,11 +379,6 @@ def intens_aroun_peak(try_position, orgin_pos, file_name, s_dim, tile_size, n_ti
 
 
 def Print_Peak_List_ppm(peaks, s_dim, points_num, sw_ppm, center_data):
-    # item = peak_list.split("/")
-    # peak_list_name = item[len(item)-1][:-5]
-    # peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
-    # if not os.path.exists(peak_list_dir_new):
-    #     os.mkdir(peak_list_dir_new)
     new_peak_list = "{0}/{1}_new_ppm.list".format(peak_list_dir_new,peak_list_name)
     print ("new_peak_list", new_peak_list)
     with open(new_peak_list, 'w') as listfile:
@@ -460,104 +471,107 @@ Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_s
 Peaks = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
 print ("---> finished")
 
+if OnlyPoints:
+    Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data, Spectra_dim, "Float")
+    # OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
+else:
+    Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data)
+    OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
+    # OldPeakList_points = Peaks[:]         ### I tried print orgin peak list in points with peak high  
+    # # for i in Peaks:
+    # #     OldPeakList_points.append(deepcopy(i.peak_points_pos))
+    # # # print (OldPeakList_points)
+    # read_intens(OldPeakList_points, file_name, Spectra_dim, Tile_size, N_Tiles)
+    # Print_Peak_List_points(OldPeakList_points, Spectra_dim, "orgin")
 
-Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, Centr_data)
-OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
-# OldPeakList_points = Peaks[:]         ### I tried print orgin peak list in points with peak high  
-# # for i in Peaks:
-# #     OldPeakList_points.append(deepcopy(i.peak_points_pos))
-# # # print (OldPeakList_points)
-# read_intens(OldPeakList_points, file_name, Spectra_dim, Tile_size, N_Tiles)
-# Print_Peak_List_points(OldPeakList_points, Spectra_dim, "orgin")
-
-"""Noise calculation"""
-try:
-    print ("peak level starts from = {:.2e}".format(peak_level))
-except NameError:
-    print ("\nNoise calculation - start")
-    List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
-    Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, N_Tiles)
-    average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
-    print ("average noise level = {:.2e}".format(average_noise_level))
-    print ("50*average noise level = {:.2e}".format(50*average_noise_level))
-    peak_level = 50*average_noise_level
-    print ("Noise calculation - finished")
+    """Noise calculation"""
+    try:
+        print ("peak level starts from = {:.2e}".format(peak_level))
+    except NameError:
+        print ("\nNoise calculation - start")
+        List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
+        Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, N_Tiles)
+        average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
+        print ("average noise level = {:.2e}".format(average_noise_level))
+        print ("50*average noise level = {:.2e}".format(50*average_noise_level))
+        peak_level = 50*average_noise_level
+        print ("Noise calculation - finished")
 
 
-"""Center peaks and read intens"""
-print ("\nCenter peaks and read intens - start")
-Peak_not_moved = 0
-Peak_moved = 0
-# Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
-Vector_set2 = [-1,0,1]
+    """Center peaks and read intens"""
+    print ("\nCenter peaks and read intens - start")
+    Peak_not_moved = 0
+    Peak_moved = 0
+    # Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
+    Vector_set2 = [-1,0,1]
 
-with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'w') as txtfile:
-    print ("Peak_not_moved =     \nPeak_moved =     ",file=txtfile)
-for indexpeak, one_peak in enumerate(Peaks):
-    Try_position = one_peak.peak_points_pos
-    Orgin_pos = one_peak.peak_points_pos
-    try_pos=[]
-    try_intens=[]
-    while one_peak.is_center == False:
+    with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'w') as txtfile:
+        print ("Peak_not_moved =     \nPeak_moved =     ",file=txtfile)
+    for indexpeak, one_peak in enumerate(Peaks):
+        Try_position = one_peak.peak_points_pos
+        Orgin_pos = one_peak.peak_points_pos
+        try_pos=[]
+        try_intens=[]
+        while one_peak.is_center == False:
+            List_of_around_points, Points_intens, try_index = intens_aroun_peak(Try_position, Orgin_pos, file_name, Spectra_dim, Tile_size, N_Tiles)
+            try_pos.append(deepcopy(Try_position))
+            try_intens.append(deepcopy(Points_intens[try_index]))
+            if Points_intens[try_index] > 0 :
+                maximum = max
+            else: 
+                maximum = min    
+            if abs(Points_intens[try_index]) > peak_level or noRemoveFlag==True:
+                if Points_intens.index(maximum(Points_intens)) != try_index:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
+                    Try_position = List_of_around_points[Points_intens.index(maximum(Points_intens))]
+                    # print ("Peak:", indexpeak, "must move")
+                    one_peak.was_moved = True
+                else:
+                    one_peak.is_center = "maybe"
+                    one_peak.peak_intens = Points_intens[try_index]
+                    # print ("Peak:", indexpeak, "is in the highest place")
+                    
+                    if one_peak.was_moved == True:
+                        one_peak.new_points_pos = Try_position
+                        Peak_moved +=1
+                    else: Peak_not_moved +=1
+            else: 
+                one_peak.is_visible = False
+                # print ("Peak:", indexpeak, "is not visible")
+                break
+
+        #check if peak is in the highest position
         List_of_around_points, Points_intens, try_index = intens_aroun_peak(Try_position, Orgin_pos, file_name, Spectra_dim, Tile_size, N_Tiles)
-        try_pos.append(deepcopy(Try_position))
-        try_intens.append(deepcopy(Points_intens[try_index]))
-        if Points_intens[try_index] > 0 :
-            maximum = max
+        if Points_intens.index(max(Points_intens)) == try_index:
+            one_peak.is_center = True
         else: 
-            maximum = min    
-        if abs(Points_intens[try_index]) > peak_level or noRemoveFlag==True:
-            if Points_intens.index(maximum(Points_intens)) != try_index:            # if current position of peak is not the highest: index of the highest point is not equal 0 (0 is index of current peak position)
-                Try_position = List_of_around_points[Points_intens.index(maximum(Points_intens))]
-                # print ("Peak:", indexpeak, "must move")
-                one_peak.was_moved = True
+            one_peak.is_center = False
+
+        with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'a') as txtfile:
+            if one_peak.is_visible == False:
+                print ("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript), file=txtfile)
             else:
-                one_peak.is_center = "maybe"
-                one_peak.peak_intens = Points_intens[try_index]
-                # print ("Peak:", indexpeak, "is in the highest place")
-                
-                if one_peak.was_moved == True:
-                    one_peak.new_points_pos = Try_position
-                    Peak_moved +=1
-                else: Peak_not_moved +=1
-        else: 
-            one_peak.is_visible = False
-            # print ("Peak:", indexpeak, "is not visible")
-            break
+                print ("\n{}\t({})".format(indexpeak, one_peak.descript), file=txtfile)
 
-    #check if peak is in the highest position
-    List_of_around_points, Points_intens, try_index = intens_aroun_peak(Try_position, Orgin_pos, file_name, Spectra_dim, Tile_size, N_Tiles)
-    if Points_intens.index(max(Points_intens)) == try_index:
-        one_peak.is_center = True
-    else: 
-        one_peak.is_center = False
+            for i in range(len(try_pos)):
+                print ("\t", try_pos[i], try_intens[i], sep="\t", file=txtfile)
+            if one_peak.is_center == False:
+                print ("\t\t\t\t\t\t\tis not in the highest position", file=txtfile)
 
-    with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'a') as txtfile:
-        if one_peak.is_visible == False:
-            print ("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript), file=txtfile)
-        else:
-            print ("\n{}\t({})".format(indexpeak, one_peak.descript), file=txtfile)
+    with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'r+') as txtfile:
+        # file_data = txtfile.read()
+        txtfile.seek(0,0)
+        # txtfile.write()
+        print ("Peak_not_moved = {}\nPeak_moved = {}".format(Peak_not_moved,Peak_moved),file=txtfile)
 
-        for i in range(len(try_pos)):
-            print ("\t", try_pos[i], try_intens[i], sep="\t", file=txtfile)
-        if one_peak.is_center == False:
-            print ("\t\t\t\t\t\t\tis not in the highest position", file=txtfile)
-
-with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'r+') as txtfile:
-    # file_data = txtfile.read()
-    txtfile.seek(0,0)
-    # txtfile.write()
-    print ("Peak_not_moved = {}\nPeak_moved = {}".format(Peak_not_moved,Peak_moved),file=txtfile)
-
-print ("Center peaks and read intens - finished")
+    print ("Center peaks and read intens - finished")
 
 
-"""Print peak list"""
-print ("\nPrint peak list - start")
+    """Print peak list"""
+    print ("\nPrint peak list - start")
 
-NewPeakList_ppm = Print_Peak_List_ppm(Peaks, Spectra_dim, Points_number, SW_size_ppm, Centr_data)
-NewPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "new")
-print ("\nPrint peak list - finish")
+    NewPeakList_ppm = Print_Peak_List_ppm(Peaks, Spectra_dim, Points_number, SW_size_ppm, Centr_data)
+    NewPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "new")
+    print ("\nPrint peak list - finish")
 
 #### Check intensity of points around the peak
 # TestList = [30, 31, 157, 107]

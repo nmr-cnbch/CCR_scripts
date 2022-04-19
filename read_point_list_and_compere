@@ -11,6 +11,7 @@ Created on Mar 15 12:55 2022
 
 
 from copy import deepcopy
+from curses.ascii import isdigit
 import math
 import sys
 import os.path
@@ -23,9 +24,9 @@ if len(sys.argv)==1:
         --dim [] - dimentionality of peak list
 
     additionaly you can add:
-        --comp2list [num] [num]  - to additionaly compare two of peak list from above
-        --out_dir [path]  - 
-        --fl [path]  - \n""")
+        --comp2list [num] [num]\t- to additionaly compare two of peak list from above
+        --out_dir [path]\t- path to direction where output file will be put
+        --fl [path]\t- path to file with list of relativ path to peaklists - every set of file must separate by ------\n""")
 
 
 
@@ -94,6 +95,7 @@ class CPeak:
 """Reading functions"""
 
 def read_peaklist(peak_list, s_dim,max_sentence_len):
+    FloatFlag = False
     with open(peak_list, 'r') as pl:
         # print (peak_list)
         p_lines = pl.readlines()
@@ -112,11 +114,12 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                 if p_pos.aa_number>aa_max_number:
                     aa_max_number=p_pos.aa_number
                 if item[s_dim].isdigit():
-                    # p_pos.peak_pos.append(deepcopy(int(item[s_dim])))
+                    # print ("!!! is digit", item[s_dim])
                     for i in range(1,s_dim+1):
                         p_pos.peak_pos.append(deepcopy(int(item[i])))
                 else: 
-                    # p_pos.peak_pos.append(deepcopy(float(item[s_dim])))
+                    # print ("!!! is NOT digit", item[s_dim])
+                    FloatFlag = True
                     for i in range(1,s_dim+1):
                         p_pos.peak_pos.append(deepcopy(float(item[i])))
                 if len(item)>s_dim+1:
@@ -126,9 +129,9 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                     max_sentence_len = len(p_pos.descript)
                 elif max_sentence_len < len(p_pos.peak_pos):
                     max_sentence_len = len(p_pos.peak_pos)
-    return p_list, aa_max_number, max_sentence_len
+    return p_list, aa_max_number, max_sentence_len, FloatFlag
 
-def compere_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, output_dir="./"):
+def compere_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, FloatFlag, output_dir="./"):
     peak_list_name = []
     compere_summary = []
     for i in file_path:
@@ -171,10 +174,16 @@ def compere_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, outp
             if no_peaks > half_len_one_aa:
                 compere_result = "None"
             elif no_peaks < half_len_one_aa:
-                if all(x == one_aa[0] for x in one_aa):
-                    compere_result = "OK"
+                if FloatFlag == True:
+                    if all(abs(x[j]-one_aa[0][j])<0.6 for x in one_aa for j in range(len(one_aa))): # it's check difference between all dimentions from any peak with first peak
+                        compere_result = "OK"
+                    else:
+                        compere_result = "Change"
                 else:
-                    compere_result = "Change"
+                    if all(x == one_aa[0] for x in one_aa): # it's check that any peak the same like first peak
+                        compere_result = "OK"
+                    else:
+                        compere_result = "Change"
 
             print ('{:^6} {:^{sentence_len}}'.format(aa_num, des,sentence_len=max_sentence_len), end=" ", file=outputfile)
             for k in range(len(peak_list)):
@@ -183,12 +192,20 @@ def compere_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, outp
                 else: 
                     print ('{:^{sentence_len}}'.format(str(one_aa[k]), sentence_len=max_sentence_len), end=" ", file=outputfile)
             try:
-                if one_aa[comparison_of_lists[0]]== one_aa[comparison_of_lists[1]]:
-                    print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
-                elif one_aa[comparison_of_lists[0]]=="None" or one_aa[comparison_of_lists[0]]=="None":
-                    print ("{:^23} {:^17}".format(compere_result," "), end="\n", file=outputfile)
+                if FloatFlag == True:
+                    if one_aa[comparison_of_lists[0]]=="None" or one_aa[comparison_of_lists[0]]=="None":
+                        print ("{:^23} {:^17}".format(compere_result," "), end="\n", file=outputfile)
+                    elif all(abs(float(one_aa[comparison_of_lists[0]][j])- float(one_aa[comparison_of_lists[1]][j]))<0.6 for j in range(len(one_aa))): # it's check difference between all dimentions from any peak with first peak
+                        print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
+                    else:
+                        print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
                 else:
-                    print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
+                    if one_aa[comparison_of_lists[0]]=="None" or one_aa[comparison_of_lists[0]]=="None":
+                        print ("{:^23} {:^17}".format(compere_result," "), end="\n", file=outputfile)
+                    elif one_aa[comparison_of_lists[0]]== one_aa[comparison_of_lists[1]]:
+                        print ("{:^23} {:^17}".format(compere_result,"yes"), end="\n", file=outputfile)
+                    else:
+                        print ("{:^23} {:^17}".format(compere_result,"no"), end="\n", file=outputfile)
             except NameError: 
                 print ("{:^23}".format(compere_result), end="\n", file=outputfile)
             compere_summary.append(deepcopy(compere_result))
@@ -207,26 +224,26 @@ if "FileOfList" in globals():
         AA_max_number = 1
         Max_sentence_len = 0
         for file_name in File_Set:
-            p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
+            p_list, aa_max, Max_sentence_len, FloatFlag = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
             Peak_Lists.append(deepcopy(p_list))
             if aa_max>AA_max_number:
                 AA_max_number=aa_max
         try:
-            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,Output_Dir)))
+            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,FloatFlag,Output_Dir)))
         except:
             item = File_Set[0].split("/")
             Output_Dir = ""
             for i in range(len(item)-1):
                 Output_Dir += item[i]+"/"
-            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,Output_Dir)))
+            Compere_Set.append(deepcopy(compere_peaklist(Peak_Lists,File_Set,AA_max_number,Max_sentence_len,FloatFlag,Output_Dir)))
 else:
     Peak_Lists = []
     AA_max_number = 1
     Max_sentence_len = 0
     for file_name in File_Path:
-        p_list, aa_max, Max_sentence_len = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
+        p_list, aa_max, Max_sentence_len, FloatFlag = read_peaklist(file_name,Spectra_dim,Max_sentence_len)
         Peak_Lists.append(deepcopy(p_list))
         if aa_max>AA_max_number:
             AA_max_number=aa_max
     print ("\nOutput Files:")
-    Result = compere_peaklist(Peak_Lists,File_Path,AA_max_number,Max_sentence_len)
+    Result = compere_peaklist(Peak_Lists,File_Path,AA_max_number,Max_sentence_len,FloatFlag)
