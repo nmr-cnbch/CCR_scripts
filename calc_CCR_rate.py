@@ -10,7 +10,6 @@ Created on Jan 27 11:18 2022
     
 from copy import deepcopy
 import sys
-from typing import Sequence
 
 if len(sys.argv)==1:
     sys.exit("""
@@ -23,6 +22,11 @@ if len(sys.argv)==1:
         --comp2list [num] [num]\t- to additionaly compare two of peak list from above
         --out_dir [path]\t- path to direction where output file will be put
         --fl [path]\t- path to file with list of relativ path to peaklists - every set of file must separate by ------\n""")
+
+
+file_director = sys.argv[1]
+
+
 
 class CSpectrum:
     def __init__(self):
@@ -59,7 +63,7 @@ class CPeak:
 
 class CSequence:
     def __init__(self):
-        self.aa_name=''
+        self.aa_name="None"
         self.aa_num=-1
         self.ccr_rate=-99999
 
@@ -140,10 +144,10 @@ def Res1to3(res):
 
 
 
-def ReadExpSet():               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum
+def ReadExpSet(file_director):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum
     experiments = []
     
-    with open("./experiments_set.txt", "r") as exp_set:
+    with open("{}/experiments_set.txt".format(file_director), "r") as exp_set:
         print ("otwarte")
         lines = exp_set.readlines()
         expset_lines=[]
@@ -205,39 +209,50 @@ def ReadExpSet():               # wczytywanie danych z pliku experiments_set.txt
     return experiments
 
 
-def ReadSequnce():
+def ReadSequnce(file_director):
 
     sequence = []
-    seq=CSequence
+    
 
-    with open("./seq", "r") as input_file:
+    with open("{}seq".format(file_director), "r") as input_file:
         linia_seq=input_file.readlines()
         FASTAFlag=False
         if ">" in linia_seq[0]:
             FASTAFlag=True
-            #print "FASTAFlag"
+            print ("FASTAFlag")
             FASTAseq=[]
             aa_no = 0
             for indexl,l_seq in enumerate(linia_seq):
-                if indexl+1<len(linia_seq):
-                    oneletter=list(str(linia_seq[indexl+1]))
+                if 0<indexl<len(linia_seq):
+                    oneletter=list(str(l_seq))
                     for aa in oneletter: 
                         if aa.isalpha():
-                            seq.aa_name = aa
+                            seqq = CSequence
+                            seqq.aa_name = aa
+                            print ("pierwsza",seqq.aa_name)            
                             aa_no += 1
-                            seq.aa_num = aa_no
-                            sequence.append(deepcopy(seq))
+                            # seq.aa_num = aa_no
+                            sequence.append(seqq)
+                            print ("druga",sequence[aa_no-1].aa_name, len(sequence))
+                            FASTAseq.append(deepcopy(seqq))
+                    # for i in range(len(oneletter)):
+                    #     print ("druga",sequence[i].aa_name, len(sequence))
+                    #     print ("trzecia",FASTAseq[i].aa_name, len(FASTAseq))
+                            
+            print ("seqence lenth: ", len(sequence))
             print ("seqence: ")
-            for indexf, fastaseq in enumerate(FASTAseq):            
-                aa_rest=Res1to3(fastaseq) # check whether seq file contains correct aa names 
+            for indexf, fastaseq in enumerate(sequence):
+                print (fastaseq.aa_name)            
+                aa_rest=Res1to3(fastaseq.aa_name) # check whether seq file contains correct aa names 
                 print ("%d%s"%(indexf+1, aa_rest))
     return sequence, aa_no
 
 
 
 
-def Read_peaklist(peak_list, s_dim):
-    with open(peak_list.auto_name, 'r') as pl:  # ????????????????
+def Read_peaklist(file_director, peak_list, s_dim):
+    peaklistdir = peak_list.auto_name
+    with open("{}{}".format(file_director,peaklistdir), 'r') as pl:  
         # print (peak_list)
         p_lines = pl.readlines()
         p_list = []
@@ -287,4 +302,5 @@ def WriteCCRRate():
 
 
 print ("start")
-Experiments = ReadExpSet()
+Experiments = ReadExpSet(file_director)
+AASequence = ReadSequnce(file_director)
