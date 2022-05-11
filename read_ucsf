@@ -7,7 +7,6 @@ Created on Feb 15 12:55 2022
 """
 """ Program do czytania widm w formacie ucsf i wypisywanie wartości dla danych punktów w widmie """
 
-""" terminal: python3 read_ucsf [spectra path] [peak list] --np [] """
 
 
 from copy import deepcopy
@@ -30,8 +29,9 @@ if len(sys.argv)==1:
     additionaly you can add:
         --np [num]\t- to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10
         --plevel [num]\t- if you know level when starting appear, add this with scientific numer notation e.g. 1e+7
-        --noRemove\t- add this if you do not want remove invisible peaks
-        --onlypoints\t- add this if you want only change ppm value to points value\n""")
+        --norm or --noRemove\t- add this if you do not want remove invisible peaks
+        --onlypoints\t- add this if you want only change ppm value to points value
+        --o or --output_name\t- add this if you want only change ppm value to points value\n""")
 
 
 
@@ -51,21 +51,50 @@ if "--plevel" in sys.argv:
 
 print (number_of_points_for_noise)
 
-if "--noRemove" in sys.argv:
+
+if "--norm" in sys.argv:
     noRemoveFlag = True
+    print ("noRemoveFlag is on")
+elif "--noRemove" in sys.argv:
+    noRemoveFlag = True
+    print ("noRemoveFlag is on")
 else:
     noRemoveFlag = False
 
+
 if "--onlypoints" in sys.argv:
     OnlyPoints = True
+    print ("OnlyPoints option is on")
 else:
     OnlyPoints = False
 
-item = peak_list.split("/")
-peak_list_name = item[len(item)-1][:-5]
-peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
-if not os.path.exists(peak_list_dir_new):
-    os.mkdir(peak_list_dir_new)
+# Output name
+if "--o" in sys.argv:
+    i = sys.argv.index("--o")
+    peak_list_name = sys.argv[i+1][:-5]
+    list_name = peak_list_name.split(".")
+    peak_list_dir_new = list_name[0]+"_list"
+    # peak_list_dir_new = peak_list_name[:-(len(peak_list_name)+5)]
+    if not os.path.exists(peak_list_dir_new):
+        os.mkdir(peak_list_dir_new)
+    print ("Output file path: {}/{}.list".format(peak_list_dir_new,peak_list_name))
+elif "--output_name" in sys.argv:
+    i = sys.argv.index("--output_name")
+    peak_list_name = sys.argv[i+1][:-5]
+    list_name = peak_list_name.split(".")
+    peak_list_dir_new = list_name[0]+"_list"
+    if not os.path.exists(peak_list_dir_new):
+        os.mkdir(peak_list_dir_new)
+    print ("Output file path: {}/{}.list".format(peak_list_dir_new,peak_list_name))
+else: 
+    item = peak_list.split("/")
+    peak_list_name = item[len(item)-1][:-5]
+    peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
+    if not os.path.exists(peak_list_dir_new):
+        os.mkdir(peak_list_dir_new)
+    print ("Output file path: {}/{}".format(peak_list_dir_new,peak_list_name))
+
+    
 
 
 

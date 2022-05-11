@@ -1,3 +1,11 @@
+---
+Title: Ideas for scripts to work with CCR
+Tags: doktorat, programowanie, skrypt, python
+Author: PinaMarzec
+Source:
+----
+
+
 General idea for scripts to work with CCR experiments
 ==
 
@@ -66,13 +74,51 @@ Przygotowanie do pracy z CCR
     - cetrowanie silnych pików w 'x'
     - zapisywanie listy pików z 'x'
     - zapisywanie projektu (js)
+> porzucilyśmy ten pomysł i teraz mamy centrowanie za pomocą skryptu, który liczy poziom szumów i okresla czy dany pik jest widoczny (read_ucsf)
 
-3. Wyznaczanie poziomu szumu dla każdego piku:
-    - bierzemy przesunięcia chemiczne po protonie dla każdego piku
-    - zczytujemy wartości punktów z obszaru bez pików o danym przesunięciu protonu - w jakiejś odległości od innych pików
-    - automatyczny pikpiking
-    - sprawdzić jak wyciągać dane o wartości punktów bezpośrenio z ucsf (przeczytać manuala Sparkiego)
+### read_ucsf
+1. Wczytywanie danych
+   
+~~~
+    read_ucsf script reading ucsf file and peak list (in Sparky format), check peak intensity of peak and if it is not in the highest position - move it. 
+    After this script prints peak lists in ppm value and points value.
+    
+    For run script type in command line:
+        python3 read_ucsf [ucsf path] [peak list path]
+      
+    additionaly you can add:
+        --np [num]\t- to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10
+        --plevel [num]\t- if you know level when starting appear, add this with scientific numer notation e.g. 1e+7
+        --noRemove\t- add this if you do not want remove invisible peaks
+        --onlypoints\t- add this if you want only change ppm value to points value
+~~~
 
+2. Wyznaczanie poziomu szumu dla każdego piku:
+   - bierzemy przesunięcia chemiczne po protonie dla każdego piku
+   - 
+> nie, losujemy N^(spectra dimentionality+1)^ (normally is N = 10) i sprawdzamy czy ten punkt jest w pobliżu piku
+
+   - zczytujemy wartości punktów z obszaru bez pików o danym przesunięciu protonu - w jakiejś odległości od innych pików
+   - ~~automatyczny pikpiking~~
+   - sprawdzić jak wyciągać dane o wartości punktów bezpośrenio z ucsf (przeczytać manuala Sparkiego)
+
+3. Peak centering 
+   - sprawdza wartości (intensywności) piku i przestrzeni o jeden w każdą strone
+   - jeśli najwyzsze miejsce jest w innym miejscu niż pik to przesuwa pik i sprawdza ponownie (sprawdza maxymalnie o 2 punkty od orginalnego piku)
+   - na koniec sprawdza czy to najwyzsza pozycja jesli nie to wraca do orgilanej pozycji
+4. dodatkowe opcje:
+  - [x] - wczytanie podanego przez użytkownika poziomu odcięcia
+  - [ ] - ReportBox - plik ze wszystkimi infomacjami o przeprowadzonych obliczeniach
+  - [ ] - ustawienia outputu przez użytkownika - nazwy i folderu
+  - [ ] - wyswietlanie uzywanych dodatkowych opcji 
+
+
+### read_point_list_compere - skrypt do porównywania pozycji pików na podstawie list pików 
+   - [x] - porównywanie na podstawie pozycji z punktach
+   - [x] - wczytywanie ścieżki dostepu do plików z pliku źródłowego 
+   - [x] - wczytywanie i porównywanie kilku zestawów danych 
+   - [ ] - wyświetlanie wysokości jeśli to możliwe
+   - [x] - jeśli punkty są w postaci float to sprawdza czy różnica jest mniejsza niż pól punkta jeśli tak to "OK", jeśli nie to "Change", również w dodatkowej funkcji compere2list
 
 ## IIIc. przenoszenie danych między komputerami (Bash)
 - konkretny schemat ułożenia danych:
@@ -121,40 +167,42 @@ WERSJA 2
 
 
 
-# IV. Liczenie stałych CCR (Python 3)
+IV. Liczenie stałych CCR (Python 3)
+--
 
-IVa. Potrzebne pliki
-    1. listy pików 
-        - format listy pików Sparkiego
-    2. experiments_set.txt 
-        - kolejność jąder zgodna z listą pików
-    3. sekwencja
-        - FASTA
-        - 
-IVb. Kod
-    - wczytywanie listy pików - nie tylko intensywności, ale też pozycje pików by określać przykrywanie.
-    - sprawdzanie przykrywania się pików ()
-    - przeliczanie wartości stałych CCR 
-    - eksport wyników 
-    1. Klasy:
-        - CSpectrum   (informacje o widmach)
-        - CPeak       (informacje o pikach)
-            + PrintPeak - metoda/funkcja do wypisywania informacji o konkretnym piku
-        - CSequence   (informacje o sekwencji i wartości stałych CCR)
-    2. Funkcje:
-        - one2three - zmiana nazw aminikowasów z 1-literowego a 3-literowy
-        - three2one - zmiana nazw aminikowasów z 3-literowego a 2-literowy
-        - 
-        - ReadInputFile - wczytywanie plików wejściowych do klas CSpectrum, CPeak, CSequence 
-            - ReadExpSet - wczytywanie danych z pliku experiment_set.txt do klasy CSpectrum
-            - ReadSequnce - wczytywanie sekwencji aminokwaów do klasy CSequence
-            - ReadPeakList - wczytywanie pozycji pików oraz ich wysokości do klas CPeak i CSpectrum
-        - CheckOverlap - porównywanie odległości między pikamy w danych wymiarach i uzupełaniaie informacji w klasie CPeak
-            - jeśli odległość w danych wymiarach będzie mniejsza niż .... to oznaczamy jako przykrywanie
-            - oznaczamy od razu w obu piki 
-        - CalcCCRRate - obliczanie stałych CCR 
-        - WriteCCRRate - wypisywanie pliku ze stałymi CCR i adnotacjiami jakościowymi (przykrywanie, intensywność pików)
-        - Write... - wypisywanie pośrednich plików, np. informacje o przykrywaniach pików w danych widmach
+### IVa. Potrzebne pliki
+  1. listy pików 
+      - format listy pików Sparkiego
+  2. experiments_set.txt 
+      - kolejność jąder zgodna z listą pików
+  3. sekwencja
+      - FASTA
+### IVb. Kod
+- [ ] wczytywanie listy pików - nie tylko intensywności, ale też pozycje pików by określać przykrywanie.
+- [ ] sprawdzanie przykrywania się pików ()
+- [ ] przeliczanie wartości stałych CCR 
+- [ ] eksport wyników 
+- [ ] rysowanie wykresów
+- [ ] jeśli są to dane dla bialka zwiniętego możemy porównac do teorii - kompatypilność z danymi teoretycznymi i ewentulanie ze skryptem Ani do liczenia kątów
+1. Klasy:
+    - [x] CSpectrum   (informacje o widmach)
+    - [x] CPeak       (informacje o pikach)
+        - [ ] PrintPeak - metoda/funkcja do wypisywania informacji o konkretnym piku
+    - [x] CSequence   (informacje o sekwencji i wartości stałych CCR)
+2. Funkcje:
+    - [x] one2three - zmiana nazw aminikowasów z 1-literowego a 3-literowy
+    - [x] three2one - zmiana nazw aminikowasów z 3-literowego a 2-literowy
+    - 
+    - [ ] ReadInputFile - wczytywanie plików wejściowych do klas CSpectrum, CPeak, CSequence 
+        - [x] ReadExpSet - wczytywanie danych z pliku experiment_set.txt do klasy CSpectrum
+        - [x] ReadSequnce - wczytywanie sekwencji aminokwaów do klasy CSequence --> na razie tylko z FASTA
+        - [x] ReadPeakList - wczytywanie pozycji pików oraz ich wysokości do klas CPeak i CSpectrum
+    - [ ] CheckOverlap - porównywanie odległości między pikamy w danych wymiarach i uzupełaniaie informacji w klasie CPeak
+        - jeśli odległość w danych wymiarach będzie mniejsza niż .... to oznaczamy jako przykrywanie
+        - oznaczamy od razu w obu piki 
+    - [ ] CalcCCRRate - obliczanie stałych CCR 
+    - [ ] WriteCCRRate - wypisywanie pliku ze stałymi CCR i adnotacjiami jakościowymi (przykrywanie, intensywność pików)
+    - [ ] Write... - wypisywanie pośrednich plików, np. informacje o przykrywaniach pików w danych widmach
 IVc. Pliki wyjściowe
     - CCRRate.txt lub .csv - sekwencja, stałe CCR, podstawowe adnotacje (w rozszerzeniu csv lub txt)
     - log.txt - plik ze wszsytkim co wypisuje program w terminalu
