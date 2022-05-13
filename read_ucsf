@@ -325,7 +325,6 @@ def find_noise_point(peaks, s_dim, points_num, number_of_points_for_noise):
 def calc_list_of_points(peak_point, tile_size):
     L=[]                                        # tile number with our peak -1
     R=[]                                        # point number with peak in tile  
-    
     for one_peak_point in peak_point:
         l=[]
         r=[]
@@ -500,7 +499,7 @@ def Print_Peak_List_points(peaks, s_dim, type_list):
 # print ("\n\nSTART")
 """File Reading"""
 
-print ("File reading - start", end=" ")
+print ("File reading - start")
 Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, Centr_data, N_Tiles = read_ucsf_info (file_name)
 Peaks = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
 print ("---> finished")
@@ -525,7 +524,9 @@ else:
         print ("\nNoise calculation - start")
         List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
         Points_intens = read_intens(List_of_noise_points, file_name, Spectra_dim, Tile_size, N_Tiles)
-        average_noise_level = round(sum(list(map(abs,Points_intens)))/len(Points_intens), -1)
+        abs_Points_intens = list(map(abs,Points_intens))
+        sum_Points_intens = sum(abs_Points_intens)
+        average_noise_level = round(sum_Points_intens/len(Points_intens), 1)
         print ("average noise level = {:.2e}".format(average_noise_level))
         print ("50*average noise level = {:.2e}".format(50*average_noise_level))
         peak_level = 50*average_noise_level
@@ -575,7 +576,11 @@ else:
 
         #check if peak is in the highest position
         List_of_around_points, Points_intens, try_index = intens_aroun_peak(Try_position, Orgin_pos, file_name, Spectra_dim, Tile_size, N_Tiles)
-        if Points_intens.index(max(Points_intens)) == try_index:
+        if Points_intens[try_index] > 0 :
+                maximum = max
+        else: 
+                maximum = min    
+        if Points_intens.index(maximum(Points_intens)) == try_index:
             one_peak.is_center = True
         else: 
             one_peak.is_center = False

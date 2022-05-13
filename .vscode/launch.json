@@ -1,0 +1,20 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "/nhome/paulina/bramsel/qOpn_CCR/trans_long/34_trans_a/34.proc/34_trans_a.ucsf",
+                "/nhome/paulina/bramsel/qOpn_CCR/trans_long/34_trans_a/34.proc/NiCOi_1Hi.list"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
