@@ -31,7 +31,7 @@ if len(sys.argv)==1:
         --plevel [num]\t- if you know level when starting appear, add this with scientific numer notation e.g. 1e+7
         --norm or --noRemove\t- add this if you do not want remove invisible peaks
         --onlypoints\t- add this if you want only change ppm value to points value
-        --o or --output_name\t- add this if you want only change ppm value to points value\n""")
+        --o or --output_name\t- add this if you want \n""")
 
 
 

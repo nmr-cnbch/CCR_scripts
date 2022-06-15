@@ -12,7 +12,7 @@ angle_names: psi                         # angle: phi, psi
 angle_pos: -1                     # angle position of all peaks: -2, -1, 0, 1, 2
 NS_auto: 4                       # number of scans in auto version
 NS_cross: 24                      # number of scans in cross version
-TC: 28                              # time d8
+TC: 0.028                              # time d8
 H_roi: 7.0 8.6               #
 
 

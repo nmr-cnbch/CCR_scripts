@@ -8,10 +8,9 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "calc_CCR_rate.py",
             "args": [
-                "/nhome/paulina/bramsel/qOpn_CCR/trans_long/34_trans_a/34.proc/34_trans_a.ucsf",
-                "/nhome/paulina/bramsel/qOpn_CCR/trans_long/34_trans_a/34.proc/NiCOi_1Hi.list"
+                "/nhome/paulina/programy/atomatyzacja_CCR_2/przyklady/set_for_calcCCRrate"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

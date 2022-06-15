@@ -8,8 +8,8 @@ Created on Jan 27 11:18 2022
 """ Program do czytania list pików i obliczania stałych CCR"""
     
     
+from math import atanh
 from copy import deepcopy
-import enum
 import sys
 
 if len(sys.argv)==1:
@@ -21,14 +21,16 @@ if len(sys.argv)==1:
         --  """)
 
 file_director = sys.argv[1]
-
+if file_director[-1] != "/":
+    print (file_director)
+    file_director += "/"
 
 
 class CSpectrum:
     def __init__(self):
-        self.CCR_name = ''       # name of CCR: CCR_1, CCR_2
-        self.auto_name = ''       # name of file with auto version
-        self.cross_name = ''       # name of file with cross version
+        self.CCR_name = ""       # name of CCR: CCR_1, CCR_2
+        self.auto_name = ""       # name of file with auto version
+        self.cross_name = ""       # name of file with cross version
         self.n_dim = 0            # number of dimentions
         self.nucl_name = []            # nuclei of all peaks: H, N, C, CA, CB, HA, HB
         self.nucl_pos = []             # nuclei position of all peaks: -2, -1, 0, 1, 2 
@@ -45,23 +47,23 @@ class CSpectrum:
                     
 class CResidue:
     def __init__(self):
-        
-        self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
-        self.peak_intens = [0,0]      # peak hight in auto [0] and cross [1] version
-        self.descript = ""              # description of peak which is in first column in Sparky-like peak list
+        self.aa_name = "None"
         self.aa_number = 0              # the number of the amino acid to which this peak corresponds
-        self.peak_seq_pos_a = []
-
-        self.is_overlap = ''       # information about the presents of overlaping of a peak: maybe, yes, no   
-        self.overlap_peaks = []       #      
-        self.ccr_rate = -99999
         self.is_peak = False       # information about the presence of a peak
 
 
-class CSequence:
-    def __init__(self):
-        self.aa_name = "None"
-        self.aa_num = -1
+        self.peak_pos = []            # chemical shifts for all nuclei of peak, length depends on dimentionality
+        self.peak_pos_points = []
+        self.peak_intens = [0,0]      # peak hight in auto [0] and cross [1] version
+        self.descript = ""              # description of peak which is in first column in Sparky-like peak list
+        # self.peak_seq_pos_a = []
+
+        self.is_overlap = False       # information about the presents of overlaping of a peak: maybe, yes, no   
+        self.overlap_peaks = []       #      
+        self.is_ccr_rate = False
+        self.ccr_rate = -99999
+
+
         
         
 
@@ -135,21 +137,31 @@ def Res1to3(res):
     return i
 
 def extract_number(given_string):
-    only_number = ''
+    only_number = ""
     for indexi, i in enumerate(given_string):
         if i.isdigit():
             only_number += i
     return only_number
 
 
+def changeFlag(flaga):
+    if flaga == True:
+        flaga = False
+    elif flaga == False:
+        flaga = True
+    return flaga
 
-
-
+def calc_distance(peak1,peak2):
+    sum_of_squares = 0
+    for i in range(len(peak1)):
+        sum_of_squares += (peak1[i]-peak2[i])**2
+    dis =  sum_of_squares**(1/len(peak1))
+    return dis
 
 def ReadExpSet(file_director):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum
     experiments = []
     
-    with open("{}/experiments_set.txt".format(file_director), "r") as exp_set:
+    with open("{}experiments_set.txt".format(file_director), "r") as exp_set:
         print ("otwarte")
         lines = exp_set.readlines()
         expset_lines=[]
@@ -160,27 +172,25 @@ def ReadExpSet(file_director):               # wczytywanie danych z pliku experi
                     expset_lines.append(deepcopy(indexl))
             if "====" in line:
                 expset_lines.append(deepcopy(indexl))
-                if commentFlag ==True:
-                    commentFlag = False
-                elif commentFlag == False:
-                    commentFlag = True
+                commentFlag = changeFlag(commentFlag)
         print ("expset_lines", expset_lines)
         if commentFlag == False:
             expset_lines.append(deepcopy(len(lines)))
 
         for i in range(0,len(expset_lines)-1):
             # print ("Lines between ", expset_lines[i], expset_lines[i+1])
-            one_experinet=CSpectrum()
+            one_experinet = CSpectrum()
             one_experinet.name=lines[expset_lines[i]][8:-1]
             for line in range(expset_lines[i],expset_lines[i+1]):
-                if len(lines[line])>0:
+                if lines[line] != "\n":
                     items=lines[line].split()
                     if "type_of_CCR" in lines[line]:
-                        one_experinet.CCR_name=items[1]
+                        one_experinet.CCR_name=items[1][1:-1]
+                        print ("CCR_NAME", items[1][1:-1])
                     if "dir_auto" in lines[line]:
                         auto_name_dir = items[1]+"_"+one_experinet.CCR_name+"_a"
                         print ("auto_name_dir", auto_name_dir)
-                        one_experinet.auto_name=auto_name_dir
+                        one_experinet.auto_name = auto_name_dir
                     if "dir_cross" in lines[line]:
                         cross_name_dir = items[1]+"_"+one_experinet.CCR_name+"_x"
                         print ("cross_name_dir", cross_name_dir)
@@ -225,7 +235,6 @@ def ReadExpSet(file_director):               # wczytywanie danych z pliku experi
 def ReadSequnce(file_director):
 
     sequence = []
-
     with open("{}seq".format(file_director), "r") as input_file:
         linia_seq=input_file.readlines()
         FASTAFlag=False
@@ -234,17 +243,16 @@ def ReadSequnce(file_director):
             print ("FASTAFlag")
             # FASTAseq=[]
             aa_no = 0
-            for indexl,l_seq in enumerate(linia_seq):
-                if 0<indexl<len(linia_seq):
-                    oneletter=list(str(l_seq))
-                    for aa in oneletter: 
-                        if aa.isalpha():
-                            seq = CSequence()
-                            seq.aa_name = aa         
-                            aa_no += 1
-                            seq.aa_num = aa_no
-                            sequence.append(deepcopy(seq))
-                            # FASTAseq.append(deepcopy(seq))
+            for indexl,l_seq in enumerate(linia_seq[1:]):
+                oneletter=list(str(l_seq))
+                for aa in oneletter: 
+                    if aa.isalpha():
+                        seq = CResidue()
+                        seq.aa_name = aa         
+                        aa_no += 1
+                        seq.aa_number = aa_no
+                        sequence.append(deepcopy(seq))
+                        # FASTAseq.append(deepcopy(seq))
             
             ## Printing sequence     
             # print ("seqence lenth: ", len(sequence))
@@ -253,96 +261,119 @@ def ReadSequnce(file_director):
             #     # print (fastaseq.aa_name)            
             #     aa_rest=Res1to3(fastaseq.aa_name) # check whether seq file contains correct aa names 
             #     print ("%d%s"%(indexf+1, aa_rest))
-    return sequence, aa_no
+    return sequence
 
 
-
-
-def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_dim):
+def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, rel_pos, s_dim, p_list, points_mode=False):
+    
     NameFlag = [False, False]
-    listofnames = [".list","_new_ppm.list"]
-    # indexl_name = [-1, -1]
+    if points_mode == False:
+        listofnames = [".list","_new_ppm.list"]
+    else:
+        listofnames = ["_points.list","_new_points.list"]
     peak_list_basic_names = [peak_list_name_auto, peak_list_name_cross]
     peak_list_names = ["None","None"]
     for indexlv, list_verson in enumerate(peak_list_basic_names):
         for i, l in enumerate(listofnames):
-            peaklistfile = file_director+list_verson+l
+            peaklistfile = str(file_director+list_verson+l)
             try:
                 f=open(peaklistfile)
                 NameFlag[indexlv] = True
-                # indexl_name[indexlv] = i
                 peak_list_names[indexlv] = peaklistfile
                 f.close
             except FileNotFoundError:
                 print ("There is no such file or directory:", peaklistfile)
     
 
-    p_list = []
-    aa_max_number = 1
     if NameFlag[0] == True and NameFlag[1] == True:
         with open(peak_list_names[0], 'r') as pl_a, open(peak_list_names[1], 'r') as pl_x:  
-            # print (peak_list)
             p_lines_a = pl_a.readlines()
             p_lines_x = pl_x.readlines()
             for indexl, line in enumerate(p_lines_a):
                 if indexl > 1 :
-                    p_pos = CResidue()
                     item_a = line.split()
                     item_x = p_lines_x[indexl].split()
                     # Reading description
                     if item_a[0] != item_x[0]:
-                        print ("Error: Auto ({}) and cross ({}) peak list are not compatible".format(peak_list_names[0], peak_list_names[1]))
+                        print ("Error: Auto ({}) and cross ({}) peak list are not compatible:\n{} ? {}".format(peak_list_names[0], peak_list_names[1], item_a[0], item_x[0]))
                         sys.exit()
-                    p_pos.descript = item_a[0]
-                    aa = p_pos.descript.split("-")
+                    description = item_a[0]
+                    aminoacids = description.split("-")
                     try:
-                        p_pos.aa_number = int(aa[s_dim-1][1:-2])
+                        aminoacids_number = int(aminoacids[s_dim-1][1:-2])
                     except:
-                        p_pos.aa_number = int(aa[0][1:-1])
-                    if p_pos.aa_number>aa_max_number:
-                        aa_max_number=p_pos.aa_number
-                    # Reading peak position in sequence
-                    last_seq_pos = -1
-                    for indexn, n in enumerate(aa):
-                        if len(n)<3:
-                            p_pos.peak_seq_pos.append(deepcopy(last_seq_pos))
-                        else:
-                            last_seq_pos = extract_number(n)
-                            p_pos.peak_seq_pos.append(deepcopy(last_seq_pos))
-                    # Reading peak position in ppm
-                    if item_a[s_dim].isdigit():
-                        # p_pos.peak_pos.append(deepcopy(int(item_a[s_dim])))
-                        for i in range(1,s_dim+1):
-                            p_pos.peak_pos.append(deepcopy(int(item_a[i])))
-                    else: 
-                        # p_pos.peak_pos.append(deepcopy(float(item_a[s_dim])))
-                        for i in range(1,s_dim+1):
-                            p_pos.peak_pos.append(deepcopy(float(item_a[i])))
+                        aminoacids_number = int(aminoacids[0][1:-1])
+                    for indexr, residue in enumerate(p_list):
+                        if aminoacids_number == residue.aa_number:
+                            residue.is_peak = True
+                            residue.descript = description
+                            if points_mode == True:  # for points mode
+                                for i in range(1,s_dim+1):
+                                    residue.peak_pos_points.append(deepcopy(int(item_a[i])))
+                            else: 
+                                for i in range(1,s_dim+1):
+                                    residue.peak_pos.append(deepcopy(float(item_a[i])))
                     # Reading peak intensity
-                    if len(item_a)>s_dim+1:
-                        p_pos.peak_intens = float(item_a[s_dim+1])
-                    # print (p_pos.descript, p_pos.aa_number, p_pos.peak_seq_pos, p_pos.peak_pos, p_pos.peak_intens)
-                    p_list.append(deepcopy(p_pos))
+                            if len(item_a)>s_dim+1:
+                                residue.peak_intens[0] = float(item_a[s_dim+1])
+                                residue.peak_intens[1] = float(item_x[s_dim+1])
     else:
         print ("There is no such file or directory:", peak_list_names)
-    return p_list, aa_max_number
+    return p_list
 
 
 
-
-def ReadInputFile():
+def CheckOverlap(peak_list):
+    # pl = peak_list
+    for indexp1, peak1 in enumerate(peak_list):
+        if peak1.is_peak:
+            for indexp2, peak2 in enumerate(peak_list):
+                if indexp2 < indexp1:
+                    if peak2.is_peak:
+                        peaks_distance = calc_distance(peak1.peak_pos_points, peak2.peak_pos_points)
+                        if peaks_distance <= 3:
+                            peak1.is_overlap = True
+                            peak2.is_overlap = True
+                            peak1.overlap_peaks.append(peak2.aa_number)
+                            peak2.overlap_peaks.append(peak1.aa_number)
     return
 
 
-def CheckOverlap():
+
+def CalcCCRRate(peak_list,angle_position,number_scan,Tc):
+    for indexp, peak in enumerate(peak_list):
+        if not peak.is_overlap and peak.is_peak:
+            peak_list[indexp+angle_position].is_ccr_rate = True
+            ccr_rate_vol = -atanh((peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]))/Tc
+            peak_list[indexp+angle_position].ccr_rate = ccr_rate_vol
     return
 
 
-def CalcCCRRate():
-    return
 
-
-def WriteCCRRate():
+def WriteCCRRate(peak_list, file_director, ccr_name, s_dim):
+    new_list = "{0}{1}_CCRrate.list".format(file_director,ccr_name)
+    print ("new_peak_list", new_list)
+    max_lenth_discrip = 0
+    max_lenth_intens = 0
+    for p in peak_list:
+        pd = str(p.aa_number)+p.aa_name
+        if len(pd)>max_lenth_discrip:
+            max_lenth_discrip=len(pd)
+        if len(str(p.peak_intens[0]))>max_lenth_intens:
+            max_lenth_intens=len(str(p.peak_intens[0]))
+    with open(new_list, 'w') as listfile:
+        print ("\tInformation of files", file=listfile) 
+        for one_peak in peak_list:
+            if one_peak.is_ccr_rate == True:
+                peak_descr = str(one_peak.aa_number)+one_peak.aa_name
+                print ("{:{sentence_len}}".format(peak_descr, sentence_len=max_lenth_discrip), end="\t", file=listfile)
+                if one_peak.is_peak == True:
+                    for i in range(s_dim):
+                        print ("{:.3f}".format(one_peak.peak_pos[i]), end="\t", file=listfile)
+                    print ("{:{sentence_len}}\t{:{sentence_len}}\t{:.4f}".format(one_peak.peak_intens[0], one_peak.peak_intens[1], one_peak.ccr_rate, sentence_len=max_lenth_intens), file=listfile)
+                else: 
+                    print ("{:{sentence_len}}\t{:{sentence_len}}\t{:.4f}".format("Info from other peak","",one_peak.ccr_rate,sentence_len=7*s_dim), file=listfile)
+                
     return
 
 
@@ -350,6 +381,14 @@ def WriteCCRRate():
 print ("start")
 
 Experiments = ReadExpSet(file_director)
-AASequence = ReadSequnce(file_director)
-for experyment in Experiments:
-    experyment.peak = Read_peaklist(file_director, experyment.auto_name, experyment.cross_name, experyment.n_dim)
+Residue_List = ReadSequnce(file_director)
+for experiment in Experiments:
+    Read_peaklist(file_director, experiment.auto_name, experiment.cross_name, experiment.nucl_pos, experiment.n_dim, Residue_List, True)
+    Read_peaklist(file_director, experiment.auto_name, experiment.cross_name, experiment.nucl_pos, experiment.n_dim, Residue_List, False)
+    experiment.peak = Residue_List
+    CheckOverlap(experiment.peak)
+    if len(experiment.angle_pos)==1 or experiment.angle_pos[0] == experiment.angle_pos[1]:
+        CalcCCRRate(experiment.peak,experiment.angle_pos[0],experiment.ns,experiment.tc_vol)
+    WriteCCRRate(experiment.peak, file_director, experiment.CCR_name, experiment.n_dim)
+
+
