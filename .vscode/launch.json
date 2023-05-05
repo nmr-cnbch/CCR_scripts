@@ -4,13 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "calc_CCR_rate.py",
+            "program": "rysowanie_wykresow.py",
             "args": [
-                "/nhome/paulina/programy/atomatyzacja_CCR_2/przyklady/set_for_calcCCRrate"
+                "/nhome/paulina/dropbox/Dropbox/Notatki/Doktorat/CCR/ubiq/22_03_CCR_results"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
