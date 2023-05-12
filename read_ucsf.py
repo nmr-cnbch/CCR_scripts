@@ -133,6 +133,12 @@ class CPeak:
 
 
 
+def print_raport(text_to_write,in_terminal=True):
+    with open('{}/info.txt'.format(peak_list_dir_new), 'a') as txtfile:
+        if in_terminal:
+            print (text_to_write)
+        txtfile.write(text_to_write+"\n")
+
 
 
 """Reading functions"""
@@ -524,6 +530,8 @@ if __name__ == "__main__":
     # print ("File reading - start")
     Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, Centr_data, N_Tiles = read_ucsf_info (file_name)
     Peaks = read_peaklist(peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
+    with open('{}/info.txt'.format(peak_list_dir_new), 'w') as txtfile:
+        txtfile.write("File name: {}\n\n".format(file_name))
     print("Peak list read")
     print("=== Reading input files finished ===")
 
@@ -542,7 +550,7 @@ if __name__ == "__main__":
 
         """Noise calculation"""
         if UserPeakLevelFlag:
-            print ("Peak level starts from = {:.2e}".format(peak_level))
+            print_raport("Peak level starts from = {:.2e}".format(peak_level))
         else:
             print ("\n=== Noise calculation ===")
             List_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, number_of_points_for_noise)
@@ -552,7 +560,7 @@ if __name__ == "__main__":
             for val in Points_intens:
                 sum_of_squares+=(val-average_noise_level)**2
             standard_deviation = math.sqrt(sum_of_squares/len(Points_intens))
-            print ("Average noise level = {:.2e}".format(standard_deviation))
+            print_raport("Average noise level = {:.2e}\n".format(standard_deviation))
             peak_level = 50*standard_deviation
             print ("=== Noise calculation finished ===")
 
@@ -564,11 +572,14 @@ if __name__ == "__main__":
             print ("\n=== Peak centering and intensity reading ===")
             Peak_not_moved = 0
             Peak_moved = 0
+            Peak_not_visible = 0
             # Vector_set = [list(row) for row in (product([-1, 0, 1],repeat=4))]
             Vector_set2 = [-1,0,1]
-
-            with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'w') as txtfile:
-                txtfile.write("Peak_not_moved =     \nPeak_moved =     ")
+            peak_centering_info = []
+            peak_height_list = []
+            # with open('{}/info.txt'.format(peak_list_dir_new), 'w') as txtfile:
+            #     txtfile.write("Peak_not_moved =     \nPeak_moved =     \n")
+            #     txtfile.write("Average peaks height =  \nAverage noise level =  \nSignal to noise ration =  ")
             for indexpeak, one_peak in enumerate(Peaks):
                 Try_position = one_peak.peak_points_pos
                 Orgin_pos = one_peak.peak_points_pos
@@ -598,6 +609,7 @@ if __name__ == "__main__":
                             else: Peak_not_moved +=1
                     else: 
                         one_peak.is_visible = False
+                        Peak_not_visible += 1 
                         # print ("Peak:", indexpeak, "is not visible")
                         break
 
@@ -609,24 +621,29 @@ if __name__ == "__main__":
                         maximum = min    
                 if Points_intens.index(maximum(Points_intens)) == try_index:
                     one_peak.is_center = True
+                    peak_height_list.append(abs(Points_intens[try_index]))
                 else: 
                     one_peak.is_center = False
 
-                with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'a') as txtfile:
-                    if one_peak.is_visible == False:
-                        txtfile.write("\n{}\t({})\t- is not visible\n".format(indexpeak, one_peak.descript))
-                    else:
-                        txtfile.write("\n{}\t({})\n".format(indexpeak, one_peak.descript))
+                # with open('{}/info.txt'.format(peak_list_dir_new), 'a') as txtfile:
+                if one_peak.is_visible == False:
+                    peak_centering_info.append("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript))
+                else:
+                    peak_centering_info.append("\n{}\t({})".format(indexpeak, one_peak.descript))
 
-                    for i in range(len(try_pos)):
-                        txtfile.write("\t{}\t{}\n".format(try_pos[i], try_intens[i]))
-                    if one_peak.is_center == False:
-                        txtfile.write("\t\t\t\t\t\t\tis not in the highest position\t")
+                for i in range(len(try_pos)):
+                    peak_centering_info.append("\t{}\t{}".format(try_pos[i], try_intens[i]))
+                if one_peak.is_center == False:
+                    peak_centering_info.append("                     is not in the highest position\t")
 
-            with open('{}/peakcenter.txt'.format(peak_list_dir_new), 'r+') as txtfile:
-                # file_data = txtfile.read()
-                txtfile.seek(0,0)
-                txtfile.write("Peak_not_moved = {}\nPeak_moved = {}\n".format(Peak_not_moved,Peak_moved))
+            average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
+            print_raport("Peak not moved = {}\nPeak moved = {}\nPeak not visible = {}".format(Peak_not_moved,Peak_moved,Peak_not_visible))
+            print_raport("Average peaks height = {:.2e}".format(average_peaks_level))
+            if UserPeakLevelFlag==False:
+                print_raport("Signal to noise ratio = {:.2f}".format(average_peaks_level))
+            print_raport("\n")
+            for i in peak_centering_info:
+                print_raport(i, in_terminal=False)
 
             print ("=== Peak centering and intensity reading finished ===")
 
