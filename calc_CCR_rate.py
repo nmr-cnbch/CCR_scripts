@@ -78,18 +78,18 @@ else: exp_file_name = "{}experiments_set.txt".format(file_director)
 
 class CSpectrum:
     def __init__(self):
-        self.CCR_name = ""       # name of CCR: CCR_1, CCR_2
-        self.auto_name = ""       # name of file with auto version
-        self.cross_name = ""       # name of file with cross version
-        self.n_dim = 0            # number of dimentions
+        self.CCR_name = ""       # name of CCR: CCR_1, CCR_2,                           -> required
+        self.auto_name = ""       # name of file with auto version                      -> required
+        self.cross_name = ""       # name of file with cross version                    -> required
+        self.n_dim = 0            # number of dimentions                                -> required
         self.nucl_name = []            # nuclei of all peaks: H, N, C, CA, CB, HA, HB
         self.nucl_pos = []             # nuclei position of all peaks: -2, -1, 0, 1, 2 
         
         self.n_angle = 0          # number of measured angle  
-        self.angle = []           # angle: phi, psi
-        self.angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2
-        self.ns = [0,0]          # number of scans in auto [0] and cross [1] version
-        self.tc_vol = -1.0        # time of ccr evolution
+        self.angle = []           # angle: phi, psi                                     -> required
+        self.angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2        -> required
+        self.ns = [0,0]          # number of scans in auto [0] and cross [1] version    -> required
+        self.tc_vol = -1.0        # time of ccr evolution                               -> required
         self.Hroi = [0.0,0.0]       # downfield and upfield of direct dimention
 
         self.peak = []            #informations about peaks from CResidue class
@@ -910,20 +910,26 @@ if __name__ == "__main__":
     print_raport ("\n=== Compering experiments with diffrent number of NUs points ===\n")
     for CCR_type in ToCompereDict:
         if len(ToCompereDict[CCR_type])>1:
-            max_nus_number = 0
-            min_nus_number = 10000000
-            min_nus_exp = -1
-            max_nus_exp = -1 
+
+            max_number = 0.0
+            min_number = 10000000.0
+            min_exp = -1
+            max_exp = -1 
             for exp_number in ToCompereDict[CCR_type]:
                 nus_number = Additional_text(Experiments[exp_number])[1:-3]
                 if nus_number.isdigit:
-                    if int(nus_number) > int(max_nus_number):
-                        max_nus_number = int(nus_number)
-                        max_nus_exp = exp_number
-                    if int(nus_number) < int(min_nus_number):
-                        min_nus_number = int(nus_number)
-                        min_nus_exp = exp_number
-            plot_gamma_exp_vs_epx(Experiments[min_nus_exp].peak,Experiments[max_nus_exp].peak, CCR_type,str(min_nus_number),str(max_nus_number))
+                    nus_number = float(nus_number)
+                    # if nus_number.is_integer:
+                    if nus_number > max_number:
+                        max_number = nus_number
+                        max_exp = exp_number
+                    if nus_number < min_number:
+                        min_number = nus_number
+                        min_exp = exp_number
+            if max_number.is_integer:
+                plot_gamma_exp_vs_epx(Experiments[min_exp].peak,Experiments[max_exp].peak, CCR_type,str(int(min_number)),str(int(max_number)))
+            else:
+                plot_gamma_exp_vs_epx(Experiments[min_exp].peak,Experiments[max_exp].peak, CCR_type,str(min_number),str(max_number))
     print_raport ("\n=== Compering experiments with diffrent number of NUs points finished ===\n")
     if refgammaFlag:
         print_raport ("\n=== Compering with reference values of CCR rates ===\n")

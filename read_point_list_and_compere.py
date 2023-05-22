@@ -11,7 +11,6 @@ Created on Mar 15 12:55 2022
 
 
 from copy import deepcopy
-from curses.ascii import isdigit
 import math
 import sys
 import os
