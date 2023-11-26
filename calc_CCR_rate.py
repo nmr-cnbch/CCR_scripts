@@ -3,9 +3,9 @@
 """
 Created on Jan 27 11:18 2022
 
-@author: paulina
+@author: Paulina Bartosinska-Marzec
 """
-""" Program do czytania list pików i obliczania stałych CCR"""
+""" The script to reading Sparky peak list and calculating CCR rates"""
     
     
 from math import atanh
@@ -21,7 +21,7 @@ import os
 
 if len(sys.argv)==1:
     sys.exit("""
-    The script to calculate CCR constants. In director has to contains:
+    The script to calculate CCR rates. In director has to contains:
     - peak lists (with peak position in points and peak height)
     - experiment_set
     - sequence in FASTA format
@@ -29,14 +29,14 @@ if len(sys.argv)==1:
     For run script type in command line:
         python3 calc_CCR_rate.py [file director]
 
-    additionaly you can add:
-        --seq  - if name of file with aminoacid sequence is not 'seq', add this with name of file
+    additionally you can add:
+        --seq  - if name of file with amino acid sequence is not 'seq', add this with name of file
         --refgamma  - if you have file with reference values of CCR rates, add this with name of file
                       (file must be .csv, columns name should be: AA, psi_angle (or/and phi_angle), CCR name
-        --expset    - if you want use experiments setup file with diffrent filename than "experiments_set.txt" (structure of file must be the same as orginal file) """)
+        --expset    - if you want use experiments setup file with different filename than "experiments_set.txt" (structure of file must be the same as orginal file) """)
 
 
-"""Commantline reading"""
+"""Command line reading"""
 
 file_director = sys.argv[1]
 if file_director[-1] != "/":
@@ -47,7 +47,7 @@ if "--seq" in sys.argv:
     i = sys.argv.index("--seq")
     seq_file_name = sys.argv[i+1] 
 else: seq_file_name = "{}seq".format(file_director)
-print("File with aminoacid sequence: {}".format(seq_file_name)) 
+print("File with amino acid sequence: {}".format(seq_file_name)) 
 
 if "--refgamma" in sys.argv: 
     i = sys.argv.index("--refgamma")
@@ -81,7 +81,7 @@ class CSpectrum:
         self.CCR_name = ""       # name of CCR: CCR_1, CCR_2,                           -> required
         self.auto_name = ""       # name of file with auto version                      -> required
         self.cross_name = ""       # name of file with cross version                    -> required
-        self.n_dim = 0            # number of dimentions                                -> required
+        self.n_dim = 0            # number of dimensions                                -> required
         self.nucl_name = []            # nuclei of all peaks: H, N, C, CA, CB, HA, HB
         self.nucl_pos = []             # nuclei position of all peaks: -2, -1, 0, 1, 2 
         
@@ -90,13 +90,60 @@ class CSpectrum:
         self.angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2        -> required
         self.ns = [0,0]          # number of scans in auto [0] and cross [1] version    -> required
         self.tc_vol = -1.0        # time of ccr evolution                               -> required
-        self.Hroi = [0.0,0.0]       # downfield and upfield of direct dimention
+        self.Hroi = [0.0,0.0]       # downfield and upfield of direct dimension
+        self.noise = [0.0,0.0]       # noise average level auto [0] and cross [1] version    -> required
 
-        self.peak = []            #informations about peaks from CResidue class
+        self.peak = []            #information about peaks from CResidue class
         self.is_peaklist = False
         self.other = ""
-                    
-class CResidue:
+
+    def CalcErrorValue(self,peak_number:int):
+        print_raport("Calculating gamma error for peak number: {}".format(peak_number))
+        Ix = self.peak[peak_number].peak_intens[1]
+        Ia = self.peak[peak_number].peak_intens[0]
+        NSa = self.ns[0]
+        NSx = self.ns[1]
+        noiseIa = self.noise[0]
+        noiseIx = self.noise[1]
+        squareDerivativeArcTanh = math.pow(1/(1-math.pow((Ix*NSa)/(Ia*NSx),2)),2)
+        sumOfSquaresOfPeakHightDeviation = math.pow(noiseIx/Ia,2) + math.pow(noiseIa*Ix/Ia,2)
+        squareError = 1/self.tc_vol * squareDerivativeArcTanh * math.pow(NSa/NSx,2) * sumOfSquaresOfPeakHightDeviation
+        self.peak[peak_number].ccrrate_error_value = math.sqrt(squareError)
+
+    def CheckOverlap(self):
+        # pl = peak_list
+        for indexp1, peak1 in enumerate(self.peak):
+            if peak1.is_peak:
+                for indexp2, peak2 in enumerate(self.peak):
+                    if indexp2 < indexp1:
+                        if peak2.is_peak:
+                            peaks_distance = calc_distance(peak1.peak_pos_points, peak2.peak_pos_points)
+                            if peaks_distance <= 3:
+                                peak1.is_overlap = True
+                                peak2.is_overlap = True
+                                peak1.overlap_peaks[peak2.aa_number]=peaks_distance
+                                peak2.overlap_peaks[peak1.aa_number]=peaks_distance
+
+    def CalcCCRRate(self):
+        for indexp, peak in enumerate(self.peak):
+            if not peak.is_overlap and peak.is_peak:
+                self.peak[indexp+self.angle_pos[0]].is_ccr_rate = True
+                try:
+                    # print (peak.peak_intens[1], number_scan[0], peak.peak_intens[0],number_scan[1], "---->", (peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]))
+                    if self.CCR_name == "CCR_5" or self.CCR_name == "CCR_6":
+                        ccr_rate_vol = -atanh((peak.peak_intens[1]*self.ns[0])/(peak.peak_intens[0]*self.ns[1]))/self.tc_vol
+                        peak.CalcErrorValue(indexp+self.angle_position)
+                    else:
+                        ccr_rate_vol = atanh((peak.peak_intens[1]*self.ns[0])/(peak.peak_intens[0]*self.ns[1]))/self.tc_vol
+                except:
+                    ccr_rate_vol = (peak.peak_intens[1]*self.ns[0])/(peak.peak_intens[0]*self.ns[1]) #"atanh(x) - x shoudl be beetween -1 and 1"
+                    peak.ccrrate_calculation_error = True
+                self.peak[indexp+self.angle_pos[0]].ccr_rate = ccr_rate_vol
+        return
+
+
+
+class CResidue():
     def __init__(self):
         self.aa_name = "None"
         self.aa_number = 0              # the number of the amino acid to which this peak corresponds
@@ -108,16 +155,18 @@ class CResidue:
         self.peak_intens = [0.0,0.0]      # peak hight in auto [0] and cross [1] version
         self.descript = ""              # description of peak which is in first column in Sparky-like peak list
         # self.peak_seq_pos_a = []
-        self.is_overlap = False       # information about the presents of overlaping of a peak: maybe, yes, no   
+        self.is_overlap = False       # information about the presents of overlapping of a peak: maybe, yes, no   
         self.overlap_peaks = {}       #     
 
         self.is_ccr_rate = False
         self.ccr_rate = -99999.0
-        self.ccrrate_error = False
+        self.ccrrate_error_value = 0.0
+        self.ccrrate_calculation_error = False
 
         self.is_gamma_calc = False      # information about the presence of a reference gamma
         self.gamma_ref = -99999.0       # value of gamma (CCR rate) which will use as reference data for experimental data, value additional file with calculated previosly gammas
         
+    
 
 
         
@@ -202,6 +251,7 @@ def CCRname2Ratename(ccrname):
     elif ccrname=="CCR_6": i="cCSA0_Ca1Ha1"
     elif ccrname=="CCR_7": i="N1Hn1_cCSA1"
     elif ccrname=="CCR_8": i="cCSA0_cCSA1"
+    elif ccrname=="CCR_9": i="Ca1Ha1_Ca2Ha2"
     
     else:
         print ("Wrong name of CCR (",ccrname,"), check the experiment set file")
@@ -333,6 +383,9 @@ def ReadExpSet(exp_file):               # wczytywanie danych z pliku experiments
                     if "other" in lines[line]:
                         one_experinet.other=items[1]
                         # print ("CCR_NAME", items[1])
+                    if "noise" in lines[line]:
+                        one_experinet.noise[0]=float(items[1])
+                        one_experinet.noise[1]=float(items[2])
             experiments.append(deepcopy(one_experinet))
             print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experinet.CCR_name,one_experinet.other,one_experinet.auto_name,one_experinet.cross_name))
             # print ("Experiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(i, one_experinet.CCR_name, one_experinet.n_dim, one_experinet.nucl_name, one_experinet.nucl_pos, one_experinet.n_angle, one_experinet.angle_pos, one_experinet.angle, one_experinet.ns, one_experinet.tc_vol, one_experinet.Hroi), file=RaportBox)
@@ -408,11 +461,11 @@ def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_di
                         sys.exit()
                     description = item_a[0]
                     aminoacids = description.split("-")
-                    # print (aminoacids)
-                    try:
-                        aminoacids_number = int(aminoacids[s_dim-1][1:-2])
-                    except:
-                        aminoacids_number = int(aminoacids[0][1:-2])
+                    aminoacids_number = ''.join([n for n in str(aminoacids[s_dim-1]) if n.isdigit()])
+                    if aminoacids_number == '':
+                        aminoacids_number = ''.join([n for n in str(aminoacids[0]) if n.isdigit()])
+                    print("aminoacids_number: ",aminoacids_number,description)
+                    aminoacids_number = int(aminoacids_number)
                     for residue in p_list:
                         # residue = CResidue()
                         if aminoacids_number == residue.aa_number:
@@ -427,6 +480,7 @@ def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_di
                                     residue.peak_pos.append(deepcopy(float(item_a[i])))
                     # Reading peak intensity
                             if len(item_a)>s_dim+1:
+                                print_raport("auto = {}, cross = {}".format(item_a[s_dim+1],item_x[s_dim+1]))
                                 residue.peak_intens[0] = float(item_a[s_dim+1])
                                 residue.peak_intens[1] = float(item_x[s_dim+1])
     else:
@@ -465,38 +519,7 @@ def Read_Reference_Gamma(gamma_cal_file_name):
 """Calc and write functions"""
 
 
-def CheckOverlap(peak_list):
-    # pl = peak_list
-    for indexp1, peak1 in enumerate(peak_list):
-        if peak1.is_peak:
-            for indexp2, peak2 in enumerate(peak_list):
-                if indexp2 < indexp1:
-                    if peak2.is_peak:
-                        peaks_distance = calc_distance(peak1.peak_pos_points, peak2.peak_pos_points)
-                        if peaks_distance <= 3:
-                            peak1.is_overlap = True
-                            peak2.is_overlap = True
-                            peak1.overlap_peaks[peak2.aa_number]=peaks_distance
-                            peak2.overlap_peaks[peak1.aa_number]=peaks_distance
-    return
 
-
-
-def CalcCCRRate(peak_list,angle_position,number_scan,Tc,CCR_name):
-    for indexp, peak in enumerate(peak_list):
-        if not peak.is_overlap and peak.is_peak:
-            peak_list[indexp+angle_position].is_ccr_rate = True
-            try:
-                # print (peak.peak_intens[1], number_scan[0], peak.peak_intens[0],number_scan[1], "---->", (peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]))
-                if CCR_name == "CCR_5" or CCR_name == "CCR_6":
-                    ccr_rate_vol = -atanh((peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]))/Tc
-                else:
-                    ccr_rate_vol = atanh((peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]))/Tc
-            except:
-                ccr_rate_vol = (peak.peak_intens[1]*number_scan[0])/(peak.peak_intens[0]*number_scan[1]) #"atanh(x) - x shoudl be beetween -1 and 1"
-                peak.ccrrate_error = True
-            peak_list[indexp+angle_position].ccr_rate = ccr_rate_vol
-    return
 
 def Additional_text(exp):
     if exp.other=="":
@@ -528,15 +551,17 @@ def LRegression_expresion(x,y):
 
 
 
-def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add=""):
+def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add="",add2=""):
 
     min_max_value = [+100.0,-100.0]         #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
     gamma_calculated = []
     gamma_experimental = []
+    gamma_calc_error = []            # ERROR GAMMA INFO, 9.11.2023
     for one_peak in peaks:
-        if one_peak.is_ccr_rate and one_peak.is_gamma_calc:
+        if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
             gamma_calculated.append(deepcopy(one_peak.gamma_ref))
             gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+            gamma_experimental.append(deepcopy(one_peak.ccrrate_error_value))            # ERROR GAMMA INFO, 9.11.2023
             if one_peak.gamma_ref<min_max_value[0]:
                 min_max_value[0]=one_peak.gamma_ref
             if one_peak.ccr_rate<min_max_value[0]:
@@ -555,7 +580,8 @@ def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add=""):
     # Plotting both the curves simultaneously
     plt.axline([0,0],slope=1, linestyle=(0, (5, 5)), linewidth=1.5, color='darkgray', label='x=y')
     plt.scatter(gamma_calculated, gamma_experimental, s=10, color='#0066ffff', label='structure-predicted vs experimental')
-    
+    plt.errorbar(gamma_calculated, gamma_experimental, yerr=gamma_calc_error,fmt='o') #            # ERROR GAMMA INFO, 9.11.2023
+            
     # Calculating Linear Regression
     # lr_exp_y_list,lr_expresion, coefition, = LRegression_expresion(gamma_calculated,gamma_experimental)
     # plt.plot(gamma_calculated, lr_exp_y_list, color='forestgreen', label='{}, $R^2$ = {:.3f}'.format(str(lr_expresion),coefition))
@@ -585,7 +611,7 @@ def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add=""):
     
     # To load the display window
     # plt.savefig("{}/wykresy2/{}_exp_vs_calc.png".format(Dir, tfn[0].name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
-    plt.savefig("{}{}_exp_vs_calc.png".format(file_director, ccr_name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
+    plt.savefig("{}{}_exp_vs_calc{}.png".format(file_director, ccr_name,add2), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
     # plt.show()
     plt.clf()
     return
@@ -725,7 +751,7 @@ def WriteCCRRate_small(peak_list, ccr_name, add=""):
         for one_peak in peak_list:
             one_row = {}
             one_row["AA"] = one_peak.aa_number
-            if one_peak.is_ccr_rate == True and one_peak.ccrrate_error == False and one_peak.aa_name != "G":
+            if one_peak.is_ccr_rate == True and one_peak.ccrrate_calculation_error == False and one_peak.aa_name != "G":
                 one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
             else:
                 one_row["CCR rate"] = "nan"
@@ -759,7 +785,7 @@ def WriteCCRRate_all_info(peak_list, ccr_name, s_dim, autoname, crossname, Tctim
                     print ("{:.3f}".format(one_peak.peak_pos[i]), end="\t", file=listfile)
                 if one_peak.aa_name == "G":
                     print ("{}".format("glycine - no CCR rate"), file=listfile)
-                elif one_peak.ccrrate_error == False:
+                elif one_peak.ccrrate_calculation_error == False:
                     print ("{:{sentence_len}}\t{:{sentence_len}}\t{:.4f}".format(one_peak.peak_intens[0], one_peak.peak_intens[1], one_peak.ccr_rate, sentence_len=max_lenth_intens), file=listfile)
                 else:
                     print ("{:{sentence_len}}\t{:{sentence_len}}\tpeak intens error: Ix/Ia = {:.4f}".format(one_peak.peak_intens[0], one_peak.peak_intens[1], one_peak.ccr_rate, sentence_len=max_lenth_intens), file=listfile)
@@ -820,7 +846,7 @@ def WriteCCRRate_all_info_CSV(peak_list, ccr_name, s_dim, autoname, crossname, T
                 else:
                     one_row["intensity in auto"] = one_peak.peak_intens[0]
                     one_row["intensity in cross"] = one_peak.peak_intens[1]
-                    if one_peak.ccrrate_error == False:
+                    if one_peak.ccrrate_calculation_error == False:
                         one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
                     else:
                         one_row["Comments"] = "peak intens error"
@@ -850,6 +876,7 @@ def Write_ALL_CCRRate_CSV():
         for experiment in Experiments:
             Add_textt=Additional_text(experiment)
             headers.append(deepcopy('{}{}'.format(experiment.CCR_name,Add_textt)))
+            headers.append(deepcopy('{}_error'.format(experiment.CCR_name)))            # ERROR GAMMA INFO, 9.11.2023
         writer = csv.DictWriter(csv_file, fieldnames=headers, delimiter=",")
         writer.writeheader()
         zero_row = {}
@@ -864,10 +891,12 @@ def Write_ALL_CCRRate_CSV():
                 Add_textt=Additional_text(experiment)
                 one_peak = experiment.peak[indexaa]
                 one_row["AA"] = str(one_peak.aa_number)+Res1to3(one_peak.aa_name)
-                if one_peak.is_ccr_rate == True and one_peak.ccrrate_error == False and one_peak.aa_name != "G":
+                if one_peak.is_ccr_rate == True and one_peak.ccrrate_calculation_error == False and one_peak.aa_name != "G":
                     one_row['{}{}'.format(experiment.CCR_name,Add_textt)] = '{:.4f}'.format(one_peak.ccr_rate)
+                    one_row['{}_error'.format(experiment.CCR_name)] = '{:.4f}'.format(one_peak.ccrrate_error_value)            # ERROR GAMMA INFO, 9.11.2023
                 else:
                     one_row['{}{}'.format(experiment.CCR_name,Add_textt)] = "nan"
+                    one_row['{}_error'.format(experiment.CCR_name)] = "nan"            # ERROR GAMMA INFO, 9.11.2023
             writer.writerow(one_row)
     print ("All CCR rates are in:", new_list)
     return
@@ -899,6 +928,9 @@ if __name__ == "__main__":
             if len(experiment.angle_pos)==1 or experiment.angle_pos[0] == experiment.angle_pos[1]:
                 CalcCCRRate(experiment.peak,experiment.angle_pos[0],experiment.ns,experiment.tc_vol,experiment.CCR_name)
                 print_raport("Calculation of CCR rates for {}{} is ready".format(experiment.CCR_name,Add_text))
+            elif experiment.angle_pos[0] < experiment.angle_pos[1]:
+                CalcCCRRate(experiment.peak,experiment.angle_pos[0],experiment.ns,experiment.tc_vol,experiment.CCR_name)
+                print_raport("Calculation of CCR rates for {}{} is ready".format(experiment.CCR_name,Add_text))
             if refgammaFlag:
                 if experiment.CCR_name in gamma_ref_dict:
                     Add_ref_gamma(gamma_ref_dict["seq_num"],gamma_ref_dict[experiment.CCR_name],experiment.peak)
@@ -907,17 +939,16 @@ if __name__ == "__main__":
             WriteCCRRate_all_info_CSV(experiment.peak, experiment.CCR_name, experiment.n_dim, experiment.auto_name, experiment.cross_name, experiment.tc_vol,add=Add_text)
     print_raport ("\n=== Calculating CCR rates finished ===")
     Write_ALL_CCRRate_CSV()
-    print_raport ("\n=== Compering experiments with diffrent number of NUs points ===\n")
+    print_raport ("\n=== Compering experiments with diffrent number of NUS points ===\n")
     for CCR_type in ToCompereDict:
         if len(ToCompereDict[CCR_type])>1:
-
             max_number = 0.0
             min_number = 10000000.0
             min_exp = -1
             max_exp = -1 
             for exp_number in ToCompereDict[CCR_type]:
                 nus_number = Additional_text(Experiments[exp_number])[1:-3]
-                if nus_number.isdigit:
+                if nus_number.isdigit() == True:
                     nus_number = float(nus_number)
                     # if nus_number.is_integer:
                     if nus_number > max_number:
@@ -930,7 +961,7 @@ if __name__ == "__main__":
                 plot_gamma_exp_vs_epx(Experiments[min_exp].peak,Experiments[max_exp].peak, CCR_type,str(int(min_number)),str(int(max_number)))
             else:
                 plot_gamma_exp_vs_epx(Experiments[min_exp].peak,Experiments[max_exp].peak, CCR_type,str(min_number),str(max_number))
-    print_raport ("\n=== Compering experiments with diffrent number of NUs points finished ===\n")
+    print_raport ("\n=== Compering experiments with diffrent number of NUS points finished ===\n")
     if refgammaFlag:
         print_raport ("\n=== Compering with reference values of CCR rates ===\n")
         for CCR_type in ToCompereDict:
@@ -940,7 +971,11 @@ if __name__ == "__main__":
                 for exp_number in ToCompereDict[CCR_type]:
                     PeaksTable.append(deepcopy(Experiments[exp_number].peak))
                     DescripTable.append(deepcopy(Additional_text(Experiments[exp_number])))
+                    plot_gamma_gamma(Experiments[exp_number].peak,CCR_type,
+                                     add=Additional_text(Experiments[exp_number]),
+                                     add2=Additional_text(Experiments[exp_number]))
                 plot_gamma_diff(PeaksTable, CCR_type, DescripTable)
+                
             else:
                 plot_gamma_gamma(Experiments[ToCompereDict[CCR_type][0]].peak,CCR_type,add=Additional_text(Experiments[ToCompereDict[CCR_type][0]]))
         print_raport ("=== Compering with reference values of CCR rates finished ===\n")
