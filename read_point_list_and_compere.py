@@ -7,7 +7,7 @@ Created on Mar 15 12:55 2022
 """
 """  """
 
-""" terminal: python3 read_point_list_and_compere [peak list1] [peak list2] [peak list3]...[peak listN] --dim [] --comp2list [] []"""
+""" The script to compering peak list """
 
 
 from copy import deepcopy
