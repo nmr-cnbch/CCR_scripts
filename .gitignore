@@ -2,6 +2,12 @@ CCR_scripts.zip
 read_point_list_and_compere
 read_ucsf
 read_ucsf_sprawdzanie_szumu.txt
+set_for_calcCCRrate_qOpn/
+set_for_calcCCRrate_Ubiq/
+ubiq_4D/
+set_for_readucsf/
+Uklad_1/
+Uklad_2/
 set_for_calcCCRrate_qOpn/4_CCR_1_a_new_ppm.list
 set_for_calcCCRrate_qOpn/5_CCR_1_x_new_ppm.list
 set_for_calcCCRrate_qOpn/6_CCR_2_a_new_ppm.list
