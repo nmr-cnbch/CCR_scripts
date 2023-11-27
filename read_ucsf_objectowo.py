@@ -20,7 +20,7 @@ import math
 import time
 import argparse #https://docs.python.org/3/library/argparse.html
 from pathlib import Path
-from ../BioNMRdictionary.py import *
+from BioNMRdictionary import *
 import logging
 
 
@@ -56,9 +56,9 @@ parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  def
 args = parser.parse_args()
 
 
-filename = args.filename
-if not os.path.exists(filename): 
-    print("There is not such file like this: ", filename)
+
+if not os.path.exists(args.filename): 
+    print("There is not such file like this: ", args.filename)
     sys.exit(1)
 if not os.path.exists(args.peak_list): 
     print("There is not such file like this: ", args.peak_list)
@@ -109,7 +109,7 @@ def print_raport(text_to_write,in_terminal=True):
             print (text_to_write)
         txtfile.write(text_to_write+"\n")
 
-class Spectrum:
+class CSpectrum:
     def __init__(self,filename,peak_list):
         self.nucl_name = []
         self.points_num = []
@@ -120,99 +120,105 @@ class Spectrum:
         self.sw_ppm = []
         self.data_center = []
         self.spectra_dimentionality = 0
-        self.peaks = read_peaklist(peak_list)
-
-    
-        with open(filename, "rb") as ucsf_file:
-            """Read spectra dimentionality"""
-            ucsf_file.seek(10)
-            ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
-            self.spectra_dim = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value 
-            print ("Spectra dimensiolity:", self.spectra_dim)
-
-            """Read spectra format"""
-            ucsf_file.seek(13)
-            ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
-            spectra_format = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value  
-
-            """Read nucleus name"""
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(180+128*i)                                       # nucleus name (1H, 13C, 15N, 31P); first is after 180 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(6)                                   # 6 byte per information 
-                text_data = ucsf_data.decode('utf-8')                           # convert bytes to string    
-                # print ("nucleus name", ucsf_data, "\t", text_data)
-                # print (text_data)
-                self.nucl_name.append(deepcopy(text_data))
-                # print (self.nucl_name[0])
-            self.nucl_name.insert(0,self.nucl_name.pop())
-            # print ("tutaj", self.nucl_name[0], self.nucl_name[1],self.nucl_name[2],self.nucl_name[3])
-            # for ii in range(len(self.nucl_name)):
-            #     print("bbb", self.nucl_name[ii])
-            print ("Nucleus names:",*self.nucl_name)
-
-            """Read number of points per asix"""
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(188+128*i)                                       # integer number of data points along axis; first is after 188 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-                bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
-                # print ("self.points_num", ucsf_data, "\t", bytes2int)
-                self.points_num.append(deepcopy(bytes2int)) 
-            self.points_num.insert(0,self.points_num.pop())
-            print ("Number of points in axis:",*self.points_num)
-
-            """Read integer tile size along this axis"""
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(196+128*i)                                       # integer tile size along this axis; first is after 196 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-                bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
-                # print ("tile size", ucsf_data, "\t", bytes2int)
-                self.tile_size.append(deepcopy(bytes2int))
-            self.tile_size.insert(0,self.tile_size.pop())
-            # print (self.tile_size)
-
-            """Read float spectrometer frequency for this nucleus (MHz) """
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(200+128*i)                                       # float spectrometer frequency for this nucleus (MHz) ; first is after 196 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-                [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-                self.spectr_fq.append(deepcopy(bytes2float))
-            self.spectr_fq.insert(0,self.spectr_fq.pop())
-            print ("Spectrometer frequency (MHz): ",' '.join("{:.2f}".format(x) for x in self.spectr_fq))
-
-            """Read float spectral width (Hz)"""
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(204+128*i)                                       # float spectral width (Hz) ; first is after 196 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-                [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-                self.sw.append(deepcopy(bytes2float))
-            self.sw.insert(0,self.sw.pop())
-            print ("Spectral width (Hz):", ' '.join("{:.0f}".format(x) for x in self.sw))
-
-
-            """Read float center of data (ppm)"""
-            for i in range(0,self.spectra_dim):
-                ucsf_file.seek(208+128*i)                                       # float center of data (ppm) ; first is after 196 bytes, next one is after additional 128 bytes
-                ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
-                [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
-                self.data_center.append(deepcopy(bytes2float))
-            self.data_center.insert(0,self.data_center.pop())
-            # print ("self.data_center",self.data_center)
-
-        """Change spectral width from Hz to ppm"""
-        for p in range(len(self.sw)):
-            sw_sparky = self.sw[p]-(self.sw[p]/self.points_num[p])
-            self.sw_ppm.append(deepcopy(sw_sparky/self.spectr_fq[p]))
-        print ("Spectral width (ppm):", ' '.join("{:.1f}".format(x) for x in self.sw_ppm))
-        # print ("self.spectr_fq", self.spectr_fq)
-        # print ("self.data_center",self.data_center)
-        # print ("self.sw =", self.sw, "\nsw_ppm =", self.sw_ppm)
+        self.peak_level = 0.0
+        self.noise_level = 0.0
         
-        for i in range (0,self.spectra_dim):
-            if self.points_num[i]%self.tile_size[i]==0:
-                self.n_tiles.append(deepcopy(int(self.points_num[i]/self.tile_size[i])))
-            else: 
-                self.n_tiles.append(deepcopy(int(self.points_num[i]/self.tile_size[i])+1))
+        ReadSpecraParamiters(filename)
+        ChangeHz2ppm()
+        
+        self.peaks = read_peaklist(peak_list)
+        
+        def ReadSpecraParamiters(self,filename):
+            with open(filename, "rb") as ucsf_file:
+                """Read spectra dimentionality"""
+                ucsf_file.seek(10)
+                ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
+                self.spectra_dim = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value 
+                print ("Spectra dimensiolity:", self.spectra_dim)
 
+                """Read spectra format"""
+                ucsf_file.seek(13)
+                ucsf_data = ucsf_file.read(1)                                   # 1 byte per information 
+                spectra_format = int.from_bytes(ucsf_data, byteorder='big')         # convert bytes to integer value  
+
+                """Read nucleus name"""
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(180+128*i)                                       # nucleus name (1H, 13C, 15N, 31P); first is after 180 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(6)                                   # 6 byte per information 
+                    text_data = ucsf_data.decode('utf-8')                           # convert bytes to string    
+                    # print ("nucleus name", ucsf_data, "\t", text_data)
+                    # print (text_data)
+                    self.nucl_name.append(deepcopy(text_data))
+                    # print (self.nucl_name[0])
+                self.nucl_name.insert(0,self.nucl_name.pop())
+                # print ("tutaj", self.nucl_name[0], self.nucl_name[1],self.nucl_name[2],self.nucl_name[3])
+                # for ii in range(len(self.nucl_name)):
+                #     print("bbb", self.nucl_name[ii])
+                print ("Nucleus names:",*self.nucl_name)
+
+                """Read number of points per asix"""
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(188+128*i)                                       # integer number of data points along axis; first is after 188 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+                    bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
+                    # print ("self.points_num", ucsf_data, "\t", bytes2int)
+                    self.points_num.append(deepcopy(bytes2int)) 
+                self.points_num.insert(0,self.points_num.pop())
+                print ("Number of points in axis:",*self.points_num)
+
+                """Read integer tile size along this axis"""
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(196+128*i)                                       # integer tile size along this axis; first is after 196 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+                    bytes2int = int.from_bytes(ucsf_data, byteorder='big')          # convert bytes to integer value  
+                    # print ("tile size", ucsf_data, "\t", bytes2int)
+                    self.tile_size.append(deepcopy(bytes2int))
+                self.tile_size.insert(0,self.tile_size.pop())
+                # print (self.tile_size)
+
+                """Read float spectrometer frequency for this nucleus (MHz) """
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(200+128*i)                                       # float spectrometer frequency for this nucleus (MHz) ; first is after 196 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+                    [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
+                    self.spectr_fq.append(deepcopy(bytes2float))
+                self.spectr_fq.insert(0,self.spectr_fq.pop())
+                print ("Spectrometer frequency (MHz): ",' '.join("{:.2f}".format(x) for x in self.spectr_fq))
+
+                """Read float spectral width (Hz)"""
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(204+128*i)                                       # float spectral width (Hz) ; first is after 196 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+                    [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
+                    self.sw.append(deepcopy(bytes2float))
+                self.sw.insert(0,self.sw.pop())
+                print ("Spectral width (Hz):", ' '.join("{:.0f}".format(x) for x in self.sw))
+
+
+                """Read float center of data (ppm)"""
+                for i in range(0,self.spectra_dim):
+                    ucsf_file.seek(208+128*i)                                       # float center of data (ppm) ; first is after 196 bytes, next one is after additional 128 bytes
+                    ucsf_data = ucsf_file.read(4)                                   # 4 byte per information 
+                    [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
+                    self.data_center.append(deepcopy(bytes2float))
+                self.data_center.insert(0,self.data_center.pop())
+                # print ("self.data_center",self.data_center)
+        
+        def ChangeHz2ppm(self):
+            """Change spectral width from Hz to ppm"""
+            for p in range(len(self.sw)):
+                sw_sparky = self.sw[p]-(self.sw[p]/self.points_num[p])
+                self.sw_ppm.append(deepcopy(sw_sparky/self.spectr_fq[p]))
+            print ("Spectral width (ppm):", ' '.join("{:.1f}".format(x) for x in self.sw_ppm))
+            # print ("self.spectr_fq", self.spectr_fq)
+            # print ("self.data_center",self.data_center)
+            # print ("self.sw =", self.sw, "\nsw_ppm =", self.sw_ppm)
+            
+            for i in range (0,self.spectra_dim):
+                if self.points_num[i]%self.tile_size[i]==0:
+                    self.n_tiles.append(deepcopy(int(self.points_num[i]/self.tile_size[i])))
+                else: 
+                    self.n_tiles.append(deepcopy(int(self.points_num[i]/self.tile_size[i])+1))
 
         def read_peaklist(self, peak_list):
             with open(peak_list, 'r') as pl:
@@ -224,6 +230,24 @@ class Spectrum:
                         p_list.append(deepcopy(p_pos))
                         # print (p_pos.peak_ppm_pos)       
             return p_list
+        
+    def SetUpPeakLevel(self):
+        if UserPeakLevelFlag:
+            print_raport("Peak level starts from = {:.2e}".format(args.peak_level))
+            self.peak_level = args.peak_level
+            self.noise_level = deepcopy(self.peak_level/50)
+                
+    def CalcNoise(self):
+        list_of_noise_points = find_noise_point(self.peaks, self.spectra_dimentionality, self.points_num, args.Number_of_points_for_noise)
+        Points_intens = read_intens(list_of_noise_points, args.filename, self.spectra_dimentionality, self.tile_size, self.n_tiles)
+        print ("list of points of noise is ready: {} points".format(len(Points_intens)))
+        average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
+        sum_of_squares=0.0
+        for val in Points_intens:
+            sum_of_squares+=(val-average_noise_level)**2
+        self.noise_level = math.sqrt(sum_of_squares/len(Points_intens))
+        self.peak_level = self.noise_level * 50
+        
 
 
 class CPeak():
@@ -238,55 +262,24 @@ class CPeak():
         self.new_points_pos = []         # if peak was moved there will be new position in points
         self.new_ppm_pos = []           # if peak was moved there will be new position in ppm
 
-        if type(input_line) == string:
+        if type(input_line) == str:
             input_line = input_line.split()
         if type(input_line) == list:
-            self.descript = item[0]
+            self.descript = input_line[0]
             # print ("p_pos.peak_ppm_pos", p_pos.peak_ppm_pos)
-            self.peak_ppm_pos.append(deepcopy(float(item[s_dim])))
+            self.peak_ppm_pos.append(deepcopy(float(input_line[s_dim])))
             for i in range(1,s_dim):
-                self.peak_ppm_pos.append(deepcopy(float(item[i])))
+                self.peak_ppm_pos.append(deepcopy(float(input_line[i])))
         else:
             pass
             # raise ERROR 
-
-    def ppm2points(spectrum:Spectrum, ppm:float, output_format:string): 
-        sw_div_fnz = spectrum.sw_ppm/(points_num-1)
-        downfield = spectrum.data_center+spectrum.points_num/2*sw_div_fnz
-        if output_format == "Float":
-            point_value = round((downfield-ppm)/(sw_div_fnz),2)
-        else:
-        point_value = round((downfield-ppm)/(sw_div_fnz))
-        if point_value > spectrum.points_num:
-            point_value = spectrum.points_num - point_value
-        if point_value < 0:
-            point_value = spectrum.points_num + point_value
-        
-        return point_value
+            
 
 
-    def points2ppm(point_value, spectrum:Spectrum): 
-        sw_div_fnz = spectrum.sw_ppm/(spectrum.points_num-1)
-        downfield = spectrum.data_center+spectrum.points_num/2*sw_div_fnz
-        ppm_value = downfield-point_value*sw_div_fnz
-        return ppm_value
-
-
-    def calc_peak_points(points_num, peaks, sw_ppm, data_center,s_dim,num_format="Integer"):
-        for p in range(len(peaks[peak_num].peak_ppm_pos)):
-            one_dim = ppm2points(peaks[peak_num].peak_ppm_pos[p],points_num[p],data_center[p],sw_ppm[p],num_format)
-            peaks[peak_num].peak_points_pos.append(deepcopy(one_dim))
-        Print_Peak_List_points(peaks, s_dim, "orgin")
-        return peaks
-
-
-"""Reading functions"""
-
-
-
-
-
-
+    def calc_peak_points(self, spectrum:CSpectrum, num_format="Integer"):
+        for p in range(len(self.peak_ppm_pos)):
+            one_dim = ppm2points(spectrum, self.peak_ppm_pos[p],num_format)
+            self.peak_points_pos.append(deepcopy(one_dim))
 
 
 
@@ -294,7 +287,25 @@ class CPeak():
 """Calculating functions"""
 
 
+def ppm2points(spectrum:CSpectrum, ppm:float, output_format:str): 
+    sw_div_fnz = spectrum.sw_ppm/(spectrum.points_num-1)
+    downfield = spectrum.data_center+spectrum.points_num/2*sw_div_fnz
+    if output_format == "Float":
+        point_value = round((downfield-ppm)/(sw_div_fnz),2)
+    else:
+        point_value = round((downfield-ppm)/(sw_div_fnz))
+    if point_value > spectrum.points_num:
+        point_value = spectrum.points_num - point_value
+    if point_value < 0:
+        point_value = spectrum.points_num + point_value
+    
+    return point_value
 
+def points2ppm(point_value, spectrum:CSpectrum): 
+    sw_div_fnz = spectrum.sw_ppm/(spectrum.points_num-1)
+    downfield = spectrum.data_center+spectrum.points_num/2*sw_div_fnz
+    ppm_value = downfield-point_value*sw_div_fnz
+    return ppm_value
 
 
 def find_noise_point(peaks, s_dim, points_num, number_of_points_for_noise):
@@ -398,8 +409,6 @@ def read_intens(peak_pos_list, filename, s_dim, tile_size, n_tiles):
 
 
 
-
-
 def find_points_around(try_position, orgin_pos, vector_set, s_dim):
     list_of_points=[]
 
@@ -469,12 +478,7 @@ def Print_Peak_List_ppm(peaks, s_dim, points_num, sw_ppm, data_center):
     return
 
 def Print_Peak_List_points(peaks, s_dim, type_list):
-    # item = peak_list.split("/")
-    # peak_list_name = item[len(item)-1][:-5]
-    # peak_list_dir_new = peak_list[:-(len(peak_list_name)+5)]+peak_list_name
-    # if not os.path.exists(peak_list_dir_new):
-    #     os.mkdir(peak_list_dir_new)
-    new_peak_list = "{0}/{1}_{2}_points.list".format(peak_list_dir_new,peak_list_name,type_list)
+    new_peak_list = "{}/{}_{}_points.list".format(peak_list_dir_new,peak_list_name,type_list)
 
     
     with open(new_peak_list, 'w') as listfile:
@@ -512,43 +516,9 @@ def current_time():
     return curr_time
 
 
-# def calc_noise(peaks: CPeak, spectra_dim, points_number, number_of_points_for_noise, filename, tile_size:list, n_tiles:list):
-#     list_of_noise_points = find_noise_point(peaks, spectra_dim, points_number, number_of_points_for_noise)
-#     Points_intens = read_intens(list_of_noise_points, filename, spectra_dim, tile_size, n_tiles)
-#     print ("list of points of noise is ready: {} points".format(len(Points_intens)))
-#     average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
-#     sum_of_squares=0.0
-#     for val in Points_intens:
-#         sum_of_squares+=(val-average_noise_level)**2
-#     standard_deviation = math.sqrt(sum_of_squares/len(Points_intens))
-#     return standard_deviation
-
-# def calc_noise(peaks=Peaks, spectra_dim=Spectra_dim, points_number=Points_number, number_of_points_for_noise=args.Number_of_points_for_noise, 
-#                filename=filename, tile_size=Tile_size, n_tiles=N_Tiles):
-
-#     list_of_noise_points = find_noise_point(peaks, spectra_dim, points_number, number_of_points_for_noise)
-#     Points_intens = read_intens(list_of_noise_points, filename, spectra_dim, tile_size, n_tiles)
-#     # list_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, args.Number_of_points_for_noise)
-#     # Points_intens = read_intens(list_of_noise_points, filename, Spectra_dim, Tile_size, N_Tiles)
-#     print ("list of points of noise is ready: {} points".format(len(Points_intens)))
-#     average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
-#     sum_of_squares=0.0
-#     for val in Points_intens:
-#         sum_of_squares+=(val-average_noise_level)**2
-#     standard_deviation = math.sqrt(sum_of_squares/len(Points_intens))
-#     return standard_deviation
 
 
-def calc_noise():
-    list_of_noise_points = find_noise_point(Peaks, Spectra_dim, Points_number, args.Number_of_points_for_noise)
-    Points_intens = read_intens(list_of_noise_points, filename, Spectra_dim, Tile_size, N_Tiles)
-    print ("list of points of noise is ready: {} points".format(len(Points_intens)))
-    average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
-    sum_of_squares=0.0
-    for val in Points_intens:
-        sum_of_squares+=(val-average_noise_level)**2
-    standard_deviation = math.sqrt(sum_of_squares/len(Points_intens))
-    return standard_deviation
+
 
 
 
@@ -566,30 +536,29 @@ if __name__ == "__main__":
    
     print("\n=== Reading input files ===")
     # print ("File reading - start")
-    Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, data_center, N_Tiles = read_ucsf_info(filename)
-    Peaks = read_peaklist(args.peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
+    spectrum = CSpectrum(args.filename,args.peak_list)
+    # Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, data_center, N_Tiles = read_ucsf_info(filename)
+    # Peaks = read_peaklist(args.peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
     with open('{}/info.txt'.format(peak_list_dir_new), 'w') as txtfile:
-        txtfile.write("File name: {}\n\n".format(filename))
-    print("Peak list read: {} peaks".format(len(Peaks)))
+        txtfile.write("File name: {}\n\n".format(args.filename))
+    print("Peak list read: {} peaks".format(len(spectrum.peaks)))
     print("=== Reading input files finished ===")
-
+    peaks = spectrum.peaks
     if args.OnlyPoints:
-        Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, data_center, Spectra_dim, "Float")
-        # OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
+        peaks.calc_peak_points(spectrum, "Float")
+        Print_Peak_List_points(peaks, spectrum.spectra_dimentionality, "orgin")
     else:
-        Peaks = calc_peak_points(Points_number, Peaks, SW_size_ppm, data_center, Spectra_dim)
-        OldPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "orgin")
+        peaks.calc_peak_points(spectrum)
+        Print_Peak_List_points(peaks, spectrum.spectra_dimentionality, "orgin")
 
         """Noise calculation"""
         if UserPeakLevelFlag:
+            spectrum.SetUpPeakLevel()            
             print_raport("Peak level starts from = {:.2e}".format(args.peak_level))
-            peak_level = args.peak_level
-            noise_level = peak_level/50
         else:
             print ("\n=== Noise calculation ===")
-            noise_level = calc_noise()
-            peak_level = 50*noise_level
-            print_raport("Average noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_level,peak_level))
+            spectrum.CalcNoise()
+            print_raport("Average noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(spectrum.noise_level,spectrum.peak_level))
             print ("=== Noise calculation finished ===")
 
 
@@ -684,33 +653,3 @@ if __name__ == "__main__":
             NewPeakList_ppm = Print_Peak_List_ppm(Peaks, Spectra_dim, Points_number, SW_size_ppm, data_center)
             NewPeakList_points = Print_Peak_List_points(Peaks, Spectra_dim, "new")
             # print ("\nPrint peak list - finish")
-
-        #### Check intensity of points around the peak
-        # TestList = [30, 31, 157, 107]
-        # moves = [-2,-1,0,1,2]
-        # with open('{}/intensmap.txt'.format(peak_list_dir_new), 'w') as txtmap:
-        #     print ("Maps of intensity of points around peak:{}\n\n".format(TestList),file=txtmap)
-
-        #     duzalista = []
-        #     for k in range(4):
-                
-        #         malalista = []
-        #         for i in moves:
-        #             TestList = [30, 31, 157, 107]
-        #             TestList[k] += i
-        #             malalista.append(deepcopy(TestList))
-        #         jedna_linia = read_intens(malalista, filename, Spectra_dim, Tile_size, N_Tiles)
-        #         duzalista.append(deepcopy(malalista))
-        #         print ("index = {}".format(k), end="\t", file=txtmap)
-        #         for p in jedna_linia:
-        #             print ("{:^20}".format(p), end="\t", file=txtmap)
-        #         print ("\n\t\t", end="\t", file=txtmap)
-        #         for b in malalista:
-        #             print ("{:^20}".format(str(b)), end="\t", file=txtmap)
-        #         print ("\n",file=txtmap)
-
-
-        
-        # print ("\n\nKONIEC\n\n")
-        # Try_point_list=[692]
-        # try_point(Try_point_list)
