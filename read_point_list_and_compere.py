@@ -113,9 +113,9 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                 p_pos.descript = item[0]
                 aa = p_pos.descript.split("-")
                 try:
-                    p_pos.aa_number = int(aa[s_dim-1][1:-2])
+                    p_pos.aa_number = int(aa[s_dim-1][1:-3])
                 except:
-                    p_pos.aa_number = int(aa[0][1:-1])
+                    p_pos.aa_number = int(aa[0][1:-2])
                 if p_pos.aa_number>aa_max_number:
                     aa_max_number=p_pos.aa_number
                 if item[s_dim].isdigit():
