@@ -56,12 +56,19 @@ else:
     for indexa, argument in enumerate(sys.argv):
         if indexa>0:
             if os.path.isfile(argument):
-                File_Path.append(deepcopy(sys.argv[indexa]))
+                if not os.path.exists(argument): 
+                    print("There is not such file like this: ", argument)
+                    sys.exit(1)
+                else:
+                    File_Path.append(deepcopy(sys.argv[indexa]))
+            else: print("There is not such file like this: ", argument)
     print ("Input Files:",*File_Path, sep="\n")
 
 if "--dim" in sys.argv:                                     # number of dimentions
     i = sys.argv.index("--dim")
     Spectra_dim=int(sys.argv[i+1])
+# else:
+#     Spectra_dim=-2
 
 if "--comp2list" in sys.argv:                               # order of two list to additional comparison: 0, 1, 2...
     j = sys.argv.index("--comp2list")
@@ -113,7 +120,7 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                 p_pos.descript = item[0]
                 aa = p_pos.descript.split("-")
                 try:
-                    p_pos.aa_number = int(aa[s_dim-1][1:-3])
+                    p_pos.aa_number = int(aa[-1][1:-3])
                 except:
                     p_pos.aa_number = int(aa[0][1:-2])
                 if p_pos.aa_number>aa_max_number:
@@ -128,7 +135,7 @@ def read_peaklist(peak_list, s_dim,max_sentence_len):
                     for i in range(1,s_dim+1):
                         p_pos.peak_pos.append(deepcopy(float(item[i])))
                 if len(item)>s_dim+1:
-                    p_pos.peak_intens = float(item[s_dim+1])
+                    p_pos.peak_intens = int(float(item[s_dim+1]))
                 p_list.append(deepcopy(p_pos))
                 if max_sentence_len < len(p_pos.descript):
                     max_sentence_len = len(p_pos.descript)
@@ -256,10 +263,10 @@ def print_all_peaklist(peak_list, file_path, aa_max_number, max_sentence_len, ou
             no_peaks = one_aa.count("None")
             half_len_one_aa = math.ceil(len(one_aa)/2)
 
-            print ('{:^6} {:^{sentence_len}}'.format(aa_num, des,sentence_len=max_sentence_len), end=" ", file=outputfile)
+            print ('{:^6} {:^{sentence_len}}'.format(aa_num,des, sentence_len=max_sentence_len), end=" ", file=outputfile)
             for k in range(len(peak_list)):
                 print ('{:^14}'.format(int_aa[k]), end=" ", file=outputfile)
-            print ("\n", file=outputfile)
+            print ("", file=outputfile)
                     
     return 
 

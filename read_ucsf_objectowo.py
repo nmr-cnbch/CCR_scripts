@@ -55,6 +55,14 @@ parser.add_argument("-o", "--output_name", type=Path,
 parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  default=False,
                     help="add this if you want calculate only noise level")
 
+parser.add_argument("-sn", "--signal3noise", dest='SignalToNoise', type=float,
+                    help="add this if you want setup minimal signal to noise ratio")
+
+parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', default=False,
+                    help="""add this if you your spectrum was reconstructed. 
+                    For reconstracted spectra we calculate 'noise' by measure random points on H-cross-section with peaks. 
+                    Otherwise, for traditional collect spectra noise is calculated by measure random points from across the spectrum""")
+
 args = parser.parse_args()
 
 
@@ -78,6 +86,13 @@ if args.OnlyPoints:
     print ("OnlyPoints is on")    
 if args.OnlyNoise:
     print ("Only calculate noise level option is on")    
+if args.SignalToNoise:
+    print (f"Minimal signal to noise ration setup to {args.SignalToNoise}") 
+if args.ReconstructionFlag:
+    print (f"Reconstructed spectrum - noise will calculate by measure random points on H-cross-section with peaks") 
+
+
+
 
 if args.output_name:
     print(args.output_name)
@@ -112,8 +127,11 @@ def print_raport(text_to_write,in_terminal=True):
         txtfile.write(text_to_write+"\n")
 
 class CSpectrum:
-    # __slots__ = [ '__filename', '__nucl_name','__points_num','__tile_size','__n_tiles','__spectr_fq','__sw','__sw_ppm','__data_center','__spectra_dim','__peak_level','__noise_level']
-    def __init__(self,filename,peak_list):
+    __slots__ = [ '__filename', '__nucl_name','__points_num','__tile_size','__n_tiles',
+                 '__spectr_fq','__sw','__sw_ppm','__data_center','__spectra_dim',
+                 '__peaks','__peak_level','__noise_level','__minimal_signal_to_noise']
+
+    def __init__(self,filename,peak_list,**kwargs):
         self.__filename = filename
         self.__nucl_name = []
         self.__points_num = []
@@ -124,12 +142,16 @@ class CSpectrum:
         self.__sw = []
         self.__sw_ppm = []
         self.__data_center = []
-        self.__s_dim = 0  #spectra_dimentionality
+        # self.__s_dim = 0  #spectra_dimentionality
         self.__peak_level = 0.0
         self.__noise_level = 0.0
+        self.__minimal_signal_to_noise = 0.0
         
         self.read_specra_paramiters()
         self.calc_spectra_width_in_ppm()
+
+        if "signal2noise" in kwargs:
+            self.__minimal_signal_to_noise = kwargs["signal2noise"]
         
         self.__peaks = self.read_peaklist(peak_list)
         
@@ -202,7 +224,7 @@ class CSpectrum:
                 [bytes2float] = struct.unpack('>f', ucsf_data)                  # convert bytes to float value
                 self.__data_center.append(deepcopy(bytes2float))
             self.__data_center.insert(0,self.__data_center.pop())
-    
+        
     # @property
     # def val(self) :
     #     return self.__val
@@ -245,7 +267,11 @@ class CSpectrum:
         if point_value > self.__points_num[which_dim]:
             point_value = self.__points_num[which_dim] - point_value
         if point_value < 0:
+            print(f"przed {point_value}, self.__points_num[which_dim]: {self.__points_num[which_dim]}, sw_div_fnz: {sw_div_fnz}, downfield: {downfield}, ppm: {ppm}")
+            print(f"""sw_div_fnz = self.__sw_ppm[which_dim]/(self.__points_num[which_dim]-1):
+            {sw_div_fnz} = {self.__sw_ppm[which_dim]}/({self.__points_num[which_dim]}-1)""")
             point_value = self.__points_num[which_dim] + point_value
+            print("po ",point_value)
         return point_value
 
     def points2ppm(self,point_value, which_dim:int) -> float: 
@@ -272,12 +298,30 @@ class CSpectrum:
             for i in vector_set2:
                 TestList = try_position[:]
                 TestList[k] += i
-                if abs(TestList[k]-orgin_pos[k])<=2:
+                if abs(TestList[k]-orgin_pos[k])<=distance*2:
                     list_of_around_points.append(deepcopy(TestList))
         try_index = list_of_around_points.index(try_position)
         # points_intens = self.read_intens(list_of_around_points)
         return list_of_around_points, try_index
     
+    def find_points_in_peak_line(self,try_position:list[int], orgin_pos:list[int],distance=1) -> tuple[list[list[int]],int]:
+        """Method for prepering list of points lin the line of peak throu all dimentions
+           and list index where is the position of the place that is being checked for being the top of the peak 
+            
+           Output: list of points around of peak (list[[dim1,dim2...]...]), list index of checking place
+        """
+        # vector_set2 = [-1,0,1]
+        vector_set2 = [x for x in range(-distance,distance+1)]
+        list_of_around_points = []
+        for k in range(self.__spectra_dim):
+            for i in vector_set2:
+                TestList = try_position[:]
+                TestList[k] += i
+                if abs(TestList[k]-orgin_pos[k])<=distance*2:
+                    list_of_around_points.append(deepcopy(TestList))
+        try_index = list_of_around_points.index(try_position)
+        # points_intens = self.read_intens(list_of_around_points)
+        return list_of_around_points, try_index
 
     def find_noise_point(self, number_of_points_for_noise) -> list[list[int]]:
         """Method to find N^(s_dim+1) random points in spectrum for calculation of noise averange level
@@ -401,16 +445,8 @@ class CSpectrum:
             possible_H_points_list = []
             possible_point_list = []
             for one_peak in self.__peaks:
-                for possible_H_point in range(one_peak.peak_points_pos[0]-4,one_peak.peak_points_pos[0]+5):
+                for possible_H_point in range(one_peak.peak_points_pos[0]-1,one_peak.peak_points_pos[0]+2):
                     possible_H_points_list.append(deepcopy(possible_H_point))
-                # org_peak_point_pos = one_peak.peak_points_pos    
-                # for possible_H_point in range(one_peak.peak_points_pos[0]-4,one_peak.peak_points_pos[0]+5):
-                #     for f in range(1,self.__spectra_dim):
-                #         peak_point_pos_line = deepcopy(org_peak_point_pos)
-                #         peak_point_pos_line[0] = deepcopy(possible_H_point)
-                #         for point_num in range(0,self.__points_num[f]-1):
-                #             peak_point_pos_line[f] = point_num
-                #             possible_point_list.append(deepcopy(peak_point_pos_line))
 
             first_try = [-1]*self.__spectra_dim
             # print(len(dumpster),len(possible_H_points_list))
@@ -437,6 +473,55 @@ class CSpectrum:
             print(f"Number of points for artefact noise: {len(list_of_points)}/{great_number_of_points_for_noise}")
             return list_of_points
 
+
+
+
+    def find_artefact_noise_point_around_one_peak(self, number_of_points_for_noise,peak_number) -> list[list[int]]:
+            """Method to find 0.5N^(s_dim+1) random points around peak for calculation of artefact noise averange level for this particual peak
+               Chosen points are from 
+
+               Output: list of points: list[[dim1,dim2...]...]
+            """
+            great_number_of_points_for_noise = number_of_points_for_noise**(1+self.__spectra_dim)/2
+
+            dumpster=[]                       # list of wrong points: e.g. it's peak or really close to peak
+            this_peak = self.__peaks[peak_number]
+
+            org_peak_point_pos = this_peak.peak_points_pos
+            dumpster.append(deepcopy(org_peak_point_pos))
+            for f in range(0,self.__spectra_dim):
+                near_peak_point_pos = deepcopy(org_peak_point_pos)
+                for point_num in range(this_peak.peak_points_pos[f]-5,this_peak.peak_points_pos[f]+6):
+                    near_peak_point_pos[f] = point_num
+                    dumpster.append(deepcopy(near_peak_point_pos))
+            list_of_points=[]                 # list of good points with noise
+
+            possible_H_points_list = []
+            for possible_H_point in range(this_peak.peak_points_pos[0]-1,this_peak.peak_points_pos[0]+2):
+                possible_H_points_list.append(deepcopy(possible_H_point))
+
+            first_try = [-1]*self.__spectra_dim
+            ii=1
+            while len(list_of_points) < great_number_of_points_for_noise:
+                for f in range(1,len(first_try)):
+                    first_try[f]=randint(0,self.__points_num[f]-1) # __points_num[f]-1 because it takes too big number
+                first_try[0] = random.choice(possible_H_points_list)
+                if first_try not in dumpster:
+                    GoodPoingFlag = [True]*self.__spectra_dim
+                    for one_peak in self.__peaks:
+                        for i in range(1,len(one_peak.peak_points_pos)):
+                            if first_try[i] in range (one_peak.peak_points_pos[i]-5, one_peak.peak_points_pos[i]+5):
+                                GoodPoingFlag[i] = False
+                    # print(first_try)
+                    if True not in GoodPoingFlag:
+                        dumpster.append(deepcopy(first_try))
+                        print(first_try, "fail")
+                    else:
+                        list_of_points.append(deepcopy(first_try))
+                    ii+=1
+                    print(f"Number of points for artefact noise: {len(list_of_points)}/{great_number_of_points_for_noise}", end="\r")
+            print(f"Number of points for artefact noise: {len(list_of_points)}/{great_number_of_points_for_noise}")
+            return list_of_points
 
 
     def calc_list_of_points(self,peak_point:list[list[int]]) -> tuple[list[list[int]],list[list[int]]]:      
@@ -477,16 +562,16 @@ class CSpectrum:
                 for d in range(D+1,self.__spectra_dim):
                     pp = pp * self.__n_tiles[d]                        # Calculating terms with quantities and sizes of tiles
                     rr = rr * self.__tile_size[d]                      # Calculating terms with position points in a given tiles
-                pp = pp * L[k][D] * numpy.prod(self.__tile_size) * self.__n_tiles[0]
+                pp = pp * L[k][D] * numpy.prod(self.__tile_size) * self.__n_tiles[0] #type:ignore
                 rr = rr * R[k][D] * self.__tile_size[0]
                 ppos[D-1]=pp
                 ppos[D-1+self.__spectra_dim]=rr
-            ppos[self.__spectra_dim-1]=L[k][0] * numpy.prod(self.__tile_size)
+            ppos[self.__spectra_dim-1]=L[k][0] * numpy.prod(self.__tile_size) #type:ignore
             ppos[self.__spectra_dim*2-1]=R[k][0]
             ppos_sum=180+128*self.__spectra_dim+sum(ppos)*4
             peak_points_pos_list.append(deepcopy(ppos_sum))
-            print(f"\t Number of points found in UCSF tilles: {k+1}/{len(peak_pos_list)}", end="\r")
-        print(f"\t Number of points found in UCSF tilles: {len(peak_points_pos_list)}/{len(peak_pos_list)}")
+        #     print(f"\t Number of points found in UCSF tilles: {k+1}/{len(peak_pos_list)}", end="\r")
+        # print(f"\t Number of points found in UCSF tilles: {len(peak_points_pos_list)}/{len(peak_pos_list)}")
         '''  Reading value from ucsf file for peak "k"  '''
         with open(self.__filename, "rb") as ucsf_file:
             for indexk, k in enumerate(peak_points_pos_list):
@@ -496,11 +581,20 @@ class CSpectrum:
                     [bytes2float] = struct.unpack('>f', ucsf_data)
                     intens_list.append(deepcopy(bytes2float))
                 except OSError:
-                    print("Invalid argument: {} - check points lists".format(k))
+                    print(f"Invalid argument: {k} - skiping this point: {peak_pos_list[indexk]}")
+                    continue
                 except struct.error:
-                    print("Invalid argument?: {} \n".format(k))
-                # print(f"\t Number of readings of point heights : {indexk+1}/{len(peak_points_pos_list)}", end="\r")
-            print(f"\t Number of readings of point heights: {len(peak_points_pos_list)}/{len(peak_pos_list)}")
+                    print(f"Invalid argument: {k} - skiping this point: {peak_pos_list[indexk]}")
+                    continue
+                    # print("""Invalid argument: {} - skiping this point
+                    # List of points deposit in: {}/List_of_reading_points""".format(k,peak_list_dir_new))
+                    # list_path = f"{peak_list_dir_new}/List_of_reading_points.txt"
+                    # if not os.path.exists(list_path):
+                    #     for 
+                # finally:
+                #     continue
+            #     print(f"\t Number of readings of point heights : {indexk+1}/{len(peak_points_pos_list)}", end="\r")
+            # print(f"\t Number of readings of point heights: {len(peak_points_pos_list)}/{len(peak_pos_list)}")
         return intens_list
 
 
@@ -514,54 +608,52 @@ class CSpectrum:
     
             
 
-    def CalcNoise(self,noise_type="") -> None:
+    def CalcNoise(self,noise_type="",peak_number=-1) -> None:
         """Method for calculation averange noise levela and minimal peak level (50*noise level)
             
-           Output: self.__noise_level, self.__peak_level
+           Output: self.__noise_level, self.__peak_level or self.__peaks[peak_number].noise_around_peak
         """
         if noise_type == "termal":
             list_of_noise_points = self.find_termal_noise_point(args.Number_of_points_for_noise)
+            if self.__minimal_signal_to_noise == 0.0: 
+                self.__minimal_signal_to_noise = self.__spectra_dim * 5
         elif noise_type == "artifacts":
             list_of_noise_points = self.find_artefact_noise_point(args.Number_of_points_for_noise)
+            if self.__minimal_signal_to_noise == 0.0: 
+                self.__minimal_signal_to_noise = self.__spectra_dim * 2.5
+        elif peak_number != -1:
+            print("\n",peak_number)
+            list_of_noise_points = self.find_artefact_noise_point_around_one_peak(args.Number_of_points_for_noise,peak_number)
         else:
             list_of_noise_points = self.find_noise_point(args.Number_of_points_for_noise)
-        # print ("list of points of noise is ready: {} points".format(len(list_of_noise_points)))
+
         Points_intens = self.read_intens(list_of_noise_points)
         print ("Reading noise height is ready")
         average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
         sum_of_squares=0.0
         for val in Points_intens:
             sum_of_squares+=(val-average_noise_level)**2
-        self.__noise_level = math.sqrt(sum_of_squares/len(Points_intens))
-        self.__peak_level = self.__noise_level * 10 * self.__spectra_dim
-        noise_type_text = f" {noise_type} "
-        print_raport("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_type_text,spectrum.__noise_level,spectrum.__peak_level))
+        noise_val = math.sqrt(sum_of_squares/len(Points_intens))
+        
+        if peak_number != -1:
+            self.__peaks[peak_number].noise_around_peak = noise_val
+            print_raport(f"Average noise level for peak number {self.__peaks[peak_number].descript} is: {self.__peaks[peak_number].noise_around_peak:.2e}")
+        else:
+            self.__noise_level = noise_val
+            self.__peak_level = self.__noise_level * self.__minimal_signal_to_noise
+            noise_type_text = f" {noise_type} "
+            if args.OnlyNoise:
+                with open(f"{peak_list_dir_new}/noise.txt", 'w') as noise_file:
+                    noise_file.write("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_type_text,self.__noise_level,self.__peak_level))
+            print_raport("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_type_text,self.__noise_level,self.__peak_level))
             
 
-
-
-
-
-
-
-
-
-
-    def Center_peaks(self):
-        Peak_not_moved = 0
-        Peak_moved = 0
-        Peak_not_visible = 0
-        Vector_set2 = [-1,0,1]
-        peak_centering_info = []
-        peak_height_list = []
-
-        for indexpeak, one_peak in enumerate(self.__peaks):
-            Try_position = one_peak.peak_points_pos
-            Orgin_pos = one_peak.peak_points_pos
-            try_pos=[]
-            try_intens=[]
-            while one_peak.is_center == False:
-                List_of_around_points, try_index = spectrum.find_points_aroun_peak(Try_position, Orgin_pos)
+    def move_this_peak(self,one_peak:CPeak,Orgin_pos:list,Try_position:list,distance:int)->tuple[list[int],list[int],list[int]]:
+        try_pos=[]
+        try_intens=[]
+        # Peak_moved_flag = False
+        while one_peak.is_center == "no":
+                List_of_around_points, try_index = spectrum.find_points_aroun_peak(Try_position, Orgin_pos,distance=distance)
                 Points_intens = spectrum.read_intens(List_of_around_points)
                 try_pos.append(deepcopy(Try_position))
                 try_intens.append(deepcopy(Points_intens[try_index]))
@@ -581,26 +673,45 @@ class CSpectrum:
                         
                         if one_peak.was_moved == True:
                             one_peak.new_points_pos = Try_position
-                            Peak_moved +=1
-                        else: Peak_not_moved +=1
                 else: 
                     one_peak.is_visible = False
-                    Peak_not_visible += 1 
                     # print ("Peak:", indexpeak, "is not visible")
                     break
+        return Try_position,try_pos,try_intens
+
+
+
+    def Center_peaks(self):
+        # peaks_moving_dict = {"Peak_not_moved":0,"Peak_moved"}
+        Peak_not_moved = 0
+        Peak_moved = 0
+        Peak_not_visible = 0
+        Vector_set2 = [-1,0,1]
+        peak_centering_info = []
+        peak_height_list = []
+
+        for indexpeak, one_peak in enumerate(self.__peaks):
+            Try_position = one_peak.peak_points_pos
+            Orgin_pos = one_peak.peak_points_pos
+            
+            Try_position,try_pos,try_intens = spectrum.move_this_peak(one_peak,Orgin_pos,Try_position,3)
+
+            if one_peak.was_moved:
+                Peak_moved +=1
+            else: Peak_not_moved +=1
 
             #check if peak is in the highest position
-            List_of_around_points, try_index = spectrum.find_points_aroun_peak(Try_position, Orgin_pos)
+            List_of_around_points, try_index = spectrum.find_points_aroun_peak(Try_position, Orgin_pos,distance=5)
             Points_intens = spectrum.read_intens(List_of_around_points)
             if Points_intens[try_index] > 0 :
                 maximum = max
             else: 
                 maximum = min    
             if Points_intens.index(maximum(Points_intens)) == try_index:
-                one_peak.is_center = True
+                one_peak.is_center = "yes"
                 peak_height_list.append(abs(Points_intens[try_index]))
             else: 
-                one_peak.is_center = False
+                one_peak.is_center = "no"
 
             if abs(Points_intens[try_index]) < self.__peak_level and args.noRemoveFlag==False:
                 one_peak.is_visible = False
@@ -614,7 +725,7 @@ class CSpectrum:
 
             for i in range(len(try_pos)):
                 peak_centering_info.append("\t{}\t{}".format(try_pos[i], try_intens[i]))
-            if one_peak.is_center == False:
+            if one_peak.is_center == "no":
                 peak_centering_info.append("                     is not in the highest position\t")
 
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
@@ -622,13 +733,25 @@ class CSpectrum:
         print_raport("Average __peaks height = {:.2e}".format(average_peaks_level))
         if UserPeakLevelFlag==False:
             signal_to_noise = average_peaks_level/self.__noise_level
+            print_raport(f"Minimal signal_to_noise: {self.__minimal_signal_to_noise}")
             print_raport("Signal to noise ratio = {:.2f}".format(signal_to_noise))
         print_raport("\n")
         for i in peak_centering_info:
             print_raport(i, in_terminal=False)
 
 
-
+    def CalcNoise_around_peaks(self) -> None:
+        """Method for calculation averange noise level around particular peak
+            
+           Output: self.__peaks[peak_number].noise_around_peak
+        """
+        noise_peak_list = f"{peak_list_dir_new}/{peak_list_name}_peaks_noise.list"
+        for peak_index in range(len(self.__peaks)):
+            self.CalcNoise(peak_number=peak_index)
+        with open(noise_peak_list, 'w') as peak_nois_file:
+            print (f"  Peak description   \tPeak uncertainty (noise value around peak)", file=peak_nois_file)
+            for one_peak in self.__peaks:
+                print (f"{one_peak.descript}\t{one_peak.noise_around_peak:.4e}", file=peak_nois_file)
 
 
     def Print_Peak_List_ppm(self):
@@ -650,7 +773,7 @@ class CSpectrum:
             for indexpeak, one_peak in enumerate(self.__peaks):
                 if one_peak.is_visible == True:
                     print ("{:{sentence_len}}".format(one_peak.descript, sentence_len=max_lenth_discrip), end="\t", file=listfile)
-                    if one_peak.was_moved == True and one_peak.is_center != False:
+                    if one_peak.was_moved == True and one_peak.is_center != "no":
                         for i in range(1,self.__spectra_dim):
                             ppm_position = self.points2ppm(one_peak.new_points_pos[i],i)
                             print ("{:.3f}".format(ppm_position), end="\t", file=listfile)
@@ -663,7 +786,7 @@ class CSpectrum:
                         print ("{:.3f}".format(one_peak.peak_ppm_pos[0]), end="\t", file=listfile)
                     print (one_peak.peak_intens, end=" ", file=listfile) 
                     
-                    if one_peak.is_center == False:
+                    if one_peak.is_center == "no":
                         print ("to check", file=listfile)
                     else: print (file=listfile)
         return
@@ -684,12 +807,13 @@ class CSpectrum:
                 print ("\tData Height\t\t\t\t Orgin peaklist in points\n", file=listfile)
                 # print ("{} peak list".format(type_list), new_peak_list)
             else:
-                print ("\tData Height\t\t\t\tCentering peak list prepare from{}\n".format(peak_list_name), file=listfile)
+                print ("\tData Height\t\t\t\tCentering peak list prepare from{}".format(peak_list_name), file=listfile)
+                print ("Average noise level = {:.2e}\n".format(self.__noise_level), file=listfile)
                 print ("{} peak list".format(type_list), new_peak_list)
             for one_peak in self.__peaks:
                 if one_peak.is_visible == True:
                     print ("{}".format(one_peak.descript), end="\t", file=listfile)
-                    if one_peak.was_moved == True and one_peak.is_center != False:
+                    if one_peak.was_moved == True and one_peak.is_center != "no":
                         for i in range(1,self.__spectra_dim):
                             print ("{}".format(one_peak.new_points_pos[i]), end="\t", file=listfile)
                         print ("{}".format(one_peak.new_points_pos[0]), end="\t", file=listfile)
@@ -699,7 +823,7 @@ class CSpectrum:
                         print ("{}".format(one_peak.peak_points_pos[0]), end="\t", file=listfile)
                     if one_peak.peak_intens:
                         print (one_peak.peak_intens, end=" ", file=listfile) 
-                    if type_list=="new" and one_peak.is_center == False:
+                    if type_list=="new" and one_peak.is_center == "no":
                         print ("to check", file=listfile)
                     else: print (file=listfile)
         return
@@ -716,10 +840,11 @@ class CPeak():
         self.is_visible = True         # if peak height is 50 time biger than noise level = True
         self.peak_intens = 0            # peak height  
         self.descript = ""              
-        self.is_center = False          # if peak is in the highest point = True
+        self.is_center = "no"          # if peak is in the highest point = "yes", 
         self.was_moved = False          # if peak was moved = True
         self.new_points_pos = []         # if peak was moved there will be new position in points
         self.new_ppm_pos = []           # if peak was moved there will be new position in ppm
+        self.noise_around_peak = 0.0 
 
         if type(input_line) == str:
             input_line = input_line.split()
@@ -761,7 +886,10 @@ if __name__ == "__main__":
    
     print("\n=== Reading input files ===")
     # print ("File reading - start")
-    spectrum = CSpectrum(args.filename,args.peak_list)
+    if args.SignalToNoise:
+        spectrum = CSpectrum(args.filename,args.peak_list,signal2noise=args.SignalToNoise)  
+    else:
+        spectrum = CSpectrum(args.filename,args.peak_list)
     # Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, __data_center, N_Tiles = read_ucsf_info(filename)
     # Peaks = read_peaklist(args.peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
     with open('{}/info.txt'.format(peak_list_dir_new), 'w') as txtfile:
@@ -777,8 +905,10 @@ if __name__ == "__main__":
             print_raport("Peak level starts from = {:.2e}".format(args.peak_level))
         else:
             print ("\n=== Noise calculation ===")
-            spectrum.CalcNoise(noise_type="termal")
-            # spectrum.CalcNoise(noise_type="artifacts")
+            if args.ReconstructionFlag:
+                spectrum.CalcNoise(noise_type="artifacts")
+            else:
+                spectrum.CalcNoise(noise_type="termal")
             print ("=== Noise calculation finished ===")
 
         if args.OnlyNoise == False:
@@ -786,6 +916,7 @@ if __name__ == "__main__":
             """Center __peaks and read intens"""
             print ("\n=== Peak centering and intensity reading ===")
             spectrum.Center_peaks()
+            spectrum.CalcNoise_around_peaks()
             print ("=== Peak centering and intensity reading finished ===")
 
 
@@ -800,4 +931,4 @@ if __name__ == "__main__":
         # TO DO
         # dodac sprawdzanie czy lista pików pasuje do widma
         # dodac przesuwanie listy wzgledem widma
-        # dodac opcje wyboku przycinania pikow lub zawijania
+        # dodac opcje wyboru przycinania pikow lub zawijania

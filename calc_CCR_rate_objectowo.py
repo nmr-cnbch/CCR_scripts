@@ -24,6 +24,8 @@ from scipy import stats
 import os
 import logging
 from BioNMRdictionary import Res1to3, Res3to1
+import argparse #https://docs.python.org/3/library/argparse.html
+from pathlib import Path
 
 if len(sys.argv)==1:
     sys.exit("""
@@ -44,37 +46,60 @@ if len(sys.argv)==1:
 
 """Command line reading"""
 
-file_director = sys.argv[1]
-if file_director[-1] != "/":
-    file_director += "/"
-    print ("\nFile director",file_director)
 
-if "--seq" in sys.argv:    
-    i = sys.argv.index("--seq")
-    seq_file_name = sys.argv[i+1] 
+parser = argparse.ArgumentParser(
+                    prog='calc_CCR_rate',
+                    description="""The script to calculate CCR rates. In director has to contains:
+    - peak lists (with peak position in points and peak height)
+    - experiment_set
+    - sequence in FASTA format""",
+                    epilog='Text at the bottom of help')
+
+parser.add_argument("file director", metavar="file_director", type=Path, 
+                    help="path to to director with all required")
+
+parser.add_argument("peak_list", metavar="peak_list_path", type=Path, 
+                    help="path to peak list in SPARKY format")
+
+parser.add_argument("-s", "--seq", dest='seq_file_name', type=int, default='seq', 
+                    help="if name of file with amino acid sequence is not 'seq', add this with name of file")
+
+parser.add_argument("-r", "--refgamma", type=Path, 
+                    help="if you have file with reference values of CCR rates, add this with name of file (file must be .csv, columns name should be: AA, psi_angle (or/and phi_angle), CCR name")
+
+parser.add_argument("-e", "--expset", type=Path, 
+                    help="if you want use experiments setup file with different filename than /experiments_set.txt/ (structure of file must be the same as orginal file)")
+
+args = parser.parse_args()
+
+file_director = args.file_director
+print ("\nFile director",file_director)
+
+if args.seq_file_name != 'seq':
+    seq_file_name = args.seq_file_name 
 else: seq_file_name = "{}seq".format(file_director)
 print("File with amino acid sequence: {}".format(seq_file_name)) 
 
-if "--refgamma" in sys.argv: 
-    i = sys.argv.index("--refgamma")
+
+if args.refgamma: 
     refgammaFlag = True
-    gamma_cal_file_name = sys.argv[i+1]
+    gamma_cal_file_name = args.refgamma
     print ("Reference CCR rates are inclued from: {}".format(gamma_cal_file_name)) 
 else: 
     refgammaFlag = False
     gamma_cal_file_name = None
+
+
+if args.expset:
+    exp_file_name = "{}{}".format(file_director,args.expset)
+    print("Diffrent experiment set file: {}".format(exp_file_name)) 
+else: exp_file_name = "{}experiments_set.txt".format(file_director)
 
 RaportDir = file_director+"all_outputs/"
 RaportBoxFile = RaportDir+"RaportBox.txt"
 if not os.path.exists(RaportDir):
         os.mkdir(RaportDir)
 
-
-if "--expset" in sys.argv:    
-    i = sys.argv.index("--expset")
-    exp_file_name = "{}{}".format(file_director,sys.argv[i+1])
-    print("Diffrent experiment set file: {}".format(exp_file_name)) 
-else: exp_file_name = "{}experiments_set.txt".format(file_director)
 # 
 
 aminoacids=['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
@@ -174,10 +199,15 @@ class CCRFactory:
         return experiments, to_compere_dict
 
 
+class ExperimentSet:
+    def __init__(self):
+        self.working_dir = ''
+        self.number_of_exp = 0
+        
 
 
 
-class CCRBaseClass:
+class CCRClass:
     
     def __init__(self,filename,file_director,seq_list):
         self._CCR_name = ""       # name of CCR: CCR_1, CCR_2,                           -> required
@@ -1101,7 +1131,7 @@ class CCRBaseClass:
         return
 
 
-class CCR1(CCRBaseClass):
+class CCR1(CCRClass):
     def __init__(self,filename,file_director,seq_list):
         self._CCR_name = "CCR_1"       # name of CCR: CCR_1, CCR_2,                           -> required
         self._auto_name = ""       # name of file with auto version                      -> required
@@ -1113,7 +1143,7 @@ class CCR1(CCRBaseClass):
         self._angle = ["psi"]           # angle: phi, psi                                     -> required
         self._angle_pos = [-1]       # angle position of all peaks: -2, -1, 0, 1, 2        -> required
         self._tc_vol = -1.0        # time of ccr evolution                               -> required
-        self._ccr_calc_function = CCRBaseClass.calc_ccr_rate()
+        self._ccr_calc_function = CCRClass.calc_ccr_rate()
         
         self._n_dim = 4            # number of dimensions                                -> required
         self._nucl_name = ["N", "CO", "CA", "H"]            # nuclei of all peaks: H, N, C, CA, CB, HA, HB
