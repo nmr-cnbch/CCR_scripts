@@ -82,10 +82,23 @@ if "--peak_uncert" in sys.argv:
 else:
     PeakUncertiFlag = False
 # 
+if "--publication" in sys.argv: 
+    PublicationFlag = True
+else:
+    PublicationFlag = False
 
 aminoacids=['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
     
-
+CCR_dict = {"CCR_1":{"angle":"psi","angle_pos":-1,},
+            "CCR_2":{"angle":"phi","angle_pos":0,},
+            "CCR_3":{"angle":"phi, psi","angle_pos":-1,},
+            "CCR_4":{"angle":"phi","angle_pos":-1,},
+            "CCR_5":{"angle":"psi","angle_pos":-1,},
+            "CCR_6":{"angle":"phi","angle_pos":0,},
+            "CCR_7":{"angle":"phi, psi","angle_pos":0,},
+            "CCR_8":{"angle":"phi, psi","angle_pos":0,},
+            "CCR_9":{"angle":"phi, psi","angle_pos":-1,},
+            }
 
 """Classes"""
 
@@ -99,8 +112,9 @@ class CSpectrum:
         self.nucl_pos = []             # nuclei position of all peaks: -2, -1, 0, 1, 2 
         
         self.n_angle = 0          # number of measured angle  
-        self.angle = []           # angle: phi, psi                                     -> required
-        self.angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2        -> required
+        self.angle = []           # angle: phi, psi                                     
+        self.angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2        
+        self.CCR_pos = 100
         self.ns = [0,0]          # number of scans in auto [0] and cross [1] version    -> required
         self.tc_vol = -1.0        # time of ccr evolution                               -> required
         self.Hroi = [0.0,0.0]       # downfield and upfield of direct dimension
@@ -126,7 +140,7 @@ class CResidue:
         # self.peak_seq_pos_a = []
         self.is_overlap = False       # information about the presents of overlapping of a peak: maybe, yes, no   
         self.overlap_peaks = {}       #  
-        self.peak_uncertainty = [] 
+        self.peak_uncertainty = [1.0,1.0] 
 
         self.is_ccr_rate = False
         self.ccr_rate = -99999.0
@@ -357,6 +371,7 @@ def ReadExpSet(exp_file):               # wczytywanie danych z pliku experiments
                     if "noise" in lines[line]:
                         one_experinet.noise[0]=float(items[1])
                         one_experinet.noise[1]=float(items[2])
+            one_experinet.CCR_pos = deepcopy(CCR_dict[one_experinet.CCR_name]["angle_pos"])
             experiments.append(deepcopy(one_experinet))
             print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experinet.CCR_name,one_experinet.other,one_experinet.auto_name,one_experinet.cross_name))
             # print ("Experiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(i, one_experinet.CCR_name, one_experinet.n_dim, one_experinet.nucl_name, one_experinet.nucl_pos, one_experinet.n_angle, one_experinet.angle_pos, one_experinet.angle, one_experinet.ns, one_experinet.tc_vol, one_experinet.Hroi), file=RaportBox)
@@ -390,10 +405,78 @@ def ReadSequnce(seq_file_name):
             print_raport ("FASTA sequence: {}".format(FASTAseq))
     return sequence
 
+def read_aminoacid_number(peak_description:str):
+    aminoacids = peak_description.split("-")
+    first_dim_sign_list = list(aminoacids[0])
+    last_dim_sign_list = list(aminoacids[-1])
+    print_raport(f"{first_dim_sign_list}, {last_dim_sign_list}")
+    digit_list_first = []
+    digitFlag_first = False
+    digit_list_last = []
+    digitFlag_last = False
+
+    for indexn, sign in enumerate(first_dim_sign_list):
+        if digitFlag_first==False:
+            if sign.isdigit():
+                digit_list_first.append(deepcopy(indexn))
+                digitFlag_first = True
+        elif digitFlag_first:
+            if not sign.isdigit():
+                digit_list_first.append(deepcopy(indexn))
+                digitFlag_first = False
+
+    for indexn, sign in enumerate(last_dim_sign_list):
+        if digitFlag_last==False:
+            if sign.isdigit():
+                digit_list_last.append(deepcopy(indexn))
+                digitFlag_last = True
+        elif digitFlag_last:
+            if not sign.isdigit():
+                digit_list_last.append(deepcopy(indexn))
+                digitFlag_last = False
+
+    if len(digit_list_first)>=2:
+        aminoacids_number_first = ''.join([n for n in first_dim_sign_list[digit_list_first[0]:digit_list_first[1]]])
+    else: aminoacids_number_first = 'nan'
+    
+    if len(digit_list_last)>=2:
+        aminoacids_number_last = ''.join([n for n in last_dim_sign_list[digit_list_last[0]:digit_list_last[1]]])
+    else: aminoacids_number_last = 'nan'
+    
+    print_raport(f"digit_list_first: {digit_list_first}, digit_list_last: {digit_list_last}")
+    print_raport(f"aminoacids_number_first: {aminoacids_number_first}, aminoacids_number_last: {aminoacids_number_last}")
+
+    if aminoacids_number_first == aminoacids_number_last:
+        aminoacids_number = aminoacids_number_first
+        HaveNumberFlag = True
+    elif aminoacids_number_first.isdigit() and aminoacids_number_last == 'nan':
+        aminoacids_number = aminoacids_number_first
+        HaveNumberFlag = True
+    elif aminoacids_number_last.isdigit() and aminoacids_number_first == 'nan':
+        aminoacids_number = aminoacids_number_last
+        HaveNumberFlag = True
+    else:
+        if first_dim_sign_list[digit_list_first[1]+1] == 'N' or first_dim_sign_list[digit_list_first[1]+1] == 'H':
+            aminoacids_number = aminoacids_number_first
+            HaveNumberFlag = True
+        elif last_dim_sign_list[digit_list_last[1]+1] == 'N' or last_dim_sign_list[digit_list_last[1]+1] == 'H':
+            aminoacids_number = aminoacids_number_last
+            HaveNumberFlag = True
+        else: HaveNumberFlag = False
+
+    if HaveNumberFlag == False:
+        print_raport(f"Probelm with number reading in: {first_dim_sign_list} and {last_dim_sign_list}")
+        aminoacids_number = "0"
+
+    print(f"aminoacids_number: {aminoacids_number}")
+    return aminoacids_number
 
 def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_dim, p_list, is_there_peaklist, points_mode=False):
     
     NameFlag = [False, False]
+    auto_noise = 0.0
+    cross_noise = 0.0
+
     # NotFoundName = []
     if points_mode == False:
         listofnames = [".list","_new_ppm.list"]
@@ -415,13 +498,20 @@ def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_di
                 # print ("There is no such file or directory:", peaklistfile, file=RaportBox)
                 RaportBox.write("There is no such file or directory: {}\n".format(peaklistfile))
     
+    
 
     if NameFlag[0] == True and NameFlag[1] == True:
-        print_raport("\n\nLISTA:{}".format(peak_list_names))
+        RaportBox.write("\n\nLISTA:{}\n".format(peak_list_names))
         with open(peak_list_names[0], 'r') as pl_a, open(peak_list_names[1], 'r') as pl_x:  
             is_there_peaklist = True
             p_lines_a = pl_a.readlines()
             p_lines_x = pl_x.readlines()
+            if points_mode:
+            # if points_mode and "Average noise level" in p_lines_a[1] and p_lines_x[1]:
+                auto_noise = float(p_lines_a[1].split("=")[1])
+                cross_noise = float(p_lines_x[1].split("=")[1])
+                print_raport(f"auto_noise = {auto_noise}, cross_noise = {cross_noise}")
+                # RaportBox.write(f"auto_noise = {auto_noise}, cross_noise = {cross_noise}")
             for indexl, line in enumerate(p_lines_a):
                 if indexl > 1 and len(line) > 1:
                     item_a = line.split()
@@ -431,11 +521,12 @@ def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_di
                         print ("Error: Auto ({}) and cross ({}) peak list are not compatible:\n{} ? {}".format(peak_list_names[0], peak_list_names[1], item_a[0], item_x[0]))
                         sys.exit()
                     description = item_a[0]
-                    aminoacids = description.split("-")
-                    aminoacids_number = ''.join([n for n in str(aminoacids[s_dim-1]) if n.isdigit()])
-                    if aminoacids_number == '':
-                        aminoacids_number = ''.join([n for n in str(aminoacids[0]) if n.isdigit()])
-                    print_raport(f"aminoacids_number: {aminoacids_number,description,aminoacids}")
+                    aminoacids_number = read_aminoacid_number(description)
+                    # aminoacids = description.split("-")
+                    # aminoacids_number = ''.join([n for n in str(aminoacids[s_dim-1]) if n.isdigit()])
+                    # if aminoacids_number == '':
+                    #     aminoacids_number = ''.join([n for n in str(aminoacids[0]) if n.isdigit()])
+                    RaportBox.write(f"aminoacids_number: {aminoacids_number,description}\n")
                     aminoacids_number = int(aminoacids_number)
                     for residue in p_list:
                         # residue = CResidue()
@@ -451,13 +542,16 @@ def Read_peaklist(file_director, peak_list_name_auto, peak_list_name_cross, s_di
                                     residue.peak_pos.append(deepcopy(float(item_a[i])))
                     # Reading peak intensity
                             if len(item_a)>s_dim+1:
-                                print_raport("auto = {}, cross = {}".format(item_a[s_dim+1],item_x[s_dim+1]))
+                                RaportBox.write("auto = {}, cross = {}\n".format(item_a[s_dim+1],item_x[s_dim+1]))
                                 residue.peak_intens[0] = float(item_a[s_dim+1])
                                 residue.peak_intens[1] = float(item_x[s_dim+1])
     else:
         print_raport ("Missing file for {} and {}! {}\n".format(peak_list_name_auto, peak_list_name_cross, peak_list_names))
         is_there_peaklist = False
-    return p_list, is_there_peaklist
+    if points_mode:
+        return p_list, is_there_peaklist, auto_noise, cross_noise
+    else:
+        return p_list, is_there_peaklist
 
 def Read_Reference_Gamma(gamma_cal_file_name):
     with open(gamma_cal_file_name, newline='') as gc_file:  
@@ -492,27 +586,29 @@ def Read_peak_uncertainty(file_director:str, list_verson:str, s_dim:int, peak_ob
     peaklistfile = f"{file_director}peak_lists/{list_verson}_peaks_noise.list"
 
     if os.path.exists(peaklistfile):
-        print_raport(f"\n\nLISTA:{peaklistfile}")
+        RaportBox.write(f"\n\nLISTA:{peaklistfile}\n")
         with open(peaklistfile, 'r') as peak_noise_file:  
             p_lines_a = peak_noise_file.readlines()
             for indexl, line in enumerate(p_lines_a):
-                if indexl > 1 and len(line) > 1:
+                if indexl > 0 and len(line) > 1:
                     item_a = line.split()
                     description = item_a[0]
-                    aminoacids = description.split("-")
-                    aminoacids_number = ''.join([n for n in str(aminoacids[s_dim-1]) if n.isdigit()])
-                    if aminoacids_number == '':
-                        aminoacids_number = ''.join([n for n in str(aminoacids[0]) if n.isdigit()])
-                    print_raport(f"aminoacids_number: {aminoacids_number,description,aminoacids}")
+                    aminoacids_number = read_aminoacid_number(description)
+                    # aminoacids = description.split("-")
+                    # aminoacids_number = ''.join([n for n in str(aminoacids[s_dim-1]) if n.isdigit()])
+                    # if aminoacids_number == '':
+                    #     aminoacids_number = ''.join([n for n in str(aminoacids[0]) if n.isdigit()])
+                    RaportBox.write(f"aminoacids_number: {aminoacids_number,description}\n")
                     aminoacids_number = int(aminoacids_number)
                     for residue in peak_objects:
                         # residue = CResidue()
                         if aminoacids_number == residue.aa_number:
                             residue.peak_uncertainty[version] = float(item_a[-1])
+                            RaportBox.write(f"peak_uncertainty = {float(item_a[-1])}\n")
         Flag = True
     else:
         Flag = False
-        print_raport (f"There is no file like: {peaklistfile}!\n")
+        print_raport (f"There is no file like: {peaklistfile}!, so there will be used averange noise value\n")
     return Flag
 
 
@@ -543,6 +639,7 @@ def CalcErrorValue(peak_list,peak_number,angle_position,number_scan,Tc,uncertain
     if uncertainty_val == None:
         uncertainty_Ia = peak_list[peak_number].peak_uncertainty[0]
         uncertainty_Ix = peak_list[peak_number].peak_uncertainty[1]
+        print_raport(f"{peak_list[peak_number].descript}: Peak_uncertainty for CalcErrorValue: {uncertainty_Ia}, {uncertainty_Ix}")
     else:
         uncertainty_Ia = uncertainty_val[0]
         uncertainty_Ix = uncertainty_val[1]
@@ -551,7 +648,7 @@ def CalcErrorValue(peak_list,peak_number,angle_position,number_scan,Tc,uncertain
     squareError = math.pow(1/Tc,2) * squareDerivativeArcTanh * math.pow(NSa/NSx,2) * sumOfSquaresOfPeakHightDeviation
     peak_list[peak_number+angle_position].ccrrate_error_value = math.sqrt(squareError)
 
-    print_raport("Calculating gamma error for peak number: {} \n squareDerivativeArcTanh = {} \n sumOfSquaresOfPeakHightDeviation = {}\n squareError = {}\n \t\t--> {}\n".format(peak_number,
+    RaportBox.write("Calculating gamma error for peak number: {} \n squareDerivativeArcTanh = {} \n sumOfSquaresOfPeakHightDeviation = {}\n squareError = {}\n \t\t--> {}\n".format(peak_number,
                                                                                                                                                        squareDerivativeArcTanh,
                                                                                                                                                        sumOfSquaresOfPeakHightDeviation,
                                                                                                                                                        squareError,
@@ -620,13 +717,14 @@ def calc_theor_Ix(peaks, angle_position, Tctime, number_scan, CCR_name):
 
 def LRegression_expresion(x,y):
     slope, intercept, r, p, std_err = stats.linregress(x, y)
+    matching_factor_for_y_x = (1-slope)/std_err #if it is <1 is good, >1 means that we have weak corellation x=y 
     r2 = r**2
     lr_exp = '{:.3f}*x + {:.3f}'.format(slope,intercept)
-    print(f"\nlinear regretion: {lr_exp}, r2: {r**2:.3f}\n p: {p}, std_err:{std_err}\n")
+    RaportBox.write(f"\nlinear regretion: {lr_exp}, r2: {r**2:.3f}\n p: {p}, std_err:{std_err}\n")
     lr_exp_y_list = []
     for i in x:
         lr_exp_y_list.append(deepcopy(slope*i+intercept))
-    return lr_exp, r2,slope, intercept
+    return lr_exp, r2, slope, intercept, matching_factor_for_y_x
 
 def WeightedLRegression_expresion(x,y,uncertainty_val):
     regr = LinearRegression()
@@ -640,19 +738,34 @@ def WeightedLRegression_expresion(x,y,uncertainty_val):
     weight_val = [1/i for i in uncertainty_val]
     regr.fit(X, Y, weight_val)
     predict_y = [i for [i] in regr.predict(X).tolist()]
-    print("FIT!")
     
     r2 = regr.score(X, Y, weight_val)
     [[slope]] = regr.coef_
     intercept = regr.intercept_[0] #type: ignore
-    print(f"slope: {slope:.3f}, intercept: {intercept:.3f}")
+    RaportBox.write(f"slope: {slope:.3f}, intercept: {intercept:.3f}")
     # print(f"r2: {r2:.3f}, \nregr.coef_:{regr.coef_},\nreg.intercept_:{regr.intercept_}")
     lr_exp = '{:.3f}*x + {:.3f}'.format(slope,intercept)
-    print(f"weighted linear regretion: {lr_exp}, r2: {r2:.3f}")
+    RaportBox.write(f"weighted linear regretion: {lr_exp}, r2: {r2:.3f}")
     return lr_exp, r2,slope, intercept
 
+def calc_R2(exp_list,theory_list):
+    SSR = 0.0
+    SSE = 0.0
+    SST = 0.0
+    average_exp = round(sum(exp_list)/len(exp_list), 3)
+    for indext, theory_val in enumerate(theory_list):
+        SSR+=(theory_val-average_exp)**2
+        SSE+=(exp_list[indext]-theory_val)**2
+        SST+=(exp_list[indext]-average_exp)**2
+    R2_val = SSR/SST
+    R2_val2 = 1 - (SSE/SST)
+    print_raport ("SSR = {:.0f}; SSE = {:.0f}; SST = {:.0f}; SSR+SSE = {:.0f}; R2_1 = {:.4f}; R2_2 = {:.4f}".format(SSR, SSE, SST, SSR+SSE, R2_val, R2_val2))
+    return R2_val2
+
+
+
 def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
-    print("\nby Hand\n")
+    RaportBox.write("\nby Hand\n")
     list_of_invert_squer_uncertainty = []
     list_of_avg_x = []
     list_of_avg_square_x = []
@@ -678,18 +791,24 @@ def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
 
     sum_of_x_avgx_y_avgy_div_uncertainty = sum(list_of_x_avgx_y_avgy_div_uncertainty)
     sum_of_x_avgx_squer_div_uncertainty = sum(list_of_x_avgx_squer_div_uncertainty)
-    print(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
+    print_raport(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
     slope = sum_of_x_avgx_y_avgy_div_uncertainty/sum_of_x_avgx_squer_div_uncertainty  
     intercept = avg_y-(slope*avg_x)
     slope_uncertainty = math.sqrt(1/(sum_of_x_avgx_squer_div_uncertainty))
     intercept_uncertainty = math.sqrt((avg_square_x)/sum_of_x_avgx_squer_div_uncertainty)
 
-    print(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
-    lr_exp = '{:.3f}*x + {:.3f}'.format(slope,intercept)
-    print(f"weighted linear regretion: {lr_exp}")
-    matching_factor_for_y_x = (1-slope)/slope_uncertainty
-    print(f"1-a/delta_a = {matching_factor_for_y_x}")
-    return lr_exp, slope, intercept, matching_factor_for_y_x
+    print_raport(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
+    lr_exp = '{:.2f}*x + {:.2f}'.format(slope,intercept)
+    print_raport(f"weighted linear regretion: {lr_exp}")
+    factor_a_for_y_x = (1-abs(slope))/slope_uncertainty
+    factor_b_for_y_x = (1-abs(intercept))/intercept_uncertainty
+    print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
+    y_from_line = []
+    for one_x in x:
+        y_from_line.append(deepcopy(one_x*slope+intercept))
+    r2 = calc_R2(y,y_from_line)
+
+    return lr_exp, slope, slope_uncertainty, intercept, intercept_uncertainty, factor_a_for_y_x, factor_b_for_y_x, r2
 
 
 def check_if_min_max(suspect_min:Union[int,float], 
@@ -739,7 +858,7 @@ def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add="",add2=""):
     avg_distance = np.mean(gamma_differences)
     std_distance = np.std(gamma_differences)
     t_critical_val = stats.t.ppf(q=1-.05,df=len(gamma_differences))
-    tStudent_1 = avg_distance/(std_distance/math.sqrt(len(gamma_differences)))
+    tStudent_1 = avg_distance/(std_distance/math.sqrt(len(gamma_differences))) #type: ignore
 
     label = f'structure-predicted vs experimental,\nwilcoxon rank = {wilcoxon_rank:.4f}\ntStudent = {tStudent_2:.4f}\ntStudent for y-x = {tStudent_1:.4f}\nT critical val = {t_critical_val:.4f}\ntStudent_3 = {tStudent_3:.4f}'
     
@@ -751,16 +870,15 @@ def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add="",add2=""):
                     yerr=gamma_calc_error, 
                     fmt='none') #
 
-    print("\n",ccr_name)
-    print(f"n = {len(gamma_differences)}")
-    print (label)
+    print_raport(f"\n {ccr_name}")
+    print_raport (label)
     # print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
-    linear_expretion,linear_r2, linear_slope, linear_intercept = LRegression_expresion(gamma_calculated, gamma_experimental)
+    linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
     weighted_expretion,weighted_r2, weighted_slope, weighted_intercept = WeightedLRegression_expresion(gamma_calculated, gamma_experimental,gamma_calc_error)
-    weighted_expretion2, weighted_slope2, weighted_intercept2, matching_factor_for_y_x = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
-    plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='red', label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}')
+    weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
+    plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='red', label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}, \nmatching factor for y=x: {matching_factor_for_y_x_LR:.1f}')
     plt.axline([0,weighted_intercept],slope=weighted_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='blue', label=f'lw: {weighted_expretion}, r2 = {weighted_r2:.3f}')
-    plt.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, color='purple', label=f'lw2: {weighted_expretion2}, \nmatching factor for y=x: {matching_factor_for_y_x:.1f}')
+    plt.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, color='purple', label=f'lw2: {weighted_expretion2}, \nmatching factor for y=x: {factor_a:.1f}')
 
     plt.title(ccr_name+add)
     # Naming the x-axis, y-axis and the whole graph 
@@ -801,12 +919,14 @@ def prepare_gamma_calc_vs_gamma_exp_table(peaks_tab:list[list[CResidue]],
     for indext in range(len(peaks_tab)):
         gamma_calculated = []
         gamma_experimental = []
+        gamma_calc_error = []
         for one_peak in peaks_tab[indext]:
             if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
                 gamma_calculated.append(deepcopy(one_peak.gamma_ref))
                 gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
                 min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-        set_of_data.append(deepcopy([gamma_calculated,gamma_experimental]))
+        set_of_data.append(deepcopy([gamma_calculated,gamma_experimental,gamma_calc_error]))
     return set_of_data,min_max_value
 
 
@@ -816,13 +936,15 @@ def prepare_gamma_calc_vs_gamma_exp_table_diff_min_max(peaks_tab:list[list[CResi
     for indext in range(len(peaks_tab)):
         gamma_calculated = []
         gamma_experimental = []
+        gamma_calc_error = []
         min_max_value = [+100.0,-100.0] #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
         for one_peak in peaks_tab[indext]:
             if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
                 gamma_calculated.append(deepcopy(one_peak.gamma_ref))
                 gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
                 min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-        set_of_data.append(deepcopy([gamma_calculated,gamma_experimental]))
+        set_of_data.append(deepcopy([gamma_calculated, gamma_experimental, gamma_calc_error]))
         set_of_min_max_value.append(deepcopy(min_max_value))
     return set_of_data,set_of_min_max_value
 
@@ -857,11 +979,12 @@ def prepare_gamma_exp_vs_diff_nus_table(peaks_tab:list[list[CResidue]],
     return set_of_data,min_max_discript,min_max_value
 
 
-def plot_gamma_gamma_all_together(peaks_tab:list[list[CResidue]],ccr_name:list[str],add:list[str],transparent_plot=False, nrows=3, ncols=3, add2=""):
+def plot_gamma_gamma_all_together(peaks_tab:list[list[CResidue]],ccr_name:list[str],add:list[str],transparent_plot=False, nrows=3, ncols=3, add2="", publication_style=False):
 
     
     fig, axs = plt.subplots(nrows=nrows,ncols=ncols)
-    fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
+    if not publication_style:
+        fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
     
     set_of_data_all_type_of_NUS,min_max_value = prepare_gamma_calc_vs_gamma_exp_table_diff_min_max(peaks_tab)
     
@@ -869,21 +992,41 @@ def plot_gamma_gamma_all_together(peaks_tab:list[list[CResidue]],ccr_name:list[s
     for indexa, ax in enumerate(axs.flat):
         if indexa < len(peaks_tab):
             ax.axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
-            ax.scatter(set_of_data_all_type_of_NUS[indexa][0],set_of_data_all_type_of_NUS[indexa][1],s=10,) #
-            ax.set_title(f"{ccr_name[indexa]} {add[indexa][1:]}", fontsize=10)
+            ax.scatter(set_of_data_all_type_of_NUS[indexa][0],set_of_data_all_type_of_NUS[indexa][1],s=3, color='#252525ff') #
+            ax.errorbar(set_of_data_all_type_of_NUS[indexa][0], set_of_data_all_type_of_NUS[indexa][1], 
+                    yerr=set_of_data_all_type_of_NUS[indexa][2], 
+                    fmt='none', color='#252525ff') #
+            weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(set_of_data_all_type_of_NUS[indexa][0],
+                                                                                                                                       set_of_data_all_type_of_NUS[indexa][1],
+                                                                                                                                       set_of_data_all_type_of_NUS[indexa][2])
+            ax.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=2, 
+                      color='mediumorchid', label=f'{add[indexa][1:]}:    {len(set_of_data_all_type_of_NUS[indexa][1])} peaks,    {weighted_expretion2},  delta_a: {weighted_slope2error:.3f}, delta_b: {weighted_intercept2error:.3f}    r2 = {r2:.2f}    factor \'a\' = {factor_a:.1f}, factor \'b\' = {factor_b:.1f}')
+            ax.set_title(f"{ccr_name[indexa]} {add[indexa][1:]}", fontsize=10) #
             ax = setup_plot_area(ax,min_max_value[indexa])
             ax.tick_params(labelsize=8)
 
-    fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
-    fig.supylabel('experimental \u0393, $s^{-1}$')
-
-    fig.set_figwidth(ncols*5)
-    fig.set_figheight(nrows*5)
+    #mediumpurple
     plt.subplots_adjust(hspace=0.3,wspace = 0.3)
 
     if add2 == '':
         add2 = add[0]
-    fig.savefig("{}_all_exp_vs_calc{}.png".format(file_director,add2), bbox_inches="tight", 
+
+    if publication_style:
+        fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=15)
+        fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=15)
+        cm = 1/2.54  # centimeters in inches
+        fig.set_figwidth(17.4*cm)
+        fig.set_figheight(17*cm)
+        fig.savefig("{}{}_all_exp_vs_calc{}.png".format(file_director,gamma_cal_file_name[2:-4],add2), bbox_inches="tight", 
+                pad_inches=0.3, transparent=transparent_plot)
+        fig.savefig("{}{}_all_exp_vs_calc{}.svg".format(file_director,gamma_cal_file_name[2:-4],add2), bbox_inches="tight", 
+                pad_inches=0.3, transparent=transparent_plot)
+    else:
+        fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
+        fig.supylabel('experimental \u0393, $s^{-1}$')
+        fig.set_figwidth(ncols*5)
+        fig.set_figheight(nrows*5)
+        fig.savefig("{}_all_exp_vs_calc{}.png".format(file_director,add2), bbox_inches="tight", 
                 pad_inches=0.3, transparent=transparent_plot)
     plt.close()
     plt.clf()
@@ -891,21 +1034,30 @@ def plot_gamma_gamma_all_together(peaks_tab:list[list[CResidue]],ccr_name:list[s
 
 
 
-def plot_gamma_gamma_and_diff_together(peaks_tab:list[list[CResidue]],ccr_name:str,add:list[str],transparent_plot=False):
+def plot_gamma_gamma_and_diff_together(peaks_tab:list[list[CResidue]],ccr_name:str,add:list[str],transparent_plot=False,publication_style=False):
 
     # plt.rcParams['font.size'] = '14'
 
     min_max_value = [+100.0,-100.0]
     fig, axs = plt.subplots(nrows=2,ncols=len(peaks_tab))
-    fig.suptitle("Comparision of CCR rates ({}) for diffrent number of NUS points ".format(ccr_name))
+    if not publication_style:
+        fig.suptitle(f"Comparision of CCR rates ({ccr_name}) for diffrent experiment variant with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\"")
     
     set_of_data_all_type_of_NUS,min_max_value = prepare_gamma_calc_vs_gamma_exp_table(peaks_tab,min_max_value)
+
     set_of_data_min_max_NUS,min_max_discript,min_max_value = prepare_gamma_exp_vs_diff_nus_table(peaks_tab,min_max_value,add)
    
    # first row - plot each NUS number in particular plot
     for indext in range(len(peaks_tab)):
         axs[0,indext].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
         axs[0,indext].scatter(set_of_data_all_type_of_NUS[indext][0],set_of_data_all_type_of_NUS[indext][1],s=10,) #
+        if len(set_of_data_all_type_of_NUS[indext][0])>0:
+            weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(set_of_data_all_type_of_NUS[indext][0],
+                                                                                                                                       set_of_data_all_type_of_NUS[indext][1],
+                                                                                                                                       set_of_data_all_type_of_NUS[indext][2])
+            axs[0,indext].axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, 
+                      color='purple', label=f'{add[indext][1:]}:    {len(set_of_data_all_type_of_NUS[indext][1])} peaks,    {weighted_expretion2},  delta_a: {weighted_slope2error:.3f}, delta_b: {weighted_intercept2error:.3f}\nr2 = {r2:.2f}    factor \'a\' = {factor_a:.1f}, factor \'b\' = {factor_b:.1f}')
+            # axs[0,indext].legend()
         axs[0,indext].set_title(add[indext][1:], fontsize=10)
         axs[0,indext] = setup_plot_area(axs[0,indext],min_max_value)
         axs[0,indext].tick_params(labelsize=8)
@@ -918,11 +1070,10 @@ def plot_gamma_gamma_and_diff_together(peaks_tab:list[list[CResidue]],ccr_name:s
                          s=10,label=str(add[indext][1:])) #
     axs[1,0] = setup_plot_area(axs[1,0],min_max_value)
     axs[1,0].tick_params(labelsize=8)
-    fig.legend(fontsize="small",loc='lower left', bbox_to_anchor=(0.35, 0.1))
+    fig.legend(fontsize="medium",loc='lower left', bbox_to_anchor=(0.3, 0.1))
 
     for indext in range(1,len(peaks_tab)-1):
         axs[1][indext].set_axis_off()
-
 
     axs[1,len(peaks_tab)-1].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
     axs[1,len(peaks_tab)-1].scatter(set_of_data_min_max_NUS[1],set_of_data_min_max_NUS[0],s=10,) #
@@ -934,11 +1085,18 @@ def plot_gamma_gamma_and_diff_together(peaks_tab:list[list[CResidue]],ccr_name:s
     fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
     fig.supylabel('experimental \u0393, $s^{-1}$')
 
-    fig.set_figwidth(len(peaks_tab)*3)
-    fig.set_figheight(5)
     plt.subplots_adjust(hspace=0.3,wspace = 0.3)
 
-    fig.savefig("{}{}_exp_vs_calc_diff.png".format(file_director, ccr_name), bbox_inches="tight", 
+    if publication_style:
+        cm = 1/2.54  # centimeters in inches
+        fig.set_figwidth(17.4*cm)
+        fig.set_figheight(17*cm)
+        fig.savefig("{}{}_exp_vs_calc_diff.svg".format(file_director, ccr_name), bbox_inches="tight", 
+                pad_inches=0.3, transparent=transparent_plot)
+    else:
+        fig.set_figwidth(len(peaks_tab)*3.5)
+        fig.set_figheight(7)
+        fig.savefig("{}{}_exp_vs_calc_diff.png".format(file_director, ccr_name), bbox_inches="tight", 
                 pad_inches=0.3, transparent=transparent_plot)
     plt.close()
     plt.clf()
@@ -1381,6 +1539,7 @@ def Write_ALL_CCRRate_CSV():
                 if one_peak.is_ccr_rate == True and one_peak.ccrrate_calculation_error == False and one_peak.aa_name != "G":
                     one_row['{}{}'.format(experiment.CCR_name,Add_textt)] = '{:.4f}'.format(one_peak.ccr_rate)
                     one_row['{}_error'.format(experiment.CCR_name)] = '{:.4f}'.format(one_peak.ccrrate_error_value)            # ERROR GAMMA INFO, 9.11.2023
+
                 else:
                     one_row['{}{}'.format(experiment.CCR_name,Add_textt)] = "nan"
                     one_row['{}_error'.format(experiment.CCR_name)] = "nan"            # ERROR GAMMA INFO, 9.11.2023
@@ -1393,9 +1552,9 @@ def Write_zeroCCRrates_Analisis_CSV():
     new_list = "zeroCCRrates_Analisis.csv".format(RaportDir)
     
     s_dim = Experiments[0].n_dim
-    zeroCCR_error_residue_dict={}
-    zeroCCR_error_experiment_dict={}
-    zeroCCR_error_aa_dict = {}
+    error_residue_dict={}
+    error_experiment_dict={}
+    error_aa_dict = {}
     invisible_cross_peaks = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
@@ -1411,7 +1570,7 @@ def Write_zeroCCRrates_Analisis_CSV():
             if experiment.is_peaklist == True:
                 writer.writerow({})
                 invisible_cross_peaks[CCR_name]=[0,0]
-                zeroCCR_error_experiment_dict[CCR_name]=0
+                error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
@@ -1419,17 +1578,17 @@ def Write_zeroCCRrates_Analisis_CSV():
                         if (one_peak.gamma_ref - one_peak.ccr_rate)/one_peak.ccr_rate >=2 or (one_peak.gamma_ref - one_peak.ccr_rate)/one_peak.ccr_rate <= -2:
                             
                             row_list = deepResidueAnalisys(writer,one_peak,peak_number,experiment,
-                                                    zeroCCR_error_residue_dict,
-                                                    zeroCCR_error_experiment_dict,
-                                                    zeroCCR_error_aa_dict)
+                                                    error_residue_dict,
+                                                    error_experiment_dict,
+                                                    error_aa_dict)
 
         writer_row = csv.writer(csv_file,delimiter=",")
         writer_row.writerow("")
         
         deepExpAnalisys(writer_row,
-                 zeroCCR_error_residue_dict,
-                 zeroCCR_error_experiment_dict,
-                 zeroCCR_error_aa_dict,
+                 error_residue_dict,
+                 error_experiment_dict,
+                 error_aa_dict,
                  invisible_cross_peaks)
         
     # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
@@ -1437,25 +1596,28 @@ def Write_zeroCCRrates_Analisis_CSV():
     return
 
 
-def deepResidueAnalisys(writer,one_peak,peak_number,experiment,
-                 zeroCCR_error_residue_dict,
-                 zeroCCR_error_experiment_dict,
-                 zeroCCR_error_aa_dict):
+def deepResidueAnalisys(writer,one_peak:CResidue,peak_number:int,experiment:CSpectrum,
+                 error_residue_dict:dict,
+                 error_experiment_dict:dict,
+                 error_aa_dict:dict):
+    """ For particular peak we write all information about it and append basics info inf dicts
+    
+    """
     s_dim = experiment.n_dim
     CCR_name =  experiment.CCR_name+Additional_text(experiment)
     noise_level = experiment.noise
     peak_descr = str(one_peak.aa_number)+one_peak.aa_name
     list_of_row = []
     one_row = {}
-    zeroCCR_error_experiment_dict[CCR_name]+=1
-    if one_peak.aa_name in zeroCCR_error_aa_dict:
-        zeroCCR_error_aa_dict[one_peak.aa_name]+=1
+    error_experiment_dict[CCR_name]+=1
+    if one_peak.aa_name in error_aa_dict:
+        error_aa_dict[one_peak.aa_name]+=1
     else:
-        zeroCCR_error_aa_dict[one_peak.aa_name]=1
+        error_aa_dict[one_peak.aa_name]=1
     one_row["CCR name"] = CCR_name
     one_row["AA"] = peak_descr
     if one_peak.is_peak == True and one_peak.is_ccr_rate == True:
-        if experiment.angle_pos[0] == 0:
+        if experiment.CCR_pos == 0:
             for i in range(s_dim):
                 one_row['w{}'.format(i+1)] = '{:.3f}'.format(one_peak.peak_pos[i])
             one_row["intensity in auto"] = one_peak.peak_intens[0]
@@ -1494,7 +1656,7 @@ def deepResidueAnalisys(writer,one_peak,peak_number,experiment,
     
     writer.writerow(one_row)
 
-    if experiment.angle_pos[0] == -1:
+    if experiment.CCR_pos == -1:
         next_peak = experiment.peak[peak_number+1]
         one_row = {}
         peak_descr = str(next_peak.aa_number)+next_peak.aa_name
@@ -1508,48 +1670,55 @@ def deepResidueAnalisys(writer,one_peak,peak_number,experiment,
         one_row["Noise in cross"] = noise_level[1]
         writer.writerow(one_row)
 
-        if peak_descr in zeroCCR_error_residue_dict:
-            zeroCCR_error_residue_dict[peak_descr].append(deepcopy(CCR_name+" (-1 position)"))
+        if peak_descr in error_residue_dict:
+            error_residue_dict[peak_descr].append(deepcopy(CCR_name+" (-1 position)"))
         else:
-            zeroCCR_error_residue_dict[peak_descr] = [CCR_name+" (-1 position)"]
-    elif experiment.angle_pos[0] == 0:
-        if peak_descr in zeroCCR_error_residue_dict:
-            zeroCCR_error_residue_dict[peak_descr].append(deepcopy(CCR_name))
+            error_residue_dict[peak_descr] = [CCR_name+" (-1 position)"]
+    elif experiment.CCR_pos == 0:
+        if peak_descr in error_residue_dict:
+            error_residue_dict[peak_descr].append(deepcopy(CCR_name))
         else:
-            zeroCCR_error_residue_dict[peak_descr] = [CCR_name]
+            error_residue_dict[peak_descr] = [CCR_name]
 
 
-def deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks):
+def deepVisibilityAnalisis(one_peak:CResidue,experiment:CSpectrum,invisible_cross_peaks):
+    """Checking if peak if visible in cross version of experiment
+    """
     CCR_name =  experiment.CCR_name+Additional_text(experiment)
     noise_level = experiment.noise
     peak_descr = str(one_peak.aa_number)+one_peak.aa_name
     if one_peak.is_peak:
         if abs(one_peak.peak_intens[1])<noise_level[1]*10:
             invisible_cross_peaks[CCR_name][0]+=1
-            print_raport("{} - {}, noise: {} intens: {} ".format(invisible_cross_peaks[CCR_name][0],peak_descr,noise_level[1],one_peak.peak_intens[1]))
+            RaportBox.write("{} - {}, noise: {} intens: {} \n".format(invisible_cross_peaks[CCR_name][0],peak_descr,noise_level[1],one_peak.peak_intens[1]))
         if abs(one_peak.peak_intens[1])<noise_level[1]:
             invisible_cross_peaks[CCR_name][1]+=1
 
-def deepExpAnalisys(writer_to_file_by_dict,
-                 zeroCCR_error_residue_dict,
-                 zeroCCR_error_experiment_dict,
-                 zeroCCR_error_aa_dict,
-                 invisible_cross_peaks):
-    for residue in sorted(zeroCCR_error_residue_dict.keys()):
+def deepExpAnalisys(writer_to_file_by_dict:csv,
+                 error_residue_dict:dict,
+                 error_experiment_dict:dict,
+                 error_aa_dict:dict,
+                 invisible_cross_peaks:dict):
+    """ 
+    1) For peak in error_residue_dict are write down inforation about what residues in which CCR experiment they are
+    2) Per CCR experiment are write down information about how many peaks are error and if its intensity if smaller than 10 time noise val or noise val
+    3)
+    """
+    for residue in sorted(error_residue_dict.keys()):
         output_line = [residue]
-        for ccr_exp in zeroCCR_error_residue_dict[residue]:
+        for ccr_exp in error_residue_dict[residue]:
             output_line.append(deepcopy(ccr_exp))
         writer_to_file_by_dict.writerow(output_line)
     writer_to_file_by_dict.writerow("")
     writer_to_file_by_dict.writerow(["Number of peaks in cross where:","CCR zero error","intesity < 10*noise level","intesity < noise level"])
     for experiment in Experiments:
         CCR_name =  experiment.CCR_name+Additional_text(experiment)
-        writer_to_file_by_dict.writerow([CCR_name,zeroCCR_error_experiment_dict[CCR_name],invisible_cross_peaks[CCR_name][0],invisible_cross_peaks[CCR_name][1]])
+        writer_to_file_by_dict.writerow([CCR_name,error_experiment_dict[CCR_name],invisible_cross_peaks[CCR_name][0],invisible_cross_peaks[CCR_name][1]])
     writer_to_file_by_dict.writerow("")
     writer_to_file_by_dict.writerow(["AA name","CCR zero error"])
     for aa in aminoacids:
-        if Res3to1(aa) in zeroCCR_error_aa_dict:
-            writer_to_file_by_dict.writerow([aa,zeroCCR_error_aa_dict[Res3to1(aa)]])
+        if Res3to1(aa) in error_aa_dict:
+            writer_to_file_by_dict.writerow([aa,error_aa_dict[Res3to1(aa)]])
 
 
 
@@ -1557,9 +1726,9 @@ def Write_ErrorCCRrates_Analisis_CSV():
     new_list = "ErrorCCRrates_Analisis.csv".format(RaportDir)
     
     s_dim = Experiments[0].n_dim
-    zeroCCR_error_residue_dict={}
-    zeroCCR_error_experiment_dict={}
-    zeroCCR_error_aa_dict = {}
+    error_residue_dict={}
+    error_experiment_dict={}
+    error_aa_dict = {}
     invisible_cross_peaks = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
@@ -1574,23 +1743,23 @@ def Write_ErrorCCRrates_Analisis_CSV():
             if experiment.is_peaklist == True:
                 writer.writerow({})
                 invisible_cross_peaks[CCR_name]=[0,0]
-                zeroCCR_error_experiment_dict[CCR_name]=0
+                error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
                     if one_peak.is_ccr_rate and one_peak.aa_name != "G" and one_peak.gamma_ref > one_peak.ccr_rate*5:
                             deepResidueAnalisys(writer,one_peak,peak_number,experiment,
-                                                    zeroCCR_error_residue_dict,
-                                                    zeroCCR_error_experiment_dict,
-                                                    zeroCCR_error_aa_dict)
+                                                    error_residue_dict,
+                                                    error_experiment_dict,
+                                                    error_aa_dict)
 
         writer_row = csv.writer(csv_file,delimiter=",")
         writer_row.writerow("")
         
         deepExpAnalisys(writer_row,
-                 zeroCCR_error_residue_dict,
-                 zeroCCR_error_experiment_dict,
-                 zeroCCR_error_aa_dict,
+                 error_residue_dict,
+                 error_experiment_dict,
+                 error_aa_dict,
                  invisible_cross_peaks)
         
         
@@ -1602,9 +1771,9 @@ def Write_diffCCRrates_Analisis_CSV():
     new_list = "diffCCRrates_Analisis.csv".format(RaportDir)
     
     s_dim = Experiments[0].n_dim
-    zeroCCR_error_residue_dict={}
-    zeroCCR_error_experiment_dict={}
-    zeroCCR_error_aa_dict = {}
+    error_residue_dict={}
+    error_experiment_dict={}
+    error_aa_dict = {}
     invisible_cross_peaks = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
@@ -1619,24 +1788,24 @@ def Write_diffCCRrates_Analisis_CSV():
             if experiment.is_peaklist == True:
                 writer.writerow({})
                 invisible_cross_peaks[CCR_name]=[0,0]
-                zeroCCR_error_experiment_dict[CCR_name]=0
+                error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
                     if one_peak.is_ccr_rate and one_peak.aa_name != "G":
                         if abs(one_peak.gamma_ref - one_peak.ccr_rate)>=1:
                             deepResidueAnalisys(writer,one_peak,peak_number,experiment,
-                                                    zeroCCR_error_residue_dict,
-                                                    zeroCCR_error_experiment_dict,
-                                                    zeroCCR_error_aa_dict)
+                                                    error_residue_dict,
+                                                    error_experiment_dict,
+                                                    error_aa_dict)
 
         writer_row = csv.writer(csv_file,delimiter=",")
         writer_row.writerow("")
         
         deepExpAnalisys(writer_row,
-                 zeroCCR_error_residue_dict,
-                 zeroCCR_error_experiment_dict,
-                 zeroCCR_error_aa_dict,
+                 error_residue_dict,
+                 error_experiment_dict,
+                 error_aa_dict,
                  invisible_cross_peaks)
         
         
@@ -1658,30 +1827,29 @@ if __name__ == "__main__":
     
     for experiment in Experiments:
         Residue_List = deepcopy(Sequence_List)
-        Residue_List, experiment.is_peaklist = Read_peaklist(file_director, experiment.auto_name, experiment.cross_name, experiment.n_dim, Residue_List, experiment.is_peaklist, points_mode=True)
+        Residue_List, experiment.is_peaklist, experiment.noise[0], experiment.noise[1] = Read_peaklist(file_director, experiment.auto_name, experiment.cross_name, experiment.n_dim, Residue_List, experiment.is_peaklist, points_mode=True)
         Residue_List, experiment.is_peaklist = Read_peaklist(file_director, experiment.auto_name, experiment.cross_name, experiment.n_dim, Residue_List, experiment.is_peaklist, points_mode=False)
         experiment.peak = Residue_List
-        if PeakUncertiFlag:
-            PeakUncertaintyFlag1 = Read_peak_uncertainty(file_director, experiment.auto_name, experiment.n_dim, experiment.peak, version=0)
-            PeakUncertaintyFlag2 = Read_peak_uncertainty(file_director, experiment.cross_name, experiment.n_dim, experiment.peak, version=1)
-            if PeakUncertaintyFlag1 and PeakUncertaintyFlag2:
-                experiment.peak_uncertainty = True
+
+        PeakUncertaintyFlag1 = Read_peak_uncertainty(file_director, experiment.auto_name, experiment.n_dim, experiment.peak, version=0)
+        PeakUncertaintyFlag2 = Read_peak_uncertainty(file_director, experiment.cross_name, experiment.n_dim, experiment.peak, version=1)
+        if PeakUncertaintyFlag1 and PeakUncertaintyFlag2:
+            experiment.peak_uncertainty = True
 
     print_raport ("=== Reading input files finished ===\n\n=== Calculating CCR rates starting ===")
     for experiment in Experiments:
+        print_raport("\nExperiment number: {}\ndim number:{}\nCCr posistion:{}\nnumber of scanes:{}\ntc time: {}\nnoise: {}".format(experiment.CCR_name, experiment.n_dim, 
+                                                                                                                        experiment.CCR_pos, experiment.ns, 
+                                                                                                                        experiment.tc_vol, experiment.noise))
         if experiment.is_peaklist == True:
             Add_text = Additional_text(experiment)
             CheckOverlap(experiment.peak)
-            if len(experiment.angle_pos)==1 or experiment.angle_pos[0] == experiment.angle_pos[1]:
-                CalcCCRRate(experiment.peak,experiment.angle_pos[0],experiment.ns,experiment.tc_vol,experiment.CCR_name,experiment.noise,experiment.peak_uncertainty)
-                print_raport("Calculation of CCR rates for {}{} is ready".format(experiment.CCR_name,Add_text))
-            elif experiment.angle_pos[0] < experiment.angle_pos[1]:
-                CalcCCRRate(experiment.peak,experiment.angle_pos[0],experiment.ns,experiment.tc_vol,experiment.CCR_name,experiment.noise,experiment.peak_uncertainty)
-                print_raport("Calculation of CCR rates for {}{} is ready".format(experiment.CCR_name,Add_text))
+            CalcCCRRate(experiment.peak,experiment.CCR_pos,experiment.ns,experiment.tc_vol,experiment.CCR_name,experiment.noise,experiment.peak_uncertainty)
+            print_raport("Calculation of CCR rates for {}{} is ready".format(experiment.CCR_name,Add_text))
             if refgammaFlag:
                 if experiment.CCR_name in gamma_ref_dict:
                     Add_ref_gamma(gamma_ref_dict["seq_num"],gamma_ref_dict[experiment.CCR_name],experiment.peak)
-                    calc_theor_Ix(experiment.peak, experiment.angle_pos[0],experiment.tc_vol,experiment.ns,experiment.CCR_name)
+                    calc_theor_Ix(experiment.peak, experiment.CCR_pos,experiment.tc_vol,experiment.ns,experiment.CCR_name)
             WriteCCRRate_small(experiment.peak, experiment.CCR_name,add=Add_text)
             WriteCCRRate_all_info(experiment.peak, experiment.CCR_name, experiment.n_dim, experiment.auto_name, experiment.cross_name, experiment.tc_vol,experiment.ns,add=Add_text)
             WriteCCRRate_all_info_CSV(experiment.peak, experiment.CCR_name, experiment.n_dim, experiment.auto_name, experiment.cross_name, experiment.tc_vol,add=Add_text)
@@ -1720,7 +1888,7 @@ if __name__ == "__main__":
                 PeaksTable.append(deepcopy(exp.peak))
                 DescripTable.append(deepcopy(Additional_text(exp)))
                 CCRTable.append(deepcopy(exp.CCR_name))
-            plot_gamma_gamma_all_together(PeaksTable, CCRTable, DescripTable)
+            plot_gamma_gamma_all_together(PeaksTable, CCRTable, DescripTable,publication_style=PublicationFlag)
         Write_zeroCCRrates_Analisis_CSV()
         Write_ErrorCCRrates_Analisis_CSV()
         Write_diffCCRrates_Analisis_CSV()

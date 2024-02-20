@@ -55,7 +55,7 @@ parser = argparse.ArgumentParser(
     - sequence in FASTA format""",
                     epilog='Text at the bottom of help')
 
-parser.add_argument("file director", metavar="file_director", type=Path, 
+parser.add_argument("file_director", metavar="file_director", type=Path, 
                     help="path to to director with all required")
 
 parser.add_argument("peak_list", metavar="peak_list_path", type=Path, 
