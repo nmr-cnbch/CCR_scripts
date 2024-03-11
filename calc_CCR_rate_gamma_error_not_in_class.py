@@ -375,12 +375,20 @@ def ReadExpSet(exp_file):               # wczytywanie danych z pliku experiments
             experiments.append(deepcopy(one_experinet))
             print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experinet.CCR_name,one_experinet.other,one_experinet.auto_name,one_experinet.cross_name))
             # print ("Experiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(i, one_experinet.CCR_name, one_experinet.n_dim, one_experinet.nucl_name, one_experinet.nucl_pos, one_experinet.n_angle, one_experinet.angle_pos, one_experinet.angle, one_experinet.ns, one_experinet.tc_vol, one_experinet.Hroi), file=RaportBox)
-            RaportBox.write("\nExperiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n".format(i, one_experinet.CCR_name, one_experinet.n_dim, one_experinet.nucl_name, one_experinet.nucl_pos, one_experinet.n_angle, one_experinet.angle_pos, one_experinet.angle, one_experinet.ns, one_experinet.tc_vol, one_experinet.Hroi))
+            RaportBox.write(f"""
+Experiment number: {i}
+CCR name: {one_experinet.CCR_name}
+n dim: {one_experinet.n_dim}
+angle pos: {one_experinet.angle_pos}
+ns: {one_experinet.ns}
+Tc: {one_experinet.tc_vol}
+
+""")
     return experiments, to_compere_dict
 
 
 def ReadSequnce(seq_file_name):
-
+    number_of_aa_per_residue = {}
     sequence = []
     with open(seq_file_name, "r") as input_file:
         linia_seq=input_file.readlines()
@@ -401,9 +409,14 @@ def ReadSequnce(seq_file_name):
                         aa_no += 1
                         seq.aa_number = aa_no
                         sequence.append(deepcopy(seq))
+                        if aa in number_of_aa_per_residue:
+                            number_of_aa_per_residue[aa]+=1
+                        else:
+                            number_of_aa_per_residue[aa]=1
                         # FASTAseq.append(deepcopy(seq))
             print_raport ("FASTA sequence: {}".format(FASTAseq))
-    return sequence
+
+    return sequence,number_of_aa_per_residue
 
 def read_aminoacid_number(peak_description:str):
     aminoacids = peak_description.split("-")
@@ -864,11 +877,11 @@ def plot_gamma_gamma(peaks,ccr_name,transparent_plot=False,add="",add2=""):
     
     # Plotting both the curves simultaneously
     plt.axline([0,0],slope=1, linestyle=(0, (5, 5)), linewidth=1.5, color='darkgray', label='x=y')
-    plt.scatter(gamma_calculated, gamma_experimental, s=5, color='#0066ffff', 
+    plt.scatter(gamma_calculated, gamma_experimental, s=5, color='#252525ff', 
                 label=label)
     plt.errorbar(gamma_calculated, gamma_experimental, 
                     yerr=gamma_calc_error, 
-                    fmt='none') #
+                    fmt='none', color='#252525ff') #
 
     print_raport(f"\n {ccr_name}")
     print_raport (label)
@@ -1051,6 +1064,9 @@ def plot_gamma_gamma_and_diff_together(peaks_tab:list[list[CResidue]],ccr_name:s
     for indext in range(len(peaks_tab)):
         axs[0,indext].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
         axs[0,indext].scatter(set_of_data_all_type_of_NUS[indext][0],set_of_data_all_type_of_NUS[indext][1],s=10,) #
+        axs[0,indext].errorbar(set_of_data_all_type_of_NUS[indext][0], set_of_data_all_type_of_NUS[indext][1], 
+                    yerr=set_of_data_all_type_of_NUS[indext][2], 
+                    fmt='none', color='#252525ff') #
         if len(set_of_data_all_type_of_NUS[indext][0])>0:
             weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(set_of_data_all_type_of_NUS[indext][0],
                                                                                                                                        set_of_data_all_type_of_NUS[indext][1],
@@ -1556,6 +1572,7 @@ def Write_zeroCCRrates_Analisis_CSV():
     error_experiment_dict={}
     error_aa_dict = {}
     invisible_cross_peaks = {}
+    aa_dict_nun = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
         headers = ['CCR name','AA']
@@ -1572,9 +1589,13 @@ def Write_zeroCCRrates_Analisis_CSV():
                 invisible_cross_peaks[CCR_name]=[0,0]
                 error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
+                    if one_peak.aa_name in aa_dict_nun:
+                        aa_dict_nun[one_peak.aa_name]+=1
+                    else:
+                        aa_dict_nun[one_peak.aa_name]=1                    
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
-                    if one_peak.is_ccr_rate and one_peak.aa_name != "G":
+                    if one_peak.is_ccr_rate and one_peak.aa_name != "G" and one_peak.is_gamma_calc:
                         if (one_peak.gamma_ref - one_peak.ccr_rate)/one_peak.ccr_rate >=2 or (one_peak.gamma_ref - one_peak.ccr_rate)/one_peak.ccr_rate <= -2:
                             
                             row_list = deepResidueAnalisys(writer,one_peak,peak_number,experiment,
@@ -1589,7 +1610,8 @@ def Write_zeroCCRrates_Analisis_CSV():
                  error_residue_dict,
                  error_experiment_dict,
                  error_aa_dict,
-                 invisible_cross_peaks)
+                 invisible_cross_peaks,
+                 aa_dict_nun)
         
     # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
     RaportBox.write("All info about zero CCR rates are in file: {}\n".format(new_list))
@@ -1698,7 +1720,8 @@ def deepExpAnalisys(writer_to_file_by_dict:csv,
                  error_residue_dict:dict,
                  error_experiment_dict:dict,
                  error_aa_dict:dict,
-                 invisible_cross_peaks:dict):
+                 invisible_cross_peaks:dict,
+                 aa_dict_nun:dict):
     """ 
     1) For peak in error_residue_dict are write down inforation about what residues in which CCR experiment they are
     2) Per CCR experiment are write down information about how many peaks are error and if its intensity if smaller than 10 time noise val or noise val
@@ -1718,7 +1741,9 @@ def deepExpAnalisys(writer_to_file_by_dict:csv,
     writer_to_file_by_dict.writerow(["AA name","CCR zero error"])
     for aa in aminoacids:
         if Res3to1(aa) in error_aa_dict:
-            writer_to_file_by_dict.writerow([aa,error_aa_dict[Res3to1(aa)]])
+            # print_raport(f"{aa},{error_aa_dict[Res3to1(aa)]},{aa_dict_nun[Res3to1(aa)]}\n")
+            percent = error_aa_dict[Res3to1(aa)]/aa_dict_nun[Res3to1(aa)]*100
+            writer_to_file_by_dict.writerow([aa,error_aa_dict[Res3to1(aa)],f"{percent:.1f} %"])
 
 
 
@@ -1730,6 +1755,7 @@ def Write_ErrorCCRrates_Analisis_CSV():
     error_experiment_dict={}
     error_aa_dict = {}
     invisible_cross_peaks = {}
+    aa_dict_nun = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
         headers = ['CCR name','AA']
@@ -1745,9 +1771,13 @@ def Write_ErrorCCRrates_Analisis_CSV():
                 invisible_cross_peaks[CCR_name]=[0,0]
                 error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
+                    if one_peak.aa_name in aa_dict_nun:
+                        aa_dict_nun[one_peak.aa_name]+=1
+                    else:
+                        aa_dict_nun[one_peak.aa_name]=1
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
-                    if one_peak.is_ccr_rate and one_peak.aa_name != "G" and one_peak.gamma_ref > one_peak.ccr_rate*5:
+                    if one_peak.is_ccr_rate and one_peak.aa_name != "G" and one_peak.gamma_ref > one_peak.ccr_rate*5 and one_peak.is_gamma_calc:
                             deepResidueAnalisys(writer,one_peak,peak_number,experiment,
                                                     error_residue_dict,
                                                     error_experiment_dict,
@@ -1760,7 +1790,8 @@ def Write_ErrorCCRrates_Analisis_CSV():
                  error_residue_dict,
                  error_experiment_dict,
                  error_aa_dict,
-                 invisible_cross_peaks)
+                 invisible_cross_peaks,
+                 aa_dict_nun)
         
         
     # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
@@ -1775,6 +1806,7 @@ def Write_diffCCRrates_Analisis_CSV():
     error_experiment_dict={}
     error_aa_dict = {}
     invisible_cross_peaks = {}
+    aa_dict_nun = {}
 
     with open(new_list, mode='w', newline='') as csv_file:
         headers = ['CCR name','AA']
@@ -1790,10 +1822,14 @@ def Write_diffCCRrates_Analisis_CSV():
                 invisible_cross_peaks[CCR_name]=[0,0]
                 error_experiment_dict[CCR_name]=0
                 for peak_number, one_peak in enumerate(experiment.peak):
+                    if one_peak.aa_name in aa_dict_nun:
+                        aa_dict_nun[one_peak.aa_name]+=1
+                    else:
+                        aa_dict_nun[one_peak.aa_name]=1
                     deepVisibilityAnalisis(one_peak,experiment,invisible_cross_peaks)
 
-                    if one_peak.is_ccr_rate and one_peak.aa_name != "G":
-                        if abs(one_peak.gamma_ref - one_peak.ccr_rate)>=1:
+                    if one_peak.is_ccr_rate and one_peak.aa_name != "G" and one_peak.is_gamma_calc:
+                        if abs(one_peak.gamma_ref - one_peak.ccr_rate)>=3:
                             deepResidueAnalisys(writer,one_peak,peak_number,experiment,
                                                     error_residue_dict,
                                                     error_experiment_dict,
@@ -1806,7 +1842,8 @@ def Write_diffCCRrates_Analisis_CSV():
                  error_residue_dict,
                  error_experiment_dict,
                  error_aa_dict,
-                 invisible_cross_peaks)
+                 invisible_cross_peaks,
+                 aa_dict_nun)
         
         
     # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
@@ -1820,7 +1857,7 @@ if __name__ == "__main__":
     RaportBox = open(RaportBoxFile,"w")
     print_raport("\n=== Reading input files ===")
     Experiments, ToCompereDict = ReadExpSet(exp_file_name)
-    Sequence_List = ReadSequnce(seq_file_name)
+    Sequence_List, NumberOfAAPerResidue = ReadSequnce(seq_file_name)
     if refgammaFlag:
         gamma_ref_dict = Read_Reference_Gamma(gamma_cal_file_name)
     else: gamma_ref_dict = {}
@@ -1838,9 +1875,10 @@ if __name__ == "__main__":
 
     print_raport ("=== Reading input files finished ===\n\n=== Calculating CCR rates starting ===")
     for experiment in Experiments:
-        print_raport("\nExperiment number: {}\ndim number:{}\nCCr posistion:{}\nnumber of scanes:{}\ntc time: {}\nnoise: {}".format(experiment.CCR_name, experiment.n_dim, 
+        print_raport("\nExperiment number: {}\ndim number:{}\nCCr posistion:{}\nnumber of scanes:{}\ntc time: {}\nnoise: {}\nother: {}".format(experiment.CCR_name, experiment.n_dim, 
                                                                                                                         experiment.CCR_pos, experiment.ns, 
-                                                                                                                        experiment.tc_vol, experiment.noise))
+                                                                                                                        experiment.tc_vol, experiment.noise,
+                                                                                                                        experiment.other))
         if experiment.is_peaklist == True:
             Add_text = Additional_text(experiment)
             CheckOverlap(experiment.peak)

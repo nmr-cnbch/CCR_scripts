@@ -61,7 +61,7 @@ parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  def
 parser.add_argument("-sn", "--signal3noise", dest='SignalToNoise', type=float,
                     help="add this if you want setup minimal signal to noise ratio")
 
-parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', default=False,
+parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', action="store_true",  default=False,
                     help="""add this if you your spectrum was reconstructed. 
                     For reconstracted spectra we calculate 'noise' by measure random points on H-cross-section with peaks. 
                     Otherwise, for traditional collect spectra noise is calculated by measure random points from across the spectrum""")
