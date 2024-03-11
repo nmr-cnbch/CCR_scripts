@@ -9,11 +9,11 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "calc_CCR_rate_gamma_error_not_in_class.py",
+            "program": "calc_CCR_rate_objectowo.py",
             "args": [
-                "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/Diff_transformation_diff_NUS_24/400NUS/",
-                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/Diff_transformation_diff_NUS_24/400NUS/rcsb_pdb_1D3Z.fasta", 
-                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/Diff_transformation_diff_NUS_24/400NUS/2D_CCRrate_nowe.csv" 
+                "./calcCCRrate_diff_NUS_new",
+                "--seq", "./calcCCRrate_diff_NUS_new/rcsb_pdb_1D3Z.fasta", 
+                "--refgamma", "./calcCCRrate_diff_NUS_new/CCRrate_stare_400NUS.csv" 
             ],
             "console": "integratedTerminal",
             "justMyCode": true
