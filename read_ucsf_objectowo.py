@@ -846,7 +846,6 @@ class CSpectrum:
             # preraring output to info.txt 
             if one_peak.is_visible == False:
                 peak_centering_info.append("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript))
-                Peak_not_visible += 1 
             else:
                 peak_centering_info.append("\n{}\t({})".format(indexpeak, one_peak.descript))
             
@@ -862,7 +861,7 @@ class CSpectrum:
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
         print_raport("Peak not moved = {}\nPeak moved = {}\nPeak not visible = {}".format(Peak_not_moved,Peak_moved,Peak_not_visible))
         print_raport("Average peaks height = {:.2e}".format(average_peaks_level))
-        
+
         if noise_type == "artifacts":
             self.__noise_level = round(sum(noise_list)/len(noise_list), 1)
         if UserPeakLevelFlag==False:
