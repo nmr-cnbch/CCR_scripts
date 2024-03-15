@@ -819,6 +819,7 @@ class CSpectrum:
         Peak_not_visible = 0
         peak_centering_info = []
         peak_height_list = []
+        noise_list = []
 
         for indexpeak, one_peak in enumerate(self.__peaks):
             Orgin_pos = one_peak.peak_points_pos
@@ -833,6 +834,7 @@ class CSpectrum:
             
             if noise_type == "artifacts":
                 self.CalcNoise(peak_number=indexpeak)
+                noise_list.append(deepcopy(one_peak.noise_around_peak))
                 if abs(New_intens) < one_peak.noise_around_peak and args.noRemoveFlag==False:
                     one_peak.is_visible = False
                     Peak_not_visible += 1 
@@ -860,6 +862,9 @@ class CSpectrum:
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
         print_raport("Peak not moved = {}\nPeak moved = {}\nPeak not visible = {}".format(Peak_not_moved,Peak_moved,Peak_not_visible))
         print_raport("Average peaks height = {:.2e}".format(average_peaks_level))
+        
+        if noise_type == "artifacts":
+            self.__noise_level = round(sum(noise_list)/len(noise_list), 1)
         if UserPeakLevelFlag==False:
             signal_to_noise = average_peaks_level/self.__noise_level
             print_raport(f"Minimal signal_to_noise: {self.__minimal_signal_to_noise}")
