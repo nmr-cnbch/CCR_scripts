@@ -84,3 +84,18 @@ def Res3to1(res:str) -> str:
         print ("Wrong name of residue (",res,"), check the seq file - FASTA format")
         sys.exit(1)
     return i
+
+def CCRname2PrettyRateNamePLT(ccrname):
+    if ccrname=="CCR_1": i="C$^{a}_{i-1}H^{a}_{i-1}$ - N$_{i}H^{N}_{i}$"          #
+    elif ccrname=="CCR_2": i="C$^{a}_{i}H^{a}_{i}$ - N$_{i}H^{N}_{i}$" 
+    elif ccrname=="CCR_3": i="N$_{i-1}H^{N}_{i-1}$ - N$_{i}H^{N}_{i}$"
+    elif ccrname=="CCR_4": i="$H^{N}_{i}H^{a}_{i-1}$ - C$_{i-1}$"
+    elif ccrname=="CCR_5": i="C$^{a}_{i}H^{a}_{i}$ - C$_{i}$"
+    elif ccrname=="CCR_6": i="C$^{a}_{i}H^{a}_{i}$ - C$_{i-1}$"
+    elif ccrname=="CCR_7": i="N$_{i}H^{N}_{i}$ - C$_{i}$"
+    elif ccrname=="CCR_8": i="C$_{i-1}$ - C$_{i}$"
+    elif ccrname=="CCR_9": i="C$^{a}_{i-1}H^{a}_{i-1}$ - C$^{a}_{i}H^{a}_{i}$"
+    else:
+        print ("Wrong name of CCR (",ccrname,")for matplotlib module")
+        sys.exit(1)
+    return i

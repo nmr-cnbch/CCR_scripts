@@ -9,11 +9,11 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "calc_CCR_rate_objectowo.py",
+            "program": "read_ucsf_objectowo.py",
             "args": [
-                "./calcCCRrate_diff_NUS_new",
-                "--seq", "./calcCCRrate_diff_NUS_new/rcsb_pdb_1D3Z.fasta", 
-                "--refgamma", "./calcCCRrate_diff_NUS_new/CCRrate_stare_400NUS.csv" 
+                "./set_for_readucsf/4D_5_CCR_1_a.ucsf",
+                "./set_for_readucsf/4D_5_CCR_1_a_new_ppm.list", 
+                "-o", "./set_for_readucsf/4D_5_CCR_1_a_TEST_objectowo_list4.list" 
             ],
             "console": "integratedTerminal",
             "justMyCode": true

@@ -318,9 +318,9 @@ class CSpectrum:
         elif self.__spectra_dim == 3:
             return generate_3Dvec_set(distance)
         elif self.__spectra_dim == 4:
-            return generate_3Dvec_set(distance)
+            return generate_4Dvec_set(distance)
         elif self.__spectra_dim == 5:
-            return generate_3Dvec_set(distance)
+            return generate_5Dvec_set(distance)
 
     def find_points_in_circle(self,orgin_pos:list[int],distance=5) -> tuple[list[list[int]],list,int]:
         """Method for prepering list of points around of peak
@@ -333,6 +333,7 @@ class CSpectrum:
         for one_circle in range(1,distance+1):
             circle_encounter.append(deepcopy(len(list_of_around_points)))
             vector_set = self.dispatch_generate_vec(one_circle)
+            #print_raport(f"spectra dim: {self.__spectra_dim} circle number: {one_circle}, vector_set: {vector_set}")
             for one_vec in vector_set:   #type: ignore
                 Test_pos = orgin_pos[:]
                 if len(one_vec) == len(Test_pos):
@@ -713,7 +714,7 @@ class CSpectrum:
         checking_places = []
 
         List_of_around_points, circle_encounter, start_index = spectrum.find_points_in_circle(Orgin_pos, distance=checking_distance+1)
-        print(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}")
+        print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}")
 
         for point_pos in List_of_around_points:
             p = PointInUCSF(points_pos=point_pos,spectrum=self)
@@ -721,7 +722,8 @@ class CSpectrum:
         # print(f"\n\n{one_peak.descript}\nList_of_around_points: {List_of_around_points}\ncircle_encounter: {circle_encounter}\nstart_index: {start_index}")
         
         spectrum.read_intens_point(checking_places)
-        print(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n")
+        #print_raport(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n")
+        #print_raport(f"Len of checking_places list: {len(checking_places)}\n")
 
         if len(List_of_around_points) != len(checking_places):
             print(f"""Length of list of points and list of intens is diffrent!
@@ -732,10 +734,10 @@ class CSpectrum:
 
         circle_start = circle_encounter[0]
         circle_end = circle_encounter[1]
-        print(f"circle_start: {circle_start}, circle_end: {circle_end}")
+        print_raport(f"circle_start: {circle_start}, circle_end: {circle_end}")
         for indexn in range(circle_start,circle_end+1):
             if checking_places[indexn].point_intensity > checking_places[start_index].point_intensity:
-                print(f"indexn: {indexn}, pos: {checking_places[indexn].point_pos} intens: {checking_places[indexn].point_intensity:.2e}")
+                #print(f"indexn: {indexn}, pos: {checking_places[indexn].point_pos} intens: {checking_places[indexn].point_intensity:.2e}")
                 suspect_set[indexn] = [checking_places[indexn].point_pos, checking_places[indexn].point_intensity]  #[position, height]
                 circle_Flag[0] = True
         # for indexn, n_point in enumerate(checking_places[circle_start:circle_end+1]):
@@ -745,18 +747,15 @@ class CSpectrum:
             #     circle_Flag[circle_number] = True
         
         if len(suspect_set) > 1:
-            print("\nkolejne kręgi")
             for circle_number in range(1,checking_distance):
                 circle_start = circle_encounter[circle_number]
                 circle_end = circle_encounter[circle_number+1]
-                print(f"circle_start: {circle_start}, circle_end: {circle_end}")
                 for indexn in range(circle_start,circle_end+1):
                     if checking_places[indexn].point_intensity > checking_places[start_index].point_intensity:
                         suspekt_peaks = deepcopy([x for x in suspect_set])
                         for suspect_point in suspekt_peaks:
                             if calc_distance(suspect_set[suspect_point][0],checking_places[indexn].point_pos)<2:
                                 if indexn not in suspect_set and checking_places[indexn].point_intensity > suspect_set[suspect_point][1]:
-                                    print(f"indexn: {indexn}, pos: {checking_places[indexn].point_pos} intens: {checking_places[indexn].point_intensity:.2e}")
                                     suspect_set[indexn] = [checking_places[indexn].point_pos, checking_places[indexn].point_intensity]  #[position, height]
                                     circle_Flag[circle_number] = True
                 # for indexn, n_point in enumerate(checking_places[circle_start:circle_end+1]):
@@ -772,7 +771,7 @@ class CSpectrum:
             distance_from_starting_point = 0
             farthest_point_intes = 0
             # print(f"suspect_set: {suspect_set}\ncircle_Flag: {circle_Flag}")
-            print(f"circle_Flag: {circle_Flag}")
+            print_raport(f"circle_Flag: {circle_Flag}")
 
             for suspect_point in suspect_set:
                 current_dist = calc_distance(suspect_set[suspect_point][0],checking_places[start_index].point_pos)
@@ -788,7 +787,7 @@ class CSpectrum:
                     one_peak.was_moved = True
                     one_peak.new_points_pos = farthest_point_pos
                     one_peak.peak_intens = farthest_point_intes
-                    print(f"farthest_point_pos: {farthest_point_pos}, farthest_point_intes: {farthest_point_intes}")
+                    print_raport(f"farthest_point_pos: {farthest_point_pos}, farthest_point_intes: {farthest_point_intes}")
                     return farthest_point_pos, farthest_point_intes, suspect_set
             
                 else:
@@ -817,7 +816,7 @@ class CSpectrum:
 
         for indexpeak, one_peak in enumerate(self.__peaks):
             Orgin_pos = one_peak.peak_points_pos
-            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,Orgin_pos, checking_distance = 5)
+            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,Orgin_pos, checking_distance=5)
             
             if one_peak.is_center == "yes":
                 peak_height_list.append(New_intens)
@@ -1119,7 +1118,6 @@ if __name__ == "__main__":
             print ("\n=== Peak centering and intensity reading ===")
             # spectrum.Center_peaks()
             spectrum.Center_peaks_new()
-            spectrum.CalcNoise_around_peaks()
             print ("=== Peak centering and intensity reading finished ===")
 
 
@@ -1128,7 +1126,11 @@ if __name__ == "__main__":
 
             NewPeakList_ppm = spectrum.Print_Peak_List_ppm()
             NewPeakList_points = spectrum.Print_Peak_List_points("new")
-            # print ("\nPrint peak list - finish")
+            print ("\n=== Printing new peak lists finished ===")
+            
+            print ("\n=== Noise around peaks calculation ===")
+            spectrum.CalcNoise_around_peaks()
+            print ("\n=== Noise around peaks calculation finished ===")
 
 
         # TO DO

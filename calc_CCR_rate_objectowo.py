@@ -24,7 +24,7 @@ from scipy import stats
 from sklearn.linear_model import LinearRegression
 from abc import ABC, abstractmethod
 
-from BioNMRdictionary import Res1to3, Res3to1
+from BioNMRdictionary import Res1to3, Res3to1, CCRname2PrettyRateNamePLT
 from CCR_dict import CCR_dict, CCRname2Ratename
 import argparse #https://docs.python.org/3/library/argparse.html
 import logging
@@ -336,13 +336,17 @@ class CCRSet:
             gamma_calculated = []
             gamma_experimental = []
             gamma_calc_error = []
+            fatal_error_point = []
             for one_peak in exp_tab[indext].peak_list():
                 if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
-                    gamma_calculated.append(deepcopy(one_peak.gamma_ref))
-                    gamma_experimental.append(deepcopy(one_peak.ccr_rate))
-                    gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
+                    if abs(one_peak.gamma_ref) - abs(one_peak.ccr_rate) > 2:
+                        fatal_error_point.append(deepcopy([one_peak.gamma_ref,one_peak.ccr_rate,one_peak.ccrrate_error_value]))
+                    else:
+                        gamma_calculated.append(deepcopy(one_peak.gamma_ref))
+                        gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                        gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
                     min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-            set_of_data.append(deepcopy([gamma_calculated,gamma_experimental,gamma_calc_error]))
+            set_of_data.append(deepcopy([gamma_calculated,gamma_experimental,gamma_calc_error,fatal_error_point]))
         return set_of_data,min_max_value
     
     @staticmethod
@@ -400,45 +404,61 @@ class CCRSet:
             fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
         
         set_of_data_all_type_of_NUS,min_max_value = self.prepare_gamma_calc_vs_gamma_exp_table_diff_min_max(exp_tab)
-        print(set_of_data_all_type_of_NUS)
+        # print(set_of_data_all_type_of_NUS)
         
     # first row - plot each NUS number in particular plot
         for indexa, ax in enumerate(axs.flat):
             if indexa < len(exp_tab):
                 exp = exp_tab[indexa]
                 Add_text = exp.Additional_text()
-                if indexa < len(exp_tab):
+                if exp.is_peaklist() and exp.is_reference():
                     ax.axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
                     ax.scatter(set_of_data_all_type_of_NUS[indexa][0],set_of_data_all_type_of_NUS[indexa][1],s=3, color='#252525ff') #
                     ax.errorbar(set_of_data_all_type_of_NUS[indexa][0], set_of_data_all_type_of_NUS[indexa][1], 
                             yerr=set_of_data_all_type_of_NUS[indexa][2], 
                             fmt='none', color='#252525ff') #
+                    #fatal errors points:
+                    ax.scatter(set_of_data_all_type_of_NUS[indexa][3][0],set_of_data_all_type_of_NUS[indexa][3][1],s=3, color='red') #
+                    ax.errorbar(set_of_data_all_type_of_NUS[indexa][3][0], set_of_data_all_type_of_NUS[indexa][3][1], 
+                            yerr=set_of_data_all_type_of_NUS[indexa][3][2], 
+                            fmt='none', color='red') #
                     weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(x=set_of_data_all_type_of_NUS[indexa][0],
                                                                                                                                             y=set_of_data_all_type_of_NUS[indexa][1],
                                                                                                                                             uncertainty_val=set_of_data_all_type_of_NUS[indexa][2])
+                    
                     ax.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=2, 
                             color='mediumorchid', label=f'{Add_text[1:]}:    {len(set_of_data_all_type_of_NUS[indexa][1])} peaks,    {weighted_expretion2},  delta_a: {weighted_slope2error:.3f}, delta_b: {weighted_intercept2error:.3f}    r2 = {r2:.2f}    factor \'a\' = {factor_a:.1f}, factor \'b\' = {factor_b:.1f}')
-                    ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) #
+                    text_pos_x = min_max_value[indexa][0] - (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
+                    text_pos_y = min_max_value[indexa][1] + (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
+                    ax.text(text_pos_x,text_pos_y,
+                            f'$R^{2}$ = {r2:.2f}', 
+                            horizontalalignment='left', verticalalignment='top',
+                            fontsize=9)
+                    # ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) #
                     ax = setup_plot_area(ax,min_max_value[indexa])
                     ax.tick_params(labelsize=8)
 
         #mediumpurple
-        plt.subplots_adjust(hspace=0.3,wspace = 0.3)
+        plt.subplots_adjust(hspace=0.4,wspace = 0.4)
 
         if add2 == '':
             add2 = exp_tab[0].Additional_text()
 
         if publication_style:
-            fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=15)
-            fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=15)
+            for indexa, ax in enumerate(axs.flat):
+                ax.set_title(f'{CCRname2PrettyRateNamePLT(exp.CCRname())}', fontsize=10)
+            fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=10)
+            fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=10)
             cm = 1/2.54  # centimeters in inches
             fig.set_figwidth(17.4*cm)
             fig.set_figheight(17*cm)
-            fig.savefig("{}/{}_all_exp_vs_calc{}.png".format(file_director,gamma_cal_file_name[2:-4],add2), bbox_inches="tight", 
+            fig.savefig("{}/{}_all_exp_vs_calc{}.png".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
                     pad_inches=0.3, transparent=transparent_plot)
-            fig.savefig("{}/{}_all_exp_vs_calc{}.svg".format(file_director,gamma_cal_file_name[2:-4],add2), bbox_inches="tight", 
+            fig.savefig("{}/{}_all_exp_vs_calc{}.svg".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
                     pad_inches=0.3, transparent=transparent_plot)
         else:
+            for indexa, ax in enumerate(axs.flat):
+                ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) #
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
             fig.supylabel('experimental \u0393, $s^{-1}$')
             fig.set_figwidth(ncols*5)
@@ -1234,6 +1254,7 @@ other: {self._other}
                 if int(one_peak.aa_number) == int(r_seq_num):
                     one_peak.is_gamma_calc = True
                     one_peak.gamma_ref = float(ref_CCR[indexr])
+                    self._is_reference = True
                     # print ("gamma_ref",one_peak.gamma_ref)
     
     def Additional_text(self)->str:
@@ -1286,10 +1307,10 @@ other: {self._other}
         print_raport (label)
         # print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
         linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
-        weighted_expretion,weighted_r2, weighted_slope, weighted_intercept = WeightedLRegression_expresion(gamma_calculated, gamma_experimental,gamma_calc_error)
+        # weighted_expretion,weighted_r2, weighted_slope, weighted_intercept = WeightedLRegression_expresion(gamma_calculated, gamma_experimental,gamma_calc_error)
         weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
         plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='red', label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}, \nmatching factor for y=x: {matching_factor_for_y_x_LR:.1f}')
-        plt.axline([0,weighted_intercept],slope=weighted_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='blue', label=f'lw: {weighted_expretion}, r2 = {weighted_r2:.3f}')
+        # plt.axline([0,weighted_intercept],slope=weighted_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='blue', label=f'lw: {weighted_expretion}, r2 = {weighted_r2:.3f}')
         plt.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, color='purple', label=f'lw2: {weighted_expretion2}, \nmatching factor for y=x: {factor_a:.1f}')
 
         plt.title(self._CCR_name+add)
@@ -1333,6 +1354,10 @@ other: {self._other}
                 peak_intens_auto.append(deepcopy(one_peak.peak_intens[0]))
                 peak_intens_cross.append(deepcopy(one_peak.peak_intens[1]))
 
+        # print ("gamma_calculated:\t", len(gamma_calculated))
+        # print ("gamma_experimental:\t", len(gamma_experimental))
+        # print ("gamma_calc_error:\t", gamma_calc_error)
+        # print ("min_max_value:\t", min_max_value)
         fig, axs = plt.subplots(nrows=3)
         plt.subplots_adjust(hspace=0.4)
         fig.set_figheight(14)
@@ -2054,10 +2079,14 @@ def LRegression_expresion(x,y):
 
 def WeightedLRegression_expresion(x,y,uncertainty_val):
     regr = LinearRegression()
-    X = np.array([[i] for i in x if str(i)!='nan' and i!=np.NaN and i!=np.nan])
-    Y = np.array([[i] for indexi, i in enumerate(y) if str(x[indexi])!='nan' and x[indexi]!=np.NaN and x[indexi]!=np.nan])
+    # X = np.array([[i,i] for i in x if x!='nan'])
+    # Y = np.array([[i,y[index]] for index, i in enumerate(x)])
+    X = np.array([[i] for i in x if x!='nan'])
+    Y = np.array([[i] for i in y if x!='nan'])
+    # X.reshape(-1,1)
+    # Y.reshape(-1,1)
     
-    weight_val = [1/i for indexi, i in enumerate(uncertainty_val) if str(x[indexi])!='nan' and x[indexi]!=np.NaN and x[indexi]!=np.nan]
+    weight_val = [1/i for i in uncertainty_val]
     regr.fit(X, Y, weight_val)
     predict_y = [i for [i] in regr.predict(X).tolist()]
     
@@ -2082,7 +2111,7 @@ def calc_R2(exp_list,theory_list):
     R2_val = SSR/SST
     R2_val2 = 1 - (SSE/SST)
     print_raport ("SSR = {:.0f}; SSE = {:.0f}; SST = {:.0f}; SSR+SSE = {:.0f}; R2_1 = {:.4f}; R2_2 = {:.4f}".format(SSR, SSE, SST, SSR+SSE, R2_val, R2_val2))
-    return R2_val2
+    return R2_val
 
 
 def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
@@ -2095,10 +2124,11 @@ def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
     list_of_x_avgx_squer_div_uncertainty = []
 
     for i in range(len(x)):
-        list_of_invert_squer_uncertainty.append(deepcopy(1/(uncertainty_val[i]**2)))
-        list_of_avg_x.append(deepcopy(x[i]/(uncertainty_val[i]**2)))
-        list_of_avg_y.append(deepcopy(y[i]/(uncertainty_val[i]**2)))
-        list_of_avg_square_x.append(deepcopy((x[i]**2)/(uncertainty_val[i]**2)))
+        if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
+            list_of_invert_squer_uncertainty.append(deepcopy(1/(uncertainty_val[i]**2)))
+            list_of_avg_x.append(deepcopy(x[i]/(uncertainty_val[i]**2)))
+            list_of_avg_y.append(deepcopy(y[i]/(uncertainty_val[i]**2)))
+            list_of_avg_square_x.append(deepcopy((x[i]**2)/(uncertainty_val[i]**2)))
 
     sum_of_invert_squer_uncertainty = sum(list_of_invert_squer_uncertainty)
     avg_x = sum(list_of_avg_x)/sum_of_invert_squer_uncertainty
@@ -2106,8 +2136,9 @@ def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
     avg_square_x = sum(list_of_avg_square_x)/sum_of_invert_squer_uncertainty
 
     for i in range(len(x)):
-        list_of_x_avgx_y_avgy_div_uncertainty.append(deepcopy((x[i]-avg_x)*(y[i]-avg_y)/(uncertainty_val[i]**2)))
-        list_of_x_avgx_squer_div_uncertainty.append(deepcopy(((x[i]-avg_x)/uncertainty_val[i])**2))
+        if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
+            list_of_x_avgx_y_avgy_div_uncertainty.append(deepcopy((x[i]-avg_x)*(y[i]-avg_y)/(uncertainty_val[i]**2)))
+            list_of_x_avgx_squer_div_uncertainty.append(deepcopy(((x[i]-avg_x)/uncertainty_val[i])**2))
 
     sum_of_x_avgx_y_avgy_div_uncertainty = sum(list_of_x_avgx_y_avgy_div_uncertainty)
     sum_of_x_avgx_squer_div_uncertainty = sum(list_of_x_avgx_squer_div_uncertainty)
@@ -2125,7 +2156,8 @@ def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
     print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
     y_from_line = []
     for one_x in x:
-        y_from_line.append(deepcopy(one_x*slope+intercept))
+        if str(one_x)!='nan':
+            y_from_line.append(deepcopy(one_x*slope+intercept))
     r2 = calc_R2(y,y_from_line)
 
     return lr_exp, slope, slope_uncertainty, intercept, intercept_uncertainty, factor_a_for_y_x, factor_b_for_y_x, r2
