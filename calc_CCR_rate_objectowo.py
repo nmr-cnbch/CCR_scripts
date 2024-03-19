@@ -227,8 +227,6 @@ class CCRSet:
             json_data = json.load(json_data_file)
 
             for exp_key, exp_properties in json_data.items():
-                print (f'{exp_properties}')
-                print (f'{exp_properties["type_of_CCR"]}: {exp_properties["NS"]}')
                 # exp_properties = json_data[properties]
                 
                 if "symetrical_reconstrution" in exp_properties and exp_properties["symetrical_reconstrution"]==True:
@@ -265,12 +263,12 @@ class CCRSet:
         for one_exp in self.ccr_set:
             if one_exp.is_peaklist():
                 Add_text = one_exp.Additional_text()
-                print(f"one_exp: {one_exp.CCRname()}{Add_text}\n len peak list: {len(one_exp.peak_list())}")
+                # print(f"one_exp: {one_exp.CCRname()}{Add_text}\n len peak list: {len(one_exp.peak_list())}")
                 one_exp.check_overlap()
                 one_exp.calc_ccr_rate()
-                print_raport(f"CalcCCRrates: {len(one_exp.peak_list())}")
-                for one_peak in one_exp.peak_list():
-                    print_raport(f"{one_peak.aa_number}: {one_peak.ccr_rate}")
+                # print_raport(f"CalcCCRrates: {len(one_exp.peak_list())}")
+                # for one_peak in one_exp.peak_list():
+                #     print_raport(f"{one_peak.aa_number}: {one_peak.ccr_rate}")
                 one_exp.WriteCCRRate_small()
                 print_raport("Calculation of CCR rates for {}{} is ready".format(one_exp.CCRname(),Add_text))
         self.Write_ALL_CCRRate_CSV()
@@ -282,7 +280,7 @@ class CCRSet:
             if one_exp.is_peaklist():
                 one_exp.Add_ref_gamma(ref_dict["seq_num"],ref_dict[one_exp.CCRname()])
                 if one_exp.is_reference:
-                    print(f"Compering CCR rates with calculated for {one_exp.CCRname()}")
+                    print(f"\nCompering CCR rates with calculated for {one_exp.CCRname()}")
                     one_exp.calc_theor_Ix()
                     one_exp.WriteCCRRate_all_info()
                     one_exp.WriteCCRRate_all_info_CSV()
@@ -293,7 +291,7 @@ class CCRSet:
 
     def Compere_diff_ver_exp(self):
         if self.__ref_flag:
-            print_raport ("\n=== Compering with reference values of CCR rates ===\n")
+            print_raport ("\n=== Compering diffrent versions of CCR rates with reference values ===\n")
             for CCR_type in self.to_compere_dict:
                 if len(self.to_compere_dict[CCR_type])>1:
                     ExpTable = []
@@ -302,10 +300,11 @@ class CCRSet:
                     self.plot_gamma_gamma_and_diff_together(ExpTable)
                     self.plot_cross_intens_theor_exp_together(ExpTable)
                     self.plot_error_histogram_together(ExpTable)
+                    print_raport (f"\n{CCR_type} - ready\n")
             self.Write_zeroCCRrates_Analisis_CSV()
             self.Write_ErrorCCRrates_Analisis_CSV()
             self.Write_diffCCRrates_Analisis_CSV()
-            print_raport ("=== Compering with reference values of CCR rates finished ===\n")
+            print_raport ("=== Compering diffrent versions of CCR rates with reference values finished ===\n")
         else:
             print_raport ("\n=== Compering experiments with diffrent number of NUS points ===\n")
             for CCR_type in self.to_compere_dict:
@@ -325,28 +324,34 @@ class CCRSet:
                                 min_number = nus_number
                                 min_exp = exp_number
                     self.plot_gamma_exp_vs_epx(self.ccr_set[min_exp],self.ccr_set[max_exp], str(int(min_number)),str(int(max_number)))
+                    print_raport (f"\n{CCR_type} - ready\n")
             print_raport ("\n=== Compering experiments with diffrent number of NUS points finished ===\n")
     
     @staticmethod
     def prepare_gamma_calc_vs_gamma_exp_table(exp_tab:list[CCRClass],
-                                          min_max_value:list) -> tuple[list[list[float]],list[Union[int,float]]]:
+                                              min_max_value:list) -> tuple[list[list[float]],list[Union[int,float]]]:
         set_of_data = []
         
         for indext in range(len(exp_tab)):
             gamma_calculated = []
             gamma_experimental = []
             gamma_calc_error = []
-            fatal_error_point = []
+            fatal_error_point_calc = []
+            fatal_error_point_exp = []
+            fatal_error_point_err = []
             for one_peak in exp_tab[indext].peak_list():
                 if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
-                    if abs(one_peak.gamma_ref) - abs(one_peak.ccr_rate) > 2:
-                        fatal_error_point.append(deepcopy([one_peak.gamma_ref,one_peak.ccr_rate,one_peak.ccrrate_error_value]))
+                    if one_peak.fatal_error:
+                        fatal_error_point_calc.append(deepcopy(one_peak.gamma_ref))
+                        fatal_error_point_exp.append(deepcopy(one_peak.ccr_rate,))
+                        fatal_error_point_err.append(deepcopy(one_peak.ccrrate_error_value))
                     else:
                         gamma_calculated.append(deepcopy(one_peak.gamma_ref))
                         gamma_experimental.append(deepcopy(one_peak.ccr_rate))
                         gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
                     min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-            set_of_data.append(deepcopy([gamma_calculated,gamma_experimental,gamma_calc_error,fatal_error_point]))
+            set_of_data.append(deepcopy([gamma_calculated, gamma_experimental, gamma_calc_error,
+                                         [fatal_error_point_calc,fatal_error_point_exp,fatal_error_point_err]]))
         return set_of_data,min_max_value
     
     @staticmethod
@@ -357,16 +362,63 @@ class CCRSet:
             gamma_calculated = []
             gamma_experimental = []
             gamma_calc_error = []
+            fatal_error_point_calc = []
+            fatal_error_point_exp = []
+            fatal_error_point_err = []
             min_max_value = [+100.0,-100.0] #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
             for one_peak in exp_tab[indext].peak_list():
                 if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
-                    gamma_calculated.append(deepcopy(one_peak.gamma_ref))
-                    gamma_experimental.append(deepcopy(one_peak.ccr_rate))
-                    gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
+                    if one_peak.fatal_error:
+                        fatal_error_point_calc.append(deepcopy(one_peak.gamma_ref))
+                        fatal_error_point_exp.append(deepcopy(one_peak.ccr_rate))
+                        fatal_error_point_err.append(deepcopy(one_peak.ccrrate_error_value))
+                    else:
+                        gamma_calculated.append(deepcopy(one_peak.gamma_ref))
+                        gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                        gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
                     min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-            set_of_data.append(deepcopy([gamma_calculated, gamma_experimental, gamma_calc_error]))
+            set_of_data.append(deepcopy([gamma_calculated, gamma_experimental, gamma_calc_error,
+                                         [fatal_error_point_calc,fatal_error_point_exp,fatal_error_point_err]]))
             set_of_min_max_value.append(deepcopy(min_max_value))
         return set_of_data,set_of_min_max_value
+    
+    @staticmethod
+    def prepare_gamma_calc_vs_gamma_exp_table_general(exp_tab:list[CCRClass],min_max_value=[]) -> tuple[list[dict[list[float]]],list[list[Union[int,float]]]|list[float,float]]:
+        if len(min_max_value) == 0:
+            minmaxFlag = True
+        else:
+            minmaxFlag = False
+        set_of_data = []
+        set_of_min_max_value = []
+        for indext in range(len(exp_tab)):
+            gamma_calculated = []
+            gamma_experimental = []
+            gamma_calc_error = []
+            fatal_error_point_calc = []
+            fatal_error_point_exp = []
+            fatal_error_point_err = []
+            if minmaxFlag:
+                min_max_value = [+100.0,-100.0] #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
+            for one_peak in exp_tab[indext].peak_list():
+                if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
+                    if one_peak.fatal_error:
+                        fatal_error_point_calc.append(deepcopy(one_peak.gamma_ref))
+                        fatal_error_point_exp.append(deepcopy(one_peak.ccr_rate))
+                        fatal_error_point_err.append(deepcopy(one_peak.ccrrate_error_value))
+                    else:
+                        gamma_calculated.append(deepcopy(one_peak.gamma_ref))
+                        gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                        gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))
+                    min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
+            set_of_data.append(deepcopy({"good":[gamma_calculated, gamma_experimental, gamma_calc_error],
+                                         "fatal":[fatal_error_point_calc,fatal_error_point_exp,fatal_error_point_err]}))
+            if minmaxFlag:
+                set_of_min_max_value.append(deepcopy(min_max_value))
+        
+        if minmaxFlag:
+            return set_of_data,set_of_min_max_value
+        else:
+            return set_of_data, min_max_value
 
     @staticmethod
     def prepare_gamma_exp_vs_diff_nus_table(exp_tab:list[CCRClass],
@@ -403,38 +455,53 @@ class CCRSet:
         if not publication_style:
             fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
         
-        set_of_data_all_type_of_NUS,min_max_value = self.prepare_gamma_calc_vs_gamma_exp_table_diff_min_max(exp_tab)
-        # print(set_of_data_all_type_of_NUS)
+        set_of_data,min_max_value = self.prepare_gamma_calc_vs_gamma_exp_table_general(exp_tab)
+        # print(set_of_data)
         
-    # first row - plot each NUS number in particular plot
+        # first row - plot each NUS number in particular plot
         for indexa, ax in enumerate(axs.flat):
             if indexa < len(exp_tab):
                 exp = exp_tab[indexa]
                 Add_text = exp.Additional_text()
                 if exp.is_peaklist() and exp.is_reference():
+                    exp_ptl_data = set_of_data[indexa]
                     ax.axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
-                    ax.scatter(set_of_data_all_type_of_NUS[indexa][0],set_of_data_all_type_of_NUS[indexa][1],s=3, color='#252525ff') #
-                    ax.errorbar(set_of_data_all_type_of_NUS[indexa][0], set_of_data_all_type_of_NUS[indexa][1], 
-                            yerr=set_of_data_all_type_of_NUS[indexa][2], 
+                    ax.scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=3, color='#252525ff') #
+                    ax.errorbar(exp_ptl_data['good'][0], exp_ptl_data['good'][1], 
+                            yerr=exp_ptl_data['good'][2], 
                             fmt='none', color='#252525ff') #
-                    #fatal errors points:
-                    ax.scatter(set_of_data_all_type_of_NUS[indexa][3][0],set_of_data_all_type_of_NUS[indexa][3][1],s=3, color='red') #
-                    ax.errorbar(set_of_data_all_type_of_NUS[indexa][3][0], set_of_data_all_type_of_NUS[indexa][3][1], 
-                            yerr=set_of_data_all_type_of_NUS[indexa][3][2], 
-                            fmt='none', color='red') #
-                    weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(x=set_of_data_all_type_of_NUS[indexa][0],
-                                                                                                                                            y=set_of_data_all_type_of_NUS[indexa][1],
-                                                                                                                                            uncertainty_val=set_of_data_all_type_of_NUS[indexa][2])
                     
-                    ax.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=2, 
-                            color='mediumorchid', label=f'{Add_text[1:]}:    {len(set_of_data_all_type_of_NUS[indexa][1])} peaks,    {weighted_expretion2},  delta_a: {weighted_slope2error:.3f}, delta_b: {weighted_intercept2error:.3f}    r2 = {r2:.2f}    factor \'a\' = {factor_a:.1f}, factor \'b\' = {factor_b:.1f}')
+                    #fatal errors points:
+                    if len(exp_ptl_data['fatal'][0])>0 and len(exp_ptl_data['fatal'][1])>0 and len(exp_ptl_data['fatal'][2])>0:
+                        ax.scatter(exp_ptl_data['fatal'][0],exp_ptl_data['fatal'][1],s=3, color='red') #
+                        ax.errorbar(exp_ptl_data['fatal'][0], exp_ptl_data['fatal'][1], 
+                                yerr=exp_ptl_data['fatal'][2], 
+                                fmt='none', color='red') #
+                    weighted_reg_dict = WeightedLRegression_expresion_by_hand(x=exp_ptl_data['good'][0],
+                                                                            y=exp_ptl_data['good'][1],
+                                                                            uncertainty_val=exp_ptl_data['good'][2])
+                    
+                    label_text = "{}:\t{} peaks,\t{},  delta_a: {:.3f}, delta_b: {:.3f}    r2 = {:.2f}    factor \'a\' = {:.1f}, factor \'b\' = {:.1f}".format(Add_text[1:],
+                                                                                                                                                                weighted_reg_dict["equation"], 
+                                                                                                                                                                weighted_reg_dict["slope_uncertainty"], 
+                                                                                                                                                                weighted_reg_dict["intercept_uncertainty"],
+                                                                                                                                                                weighted_reg_dict["r2"],
+                                                                                                                                                                weighted_reg_dict["factor_a"],
+                                                                                                                                                                weighted_reg_dict["factor_b"],
+                                                                                                                                                                len(exp_ptl_data['good'][1]))
+                    ax.axline([0,weighted_reg_dict["intercept"]],slope=weighted_reg_dict["slope"], 
+                              linestyle=(0, (5, 5)), linewidth=2, color='mediumorchid', 
+                              label=label_text)
                     text_pos_x = min_max_value[indexa][0] - (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
                     text_pos_y = min_max_value[indexa][1] + (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
                     ax.text(text_pos_x,text_pos_y,
-                            f'$R^{2}$ = {r2:.2f}', 
+                            f'$R^{2}$ = {weighted_reg_dict["r2"]:.2f}', 
                             horizontalalignment='left', verticalalignment='top',
                             fontsize=9)
-                    # ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) #
+                    if publication_style:
+                        ax.set_title(f'{CCRname2PrettyRateNamePLT(exp.CCRname())}', fontsize=10)
+                    else:
+                        ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) 
                     ax = setup_plot_area(ax,min_max_value[indexa])
                     ax.tick_params(labelsize=8)
 
@@ -445,8 +512,6 @@ class CCRSet:
             add2 = exp_tab[0].Additional_text()
 
         if publication_style:
-            for indexa, ax in enumerate(axs.flat):
-                ax.set_title(f'{CCRname2PrettyRateNamePLT(exp.CCRname())}', fontsize=10)
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=10)
             fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=10)
             cm = 1/2.54  # centimeters in inches
@@ -457,8 +522,6 @@ class CCRSet:
             fig.savefig("{}/{}_all_exp_vs_calc{}.svg".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
                     pad_inches=0.3, transparent=transparent_plot)
         else:
-            for indexa, ax in enumerate(axs.flat):
-                ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) #
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
             fig.supylabel('experimental \u0393, $s^{-1}$')
             fig.set_figwidth(ncols*5)
@@ -476,23 +539,37 @@ class CCRSet:
         if not publication_style:
             fig.suptitle(f"Comparision of CCR rates ({ccr_name}) for diffrent experiment variant with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\"")
         
-        set_of_data_all_type_of_NUS,min_max_value = self.prepare_gamma_calc_vs_gamma_exp_table(exp_tab,min_max_value)
+        set_of_data,min_max_value = self.prepare_gamma_calc_vs_gamma_exp_table_general(exp_tab,min_max_value=min_max_value)
         set_of_data_min_max_NUS,min_max_discript,min_max_value = self.prepare_gamma_exp_vs_diff_nus_table(exp_tab,min_max_value)
     
         # first row - plot each NUS number in particular plot
         for indext, exp in enumerate(exp_tab):
+            exp_ptl_data = set_of_data[indext]
             Add_text = exp.Additional_text()
             axs[0,indext].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
-            axs[0,indext].scatter(set_of_data_all_type_of_NUS[indext][0],set_of_data_all_type_of_NUS[indext][1],s=10,) #
-            axs[0,indext].errorbar(set_of_data_all_type_of_NUS[indext][0], set_of_data_all_type_of_NUS[indext][1], 
-                        yerr=set_of_data_all_type_of_NUS[indext][2], 
+            axs[0,indext].scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=10,) #
+            axs[0,indext].errorbar(exp_ptl_data['good'][0], exp_ptl_data['good'][1], 
+                        yerr=exp_ptl_data['good'][2], 
                         fmt='none', color='#252525ff') #
-            if len(set_of_data_all_type_of_NUS[indext][0])>0:
-                weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(set_of_data_all_type_of_NUS[indext][0],
-                                                                                                                                        set_of_data_all_type_of_NUS[indext][1],
-                                                                                                                                        set_of_data_all_type_of_NUS[indext][2])
-                axs[0,indext].axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, 
-                        color='purple', label=f'{Add_text[1:]}:    {len(set_of_data_all_type_of_NUS[indext][1])} peaks,    {weighted_expretion2},  delta_a: {weighted_slope2error:.3f}, delta_b: {weighted_intercept2error:.3f}\nr2 = {r2:.2f}    factor \'a\' = {factor_a:.1f}, factor \'b\' = {factor_b:.1f}')
+            #fatal errors points:
+            if len(exp_ptl_data['fatal'][3][0])>0 and len(exp_ptl_data['fatal'][3][1])>0 and len(exp_ptl_data['fatal'][3][2])>0:
+                axs[0,indext].scatter(exp_ptl_data['fatal'][3][0],exp_ptl_data['fatal'][3][1],s=3, color='red') #
+                axs[0,indext].errorbar(exp_ptl_data['fatal'][3][0], exp_ptl_data['fatal'][3][1], 
+                        yerr=exp_ptl_data['fatal'][3][2], 
+                        fmt='none', color='red') #
+            if len(exp_ptl_data['good'][0])>0:
+                weighted_reg_dict = WeightedLRegression_expresion_by_hand(exp_ptl_data['good'][0], exp_ptl_data['good'][1], exp_ptl_data['good'][2])
+                label_text = "{}:\t{} peaks,\t{},  delta_a: {:.3f}, delta_b: {:.3f}\tr2 = {:.2f}\tfactor \'a\' = {:.1f}, factor \'b\' = {:.1f}".format(Add_text[1:],
+                                                                                                                                                                weighted_reg_dict["equation"], 
+                                                                                                                                                                weighted_reg_dict["slope_uncertainty"], 
+                                                                                                                                                                weighted_reg_dict["intercept_uncertainty"],
+                                                                                                                                                                weighted_reg_dict["r2"],
+                                                                                                                                                                weighted_reg_dict["factor_a"],
+                                                                                                                                                                weighted_reg_dict["factor_b"],
+                                                                                                                                                                len(exp_ptl_data['good'][1]))
+                axs[0,indext].axline([0,weighted_reg_dict["intercept"]],slope=weighted_reg_dict["slope"], 
+                            linestyle=(0, (5, 5)), linewidth=1.5, color='purple', 
+                            label=label_text)
                 # axs[0,indext].legend()
             axs[0,indext].set_title(Add_text[1:], fontsize=10)
             axs[0,indext] = setup_plot_area(axs[0,indext],min_max_value)
@@ -502,8 +579,8 @@ class CCRSet:
         axs[1,0].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray', label='x=y') 
         for indext, exp in enumerate(exp_tab):
             Add_text = exp.Additional_text()
-            axs[1,0].scatter(set_of_data_all_type_of_NUS[indext][0],
-                             set_of_data_all_type_of_NUS[indext][1],
+            axs[1,0].scatter(exp_ptl_data['good'][0],
+                             exp_ptl_data['good'][1],
                              s=10,label=str(Add_text[1:])) #
         axs[1,0] = setup_plot_area(axs[1,0],min_max_value)
         axs[1,0].tick_params(labelsize=8)
@@ -674,7 +751,7 @@ class CCRSet:
             axs[2,indext].set_ylabel('Uncertainty value')
             axs[2,indext].set_xlabel('Peak intens in cross')
 
-        plt.savefig("{}/Hist_{}_exp_vs_Uncertainty_all.png".format(file_director, ccr_name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
+        plt.savefig("{}Hist_{}_exp_vs_Uncertainty_all.png".format(RaportDir, ccr_name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
         # plt.show()
         plt.clf()
         plt.close()
@@ -1040,7 +1117,7 @@ class CCRClass:
         if "H_roi" in exp_dict:
             self._Hroi=float(exp_dict["H_roi"])
 
-        print_raport(f"""\n
+        print_raport(f"""
 CCR name: {self._CCR_name}
 auto name: {self._auto_name}
 cross name: {self._cross_name}
@@ -1049,7 +1126,6 @@ CCR pos: {self._CCR_pos}
 ns: {self._ns}
 Tc: {self._tc_vol}
 other: {self._other}
-
 """)
         
 
@@ -1173,7 +1249,7 @@ other: {self._other}
             else: HaveNumberFlag = False
 
         if HaveNumberFlag == False:
-            print_raport(f"Probelm with number reading in: {first_dim_sign_list} and {last_dim_sign_list}")
+            print_raport(f"Problem with number reading in: {first_dim_sign_list} and {last_dim_sign_list}")
             aminoacids_number = "0"
         # print(f"aminoacids_number: {aminoacids_number}")
         return aminoacids_number
@@ -1254,6 +1330,7 @@ other: {self._other}
                 if int(one_peak.aa_number) == int(r_seq_num):
                     one_peak.is_gamma_calc = True
                     one_peak.gamma_ref = float(ref_CCR[indexr])
+                    one_peak.check_if_fatal_error()
                     self._is_reference = True
                     # print ("gamma_ref",one_peak.gamma_ref)
     
@@ -1271,22 +1348,27 @@ other: {self._other}
         gamma_experimental = []
         gamma_calc_error = []            # ERROR GAMMA INFO, 9.11.2023
         gamma_differences = []
+        fatal_error_point_calc = []
+        fatal_error_point_exp = []
+        fatal_error_point_err = []
         for one_peak in self._peaks:
             if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
                 # print(one_peak.gamma_ref,one_peak.ccr_rate)
-                gamma_calculated.append(deepcopy(one_peak.gamma_ref))
-                gamma_experimental.append(deepcopy(one_peak.ccr_rate))
-                gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))            # ERROR GAMMA INFO, 9.11.2023
+                if one_peak.fatal_error:
+                    fatal_error_point_calc.append(deepcopy(one_peak.gamma_ref))
+                    fatal_error_point_exp.append(deepcopy(one_peak.ccr_rate))
+                    fatal_error_point_err.append(deepcopy(one_peak.ccrrate_error_value))
+                else:
+                    gamma_calculated.append(deepcopy(one_peak.gamma_ref))
+                    gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                    gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))            # ERROR GAMMA INFO, 9.11.2023
+                    gamma_differences.append(deepcopy(one_peak.ccr_rate-one_peak.gamma_ref))
                 min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
-                gamma_differences.append(deepcopy(one_peak.ccr_rate-one_peak.gamma_ref))
 
         plt.rcParams['font.size'] = '14'
 
         wilcoxon_rank = stats.wilcoxon(gamma_calculated,gamma_experimental)[1] # results: statistic, pvalue, zstatistic  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.wilcoxon.html
         tStudent_2 = stats.ttest_ind(gamma_calculated,gamma_experimental)[0]    # results: statistic, pvalue, df  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html
-        # pvalue is for alternative hypothesis, so:
-        # if p>a -> H0, 
-        # if p<a -> H1
         tStudent_3 = stats.ttest_rel(gamma_calculated,gamma_experimental)[0] # results: statistic, pvalue, 
         avg_distance = np.mean(gamma_differences)
         std_distance = np.std(gamma_differences)
@@ -1302,16 +1384,24 @@ other: {self._other}
         plt.errorbar(gamma_calculated, gamma_experimental, 
                         yerr=gamma_calc_error, 
                         fmt='none', color='#252525ff') #
+        #fatal errors points:
+        if len(fatal_error_point_calc)>0 and len(fatal_error_point_calc)>0 and len(fatal_error_point_calc)>0:
+            plt.scatter(fatal_error_point_calc,fatal_error_point_exp,s=3, color='red') #
+            plt.errorbar(fatal_error_point_calc, fatal_error_point_exp, 
+                    yerr=fatal_error_point_err, 
+                    fmt='none', color='red') #
 
-        print_raport(f"\n {self._CCR_name}")
-        print_raport (label)
+        # print_raport(f"\n {self._CCR_name}")
+        RaportBox.write(label)
         # print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
         linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
-        # weighted_expretion,weighted_r2, weighted_slope, weighted_intercept = WeightedLRegression_expresion(gamma_calculated, gamma_experimental,gamma_calc_error)
-        weighted_expretion2, weighted_slope2, weighted_slope2error, weighted_intercept2, weighted_intercept2error, factor_a, factor_b, r2 = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
-        plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='red', label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}, \nmatching factor for y=x: {matching_factor_for_y_x_LR:.1f}')
-        # plt.axline([0,weighted_intercept],slope=weighted_slope, linestyle=(0, (5, 5)), linewidth=1.5, color='blue', label=f'lw: {weighted_expretion}, r2 = {weighted_r2:.3f}')
-        plt.axline([0,weighted_intercept2],slope=weighted_slope2, linestyle=(0, (5, 5)), linewidth=1.5, color='purple', label=f'lw2: {weighted_expretion2}, \nmatching factor for y=x: {factor_a:.1f}')
+        weighted_reg_dict = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
+        plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), 
+                   linewidth=1.5, color='red', 
+                   label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}, \nmatching factor for y=x: {matching_factor_for_y_x_LR:.1f}')
+        plt.axline([0,weighted_reg_dict["intercept"]],slope=weighted_reg_dict["slope"], 
+                   linestyle=(0, (5, 5)), linewidth=1.5, color='purple', 
+                   label=f'lw2: {weighted_reg_dict["equation"]}, \nmatching factor for y=x: {weighted_reg_dict["factor_a"]:.1f}')
 
         plt.title(self._CCR_name+add)
         # Naming the x-axis, y-axis and the whole graph 
@@ -1378,7 +1468,7 @@ other: {self._other}
         axs[2].set_xlabel('Peak intens in cross')
 
         # plt.title(ccr_name+add)
-        plt.savefig("{}/Hist_{}_exp_vs_Uncertainty{}.png".format(file_director, self._CCR_name,add2), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
+        plt.savefig("{}Hist_{}_exp_vs_Uncertainty{}.png".format(RaportDir, self._CCR_name,add2), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
         # plt.show()
         plt.clf()
         plt.close()
@@ -1416,12 +1506,16 @@ other: {self._other}
 
             if one_peak.ccrrate_calculation_error == False:
                 one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
+            elif one_peak.to_check:
+                one_row["Comments"] = "Check peak position!"
             else:
                 one_row["Comments"] = "peak intens error"
 
         elif one_peak.is_peak == False and one_peak.is_ccr_rate == True: 
             if one_peak.aa_name == "G":
                 one_row["Comments"] = "glycine - no CCR rate"
+            elif one_peak.to_check:
+                one_row["Comments"] = "Check peak position!"
             else:
                 one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
                 one_row["Comments"] = "Info from other peak"
@@ -1430,6 +1524,8 @@ other: {self._other}
         elif one_peak.is_peak == True and one_peak.is_ccr_rate == False:
             for i in range(self._n_dim):
                 one_row['w{}'.format(i+1)] = '{:.3f}'.format(one_peak.peak_pos[i])
+            if one_peak.to_check:
+                        one_row["Comments"] = "Check peak position!"
         else:
             one_row["Comments"] = "No visible peak"
         
@@ -1518,7 +1614,7 @@ other: {self._other}
         with open(new_list, 'w') as listfile:
             sentence_len_7_dim = int(7*self._n_dim)
             print ("\tauto list name = {}\tcross list name = {}\tTc = {}".format(self._auto_name[0], self._cross_name[0], self._tc_vol), file=listfile) 
-            print ("{0}\t{1:4}\t{2:5}\t{3:5}\t CCR rate \t CCR Uncertainty \t CCR theor \t Ix theor \t Ix/Ia".format("AA",
+            print ("{0}\t{1:4}\t{2:5}\t{3:5}\t CCR rate \t CCR Uncertainty \t CCR theor \t Ix theor \t Ix/Ia \t Comments".format("AA",
                                                                                                                     "peak position",
                                                                                                                     "intensity in auto",
                                                                                                                     "intensity in cross",
@@ -1570,9 +1666,14 @@ other: {self._other}
                     dict_line['Ix_Ia'] = "{:8.2f}".format(one_peak.Ix_theor_Ia_ratio, sentence_len=10)
                 else:
                     dict_line['ccr_rate_theor'] =  dict_line['Ix_theor'] = dict_line['Ix_Ia'] = " "*10  
+                
+                if one_peak.to_check:
+                    dict_line["Comments"] = "Check peak position!"
 
                 for item in dict_line:
                     print (dict_line[item], end="\t", file=listfile)
+                
+                
         # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
         RaportBox.write("All info from peaks for {} rates are in file: {}\n".format(self._CCR_name, new_list))
         return
@@ -1608,10 +1709,8 @@ other: {self._other}
                 peak_descr = str(one_peak.aa_number)+one_peak.aa_name
                 one_row["AA"] = peak_descr
                 if one_peak.is_peak == True and one_peak.is_ccr_rate == True:
-                    # peak_position = str(one_peak.peak_pos[0])
                     for i in range(self._n_dim):
                         one_row['w{}'.format(i+1)] = '{:.3f}'.format(one_peak.peak_pos[i])
-                    # one_row["peak position"] = peak_position
                     if one_peak.aa_name == "G":
                         one_row["Comments"] = "glycine - no CCR rate"
                     else:
@@ -1619,9 +1718,10 @@ other: {self._other}
                         one_row["intensity in cross"] = one_peak.peak_intens[1]
                         if one_peak.ccrrate_calculation_error == False:
                             one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
+                        elif one_peak.to_check:
+                            one_row["Comments"] = "Check peak position!"
                         else:
                             one_row["Comments"] = "peak intens error"
-                    
                 elif one_peak.is_peak == False and one_peak.is_ccr_rate == True: 
                     if one_peak.aa_name == "G":
                         one_row["Comments"] = "glycine - no CCR rate"
@@ -1633,6 +1733,8 @@ other: {self._other}
                 elif one_peak.is_peak == True and one_peak.is_ccr_rate == False:
                     for i in range(self._n_dim):
                         one_row['w{}'.format(i+1)] = '{:.3f}'.format(one_peak.peak_pos[i])
+                    if one_peak.to_check:
+                        one_row["Comments"] = "Check peak position!"
                 else:
                     one_row["Comments"] = "No visible peak"
                 
@@ -1685,7 +1787,7 @@ class CCR_normal(CCRClass):
                 if points_mode:
                 # if points_mode and "Average noise level" in p_lines_a[1] and p_lines_x[1]:
                     self._noise = [float(p_lines_a[1].split("=")[1]), float(p_lines_x[1].split("=")[1])]
-                    print_raport(f"auto_noise = {self._noise[0]}, cross_noise = {self._noise[1]}")
+                    print_raport(f"{self._CCR_name}: auto_noise = {self._noise[0]:.2e}, cross_noise = {self._noise[1]:.2e}")
                     # RaportBox.write(f"auto_noise = {self._noise[0]}, cross_noise = {self._noise[1]}")
                 for indexl, line in enumerate(p_lines_a):
                     if indexl > 1 and len(line) > 1:
@@ -1715,6 +1817,13 @@ class CCR_normal(CCRClass):
                                 if len(item_a)>self._n_dim+1:
                                     RaportBox.write("auto = {}, cross = {}\n".format(item_a[self._n_dim+1],item_x[self._n_dim+1]))
                                     res.peak_intens = [ float(item_a[self._n_dim+1]) , float(item_x[self._n_dim+1]) ]
+
+                                if len(item_a)>self._n_dim+2:
+                                    if item_a[self._n_dim+2]=="to_check":
+                                        res.to_check = True
+                                if len(item_x)>self._n_dim+2:
+                                    if item_x[self._n_dim+2]=="to_check":
+                                        res.to_check = True
         else:
             print_raport ("Missing file for {} and {}! {}\n".format(self._auto_name[0], self._cross_name[0], peak_list_names))
             self._is_peaklist = False
@@ -1736,7 +1845,7 @@ class CCR_normal(CCRClass):
         if self._is_peak_uncertainty:
             uncertainty_Ia = self._peaks[peak_number].peak_uncertainty[0]
             uncertainty_Ix = self._peaks[peak_number].peak_uncertainty[1]
-            print_raport(f"{self._peaks[peak_number].descript}: Peak_uncertainty for CalcErrorValue: {uncertainty_Ia}, {uncertainty_Ix}")
+            RaportBox.write(f"{self._peaks[peak_number].descript}: Peak_uncertainty for CalcErrorValue: {uncertainty_Ia}, {uncertainty_Ix}")
         else:
             uncertainty_Ia = noiseIa
             uncertainty_Ix = noiseIx
@@ -1745,7 +1854,7 @@ class CCR_normal(CCRClass):
         squareError = math.pow(1/self._tc_vol,2) * squareDerivativeArcTanh * math.pow(NSa/NSx,2) * sumOfSquaresOfPeakHightDeviation
         self._peaks[peak_number+self._CCR_pos].ccrrate_error_value = math.sqrt(squareError)
 
-        print_raport("Calculating gamma uncertainty for peak number: {} \n squareDerivativeArcTanh = {} \n sumOfSquaresOfPeakHightDeviation = {}\n squareError = {}\n \t\t--> {}\n".format(peak_number,
+        RaportBox.write("Calculating gamma uncertainty for peak number: {} \n squareDerivativeArcTanh = {} \n sumOfSquaresOfPeakHightDeviation = {}\n squareError = {}\n \t\t--> {}\n".format(peak_number,
                                                                                                                                                         squareDerivativeArcTanh,
                                                                                                                                                         sumOfSquaresOfPeakHightDeviation,
                                                                                                                                                         squareError,
@@ -1776,9 +1885,12 @@ class CCR_normal(CCRClass):
             res_num = indexp-self._CCR_pos
             if len(self._peaks)> res_num >= 0:
                 other_peak = self._peaks[res_num]
+                residue = str(other_peak.aa_number)+other_peak.aa_name
                 if one_peak.is_gamma_calc and other_peak.is_peak:
-                    residue = str(other_peak.aa_number)+other_peak.aa_name
-                    print_raport(residue)
+                    # residue = str(other_peak.aa_number)+other_peak.aa_name
+                    if one_peak.to_check:
+                        print_raport(f"{residue} - Check peak position!!!")
+                    else: print_raport(residue)
                     auto_peak_intensity = other_peak.peak_intens[0]
                     other_peak.Ix_theor = float(math.tanh(one_peak.gamma_ref*self._tc_vol)*auto_peak_intensity*self._ns[1]/self._ns[0])
                     if self._CCR_name == "CCR_5" or self._CCR_name == "CCR_6":
@@ -1786,8 +1898,10 @@ class CCR_normal(CCRClass):
                     other_peak.Ix_theor_Ia_ratio = one_peak.Ix_theor/auto_peak_intensity
                     other_peak.Ix_theor_Ia_ratio_without_NS = one_peak.Ix_theor_Ia_ratio*self._ns[0]/self._ns[1]
                 else:
-                    residue = str(other_peak.aa_number)+other_peak.aa_name
-                    print_raport("This residue ({}) don't have reference value of gamma or referens (auto) peak".format(residue))
+                    # residue = str(other_peak.aa_number)+other_peak.aa_name
+                    if one_peak.to_check:
+                        print_raport(f"{residue} - This residue don't have reference value of gamma or referens (auto) peak and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue don't have reference value of gamma or referens (auto) peak")
     
 
 
@@ -1961,6 +2075,7 @@ class CResidue:
         self.is_overlap = False       # information about the presents of overlapping of a peak: maybe, yes, no   
         self.overlap_peaks = {}       #     
         self.peak_uncertainty = [] 
+        self.to_check = False
 
         self.is_ccr_rate = False
         self.ccr_rate = -99999.0
@@ -1969,12 +2084,20 @@ class CResidue:
 
         self.is_gamma_calc = False      # information about the presence of a reference gamma
         self.gamma_ref = -99999.0       # value of gamma (CCR rate) which will use as reference data for experimental data, value additional file with calculated previosly gammas
+        self.fatal_error = False
         self.Ix_theor = 0.0
         self.Ix_theor_Ia_ratio = 0.0
         self.Ix_theor_Ia_ratio_without_NS = 0.0
 
 
-        
+    def check_if_fatal_error(self):
+        if self.is_gamma_calc:
+            dist = math.sqrt((self.ccr_rate - self.gamma_ref )**2+(self.gamma_ref - self.gamma_ref)**2)
+            if dist > 5:
+                self.fatal_error = True
+            # quotient = self.ccr_rate/self.gamma_ref
+            # if 1.25 < quotient < 0.75:
+            #     self.fatal_error = True
 
 """Small functions"""
 
@@ -2110,11 +2233,18 @@ def calc_R2(exp_list,theory_list):
         SST+=(exp_list[indext]-average_exp)**2
     R2_val = SSR/SST
     R2_val2 = 1 - (SSE/SST)
-    print_raport ("SSR = {:.0f}; SSE = {:.0f}; SST = {:.0f}; SSR+SSE = {:.0f}; R2_1 = {:.4f}; R2_2 = {:.4f}".format(SSR, SSE, SST, SSR+SSE, R2_val, R2_val2))
-    return R2_val
+    RaportBox.write("SSR = {:.0f}; SSE = {:.0f}; SST = {:.0f}; SSR+SSE = {:.0f}; R2_1 = {:.4f}; R2_2 = {:.4f}".format(SSR, SSE, SST, SSR+SSE, R2_val, R2_val2))
+    return R2_val2
 
 
-def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
+def WeightedLRegression_expresion_by_hand(x:list,y:list,uncertainty_val:list)->dict["equation":str, 
+                                                                                    "slope":float, 
+                                                                                    "slope_uncertainty":float, 
+                                                                                    "intercept":float, 
+                                                                                    "intercept_uncertainty":float, 
+                                                                                    "factor_a_for_y_x":float, 
+                                                                                    "factor_b_for_y_x":float, 
+                                                                                    "r2":float]:
     RaportBox.write("\nby Hand\n")
     list_of_invert_squer_uncertainty = []
     list_of_avg_x = []
@@ -2142,26 +2272,41 @@ def WeightedLRegression_expresion_by_hand(x,y,uncertainty_val):
 
     sum_of_x_avgx_y_avgy_div_uncertainty = sum(list_of_x_avgx_y_avgy_div_uncertainty)
     sum_of_x_avgx_squer_div_uncertainty = sum(list_of_x_avgx_squer_div_uncertainty)
-    print_raport(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
+    # print_raport(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
     slope = sum_of_x_avgx_y_avgy_div_uncertainty/sum_of_x_avgx_squer_div_uncertainty  
     intercept = avg_y-(slope*avg_x)
     slope_uncertainty = math.sqrt(1/(sum_of_x_avgx_squer_div_uncertainty))
     intercept_uncertainty = math.sqrt((avg_square_x)/sum_of_x_avgx_squer_div_uncertainty)
 
-    print_raport(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
-    lr_exp = '{:.2f}*x + {:.2f}'.format(slope,intercept)
-    print_raport(f"weighted linear regretion: {lr_exp}")
-    factor_a_for_y_x = (1-abs(slope))/slope_uncertainty
-    factor_b_for_y_x = (1-abs(intercept))/intercept_uncertainty
-    print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
+    # print_raport(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
+    # lr_exp = '{:.2f}*x + {:.2f}'.format(slope,intercept)
+    # # print_raport(f"weighted linear regretion: {lr_exp}")
+    # factor_a_for_y_x = (1-abs(slope))/slope_uncertainty
+    # factor_b_for_y_x = (1-abs(intercept))/intercept_uncertainty
+    # print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
+    
     y_from_line = []
     for one_x in x:
         if str(one_x)!='nan':
             y_from_line.append(deepcopy(one_x*slope+intercept))
-    r2 = calc_R2(y,y_from_line)
-
-    return lr_exp, slope, slope_uncertainty, intercept, intercept_uncertainty, factor_a_for_y_x, factor_b_for_y_x, r2
-
+    # r2 = calc_R2(y,y_from_line)
+    
+    # return_dict = {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
+    #                "slope":slope, 
+    #                "slope_uncertainty":slope_uncertainty, 
+    #                "intercept":intercept, 
+    #                "intercept_uncertainty":intercept_uncertainty, 
+    #                "factor_a_for_y_x":(1-abs(slope))/slope_uncertainty, 
+    #                "factor_b_for_y_x":(1-abs(intercept))/intercept_uncertainty, 
+    #                "r2":calc_R2(y,y_from_line)}
+    return {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
+            "slope":slope, 
+            "slope_uncertainty":slope_uncertainty, 
+            "intercept":intercept, 
+            "intercept_uncertainty":intercept_uncertainty, 
+            "factor_a":(1-abs(slope))/slope_uncertainty, 
+            "factor_b":(1-abs(intercept))/intercept_uncertainty, 
+            "r2":calc_R2(y,y_from_line)}
 
 def check_if_min_max(suspect_min:Union[int,float], 
                     suspect_max:Union[int,float], 
@@ -2209,7 +2354,6 @@ if __name__ == "__main__":
     plot_together_list = []
     ExperimentsSet.Compere_with_reference(ref_dict=gamma_ref_dict)
     for key in ExperimentsSet.to_compere_dict:
-        print(ExperimentsSet.to_compere_dict[key])
         exp = ExperimentsSet.ccr_set[ExperimentsSet.to_compere_dict[key][-1]]
         plot_together_list.append(deepcopy(exp))
     ExperimentsSet.plot_gamma_gamma_all_together(plot_together_list, publication_style=args.PublicationFlag)

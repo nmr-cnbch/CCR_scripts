@@ -68,15 +68,18 @@ parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', 
 
 args = parser.parse_args()
 
-
+print("\n\n==================================\nRead UCSF and center peak list\n")
 
 if not os.path.exists(args.filename): 
     print("There is not such file like this: ", args.filename)
     sys.exit(1)
+else:
+    print(f"UCSF file: {args.filename}")
 if not os.path.exists(args.peak_list): 
     print("There is not such file like this: ", args.peak_list)
     sys.exit(1)
-
+else:
+    print(f"Peak list file: {args.peak_list}\n")
 
 if args.peak_level:
     UserPeakLevelFlag = True
@@ -84,7 +87,7 @@ else:
     UserPeakLevelFlag = False
 
 if args.noRemoveFlag:
-    print ("Peak centering without removing invisible __peaks")
+    print ("Peak centering without removing invisible peaks")
 if args.OnlyPoints:
     print ("OnlyPoints is on")    
 if args.OnlyNoise:
@@ -101,11 +104,9 @@ else:
 
 
 if args.output_name:
-    print(args.output_name)
     peak_list_name = os.path.basename(args.output_name)
     if "." in str(peak_list_name):
         point_index = str(peak_list_name).index(".")
-        print("index . : {}".format(point_index))
         peak_list_name = peak_list_name[:point_index]
 
     peak_list_dir_new = os.path.dirname(args.output_name)+peak_list_name+"_list"
@@ -525,7 +526,7 @@ class CSpectrum:
 
                Output: list of points: list[[dim1,dim2...]...]
             """
-            great_number_of_points_for_noise = number_of_points_for_noise**(1+self.__spectra_dim)/2
+            great_number_of_points_for_noise = 0.75*number_of_points_for_noise**(self.__spectra_dim)
 
             dumpster=[]                       # list of wrong points: e.g. it's peak or really close to peak
             this_peak = self.__peaks[peak_number]
@@ -710,7 +711,7 @@ class CSpectrum:
             if args.OnlyNoise:
                 with open(f"{peak_list_dir_new}/noise.txt", 'w') as noise_file:
                     noise_file.write("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_type_text,self.__noise_level,self.__peak_level))
-            print_raport("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}\n".format(noise_type_text,self.__noise_level,self.__peak_level))
+            print_raport("Average{}noise level = {:.2e}\nPeaks cutline = {:.2e}".format(noise_type_text,self.__noise_level,self.__peak_level))
             print ("=== Noise calculation finished ===")
 
 
@@ -720,7 +721,7 @@ class CSpectrum:
         checking_places = []
 
         List_of_around_points, circle_encounter, start_index = spectrum.find_points_in_circle(Orgin_pos, distance=checking_distance+1)
-        print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}")
+        print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}",in_terminal=False)
 
         for point_pos in List_of_around_points:
             p = PointInUCSF(points_pos=point_pos,spectrum=self)
@@ -728,8 +729,8 @@ class CSpectrum:
         # print(f"\n\n{one_peak.descript}\nList_of_around_points: {List_of_around_points}\ncircle_encounter: {circle_encounter}\nstart_index: {start_index}")
         
         spectrum.read_intens_point(checking_places)
-        #print_raport(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n")
-        #print_raport(f"Len of checking_places list: {len(checking_places)}\n")
+        print_raport(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n",in_terminal=False)
+        print_raport(f"Len of checking_places list: {len(checking_places)}\n",in_terminal=False)
 
         if len(List_of_around_points) != len(checking_places):
             print(f"""Length of list of points and list of intens is diffrent!
@@ -740,7 +741,7 @@ class CSpectrum:
 
         circle_start = circle_encounter[0]
         circle_end = circle_encounter[1]
-        print_raport(f"circle_start: {circle_start}, circle_end: {circle_end}")
+        print_raport(f"circle_start: {circle_start}, circle_end: {circle_end}",in_terminal=False)
         for indexn in range(circle_start,circle_end+1):
             if checking_places[indexn].point_intensity > checking_places[start_index].point_intensity:
                 #print(f"indexn: {indexn}, pos: {checking_places[indexn].point_pos} intens: {checking_places[indexn].point_intensity:.2e}")
@@ -777,7 +778,7 @@ class CSpectrum:
             distance_from_starting_point = 0
             farthest_point_intes = 0
             # print(f"suspect_set: {suspect_set}\ncircle_Flag: {circle_Flag}")
-            print_raport(f"circle_Flag: {circle_Flag}")
+            # print_raport(f"circle_Flag: {circle_Flag}")
 
             for suspect_point in suspect_set:
                 current_dist = calc_distance(suspect_set[suspect_point][0],checking_places[start_index].point_pos)
@@ -793,7 +794,7 @@ class CSpectrum:
                     one_peak.was_moved = True
                     one_peak.new_points_pos = farthest_point_pos
                     one_peak.peak_intens = farthest_point_intes
-                    print_raport(f"farthest_point_pos: {farthest_point_pos}, farthest_point_intes: {farthest_point_intes}")
+                    # print_raport(f"farthest_point_pos: {farthest_point_pos}, farthest_point_intes: {farthest_point_intes}")
                     return farthest_point_pos, farthest_point_intes, suspect_set
             
                 else:
@@ -817,6 +818,8 @@ class CSpectrum:
         Peak_not_moved = 0
         Peak_moved = 0
         Peak_not_visible = 0
+        Peak_visible = 0
+        Peak_to_check = 0
         peak_centering_info = []
         peak_height_list = []
         noise_list = []
@@ -835,18 +838,21 @@ class CSpectrum:
             if noise_type == "artifacts":
                 self.CalcNoise(peak_number=indexpeak)
                 noise_list.append(deepcopy(one_peak.noise_around_peak))
-                if abs(New_intens) < one_peak.noise_around_peak and args.noRemoveFlag==False:
-                    one_peak.is_visible = False
-                    Peak_not_visible += 1 
+                if self.__minimal_signal_to_noise == 0.0: 
+                    self.__minimal_signal_to_noise = self.__spectra_dim * 2.5
+                minimal_peak_height = one_peak.noise_around_peak * self.__minimal_signal_to_noise
             else:
-                if abs(New_intens) < self.__peak_level and args.noRemoveFlag==False:
+                minimal_peak_height = self.__peak_level
+
+            if abs(New_intens) < minimal_peak_height and args.noRemoveFlag==False:
                     one_peak.is_visible = False
                     Peak_not_visible += 1 
-
+            # elif 
             # preraring output to info.txt 
             if one_peak.is_visible == False:
                 peak_centering_info.append("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript))
             else:
+                Peak_visible += 1
                 peak_centering_info.append("\n{}\t({})".format(indexpeak, one_peak.descript))
             
             if len(path_dict)>0:
@@ -856,10 +862,12 @@ class CSpectrum:
             peak_centering_info.append("\t{}\t{}".format(New_pos, New_intens))
             
             if one_peak.is_center == "no":
+                one_peak.to_check = True
+                Peak_to_check += 1
                 peak_centering_info.append("                     is not in the highest position\t")
 
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
-        print_raport("Peak not moved = {}\nPeak moved = {}\nPeak not visible = {}".format(Peak_not_moved,Peak_moved,Peak_not_visible))
+        print_raport("Peaks not moved = {}\nPeaks moved = {}\nPeaks visible = {}\nPeaks not visible = {}\n Peaks to check = {}".format(Peak_not_moved,Peak_moved,Peak_visible,Peak_not_visible, Peak_to_check))
         print_raport("Average peaks height = {:.2e}".format(average_peaks_level))
 
         if noise_type == "artifacts":
@@ -868,7 +876,7 @@ class CSpectrum:
             signal_to_noise = average_peaks_level/self.__noise_level
             print_raport(f"Minimal signal_to_noise: {self.__minimal_signal_to_noise}")
             print_raport("Signal to noise ratio = {:.2f}".format(signal_to_noise))
-        print_raport("\n")
+        print_raport("\n", in_terminal=False)
         for i in peak_centering_info:
             print_raport(i, in_terminal=False)
 
@@ -919,7 +927,7 @@ class CSpectrum:
                     print (one_peak.peak_intens, end=" ", file=listfile) 
                     
                     if one_peak.is_center == "no":
-                        print ("to check", file=listfile)
+                        print ("to_check", file=listfile)
                     else: print (file=listfile)
         return
 
@@ -957,7 +965,7 @@ class CSpectrum:
                     if one_peak.peak_intens:
                         print (one_peak.peak_intens, end=" ", file=listfile) 
                     if type_list=="new" and one_peak.is_center == "no":
-                        print ("to check", file=listfile)
+                        print ("to_check", file=listfile)
                     else: print (file=listfile)
         return
 
@@ -1141,7 +1149,7 @@ if __name__ == "__main__":
 
             NewPeakList_ppm = spectrum.Print_Peak_List_ppm()
             NewPeakList_points = spectrum.Print_Peak_List_points("new")
-            print ("\n=== Printing new peak lists finished ===")
+            print ("=== Printing new peak lists finished ===")
             
             # print ("\n=== Noise around peaks calculation ===")
             # spectrum.CalcNoise_around_peaks()
