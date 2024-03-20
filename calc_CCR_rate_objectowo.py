@@ -282,6 +282,7 @@ class CCRSet:
                 if one_exp.is_reference:
                     print(f"\nCompering CCR rates with calculated for {one_exp.CCRname()}")
                     one_exp.calc_theor_Ix()
+                    one_exp.check_if_fatal_error()
                     one_exp.WriteCCRRate_all_info()
                     one_exp.WriteCCRRate_all_info_CSV()
                     one_exp.plot_gamma_gamma()
@@ -451,6 +452,8 @@ class CCRSet:
         return set_of_data,min_max_discript,min_max_value
 
     def plot_gamma_gamma_all_together(self,exp_tab:list[CCRClass],transparent_plot=False, nrows=3, ncols=3, add2="", publication_style=False):
+        if nrows==3 and ncols==3:
+            set_nrow_ncol(len(exp_tab))
         fig, axs = plt.subplots(nrows=nrows,ncols=ncols)
         if not publication_style:
             fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
@@ -1330,10 +1333,22 @@ other: {self._other}
                 if int(one_peak.aa_number) == int(r_seq_num):
                     one_peak.is_gamma_calc = True
                     one_peak.gamma_ref = float(ref_CCR[indexr])
-                    one_peak.check_if_fatal_error()
                     self._is_reference = True
                     # print ("gamma_ref",one_peak.gamma_ref)
     
+    def check_if_fatal_error(self):
+        min_max_value = [+100.0,-100.0] 
+        for one_peak in self._peaks:
+            if one_peak.is_gamma_calc and one_peak.is_ccr_rate:
+                min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
+        
+        peak_range = math.sqrt((min_max_value[1] - min_max_value[0])**2)
+        for one_peak in self._peaks:    
+            if one_peak.is_gamma_calc:
+                dist = math.sqrt((one_peak.ccr_rate - one_peak.gamma_ref )**2)
+                if dist > peak_range*0.2:
+                    one_peak.fatal_error = True
+
     def Additional_text(self)->str:
         if self._other=="":
             add_text=""
@@ -1819,11 +1834,12 @@ class CCR_normal(CCRClass):
                                     res.peak_intens = [ float(item_a[self._n_dim+1]) , float(item_x[self._n_dim+1]) ]
 
                                 if len(item_a)>self._n_dim+2:
-                                    if item_a[self._n_dim+2]=="to_check":
+                                    if item_a[self._n_dim+2]=="check_pos" or item_a[self._n_dim+2]=="to_check":
                                         res.to_check = True
                                 if len(item_x)>self._n_dim+2:
-                                    if item_x[self._n_dim+2]=="to_check":
+                                    if item_x[self._n_dim+2]=="check_pos" or item_x[self._n_dim+2]=="to_check":
                                         res.to_check = True
+                                        
         else:
             print_raport ("Missing file for {} and {}! {}\n".format(self._auto_name[0], self._cross_name[0], peak_list_names))
             self._is_peaklist = False
@@ -1897,6 +1913,14 @@ class CCR_normal(CCRClass):
                         other_peak.Ix_theor = -1 * other_peak.Ix_theor
                     other_peak.Ix_theor_Ia_ratio = one_peak.Ix_theor/auto_peak_intensity
                     other_peak.Ix_theor_Ia_ratio_without_NS = one_peak.Ix_theor_Ia_ratio*self._ns[0]/self._ns[1]
+                elif one_peak.is_gamma_calc and other_peak.is_peak==False:
+                    if one_peak.to_check:
+                        print_raport(f"{residue} - This residue don't have referens (auto) peak and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue don't have referens (auto) peak")
+                elif one_peak.is_gamma_calc==False and other_peak.is_peak:
+                    if one_peak.to_check:
+                        print_raport(f"{residue} - This residue don't have reference value of gamma and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue don't have reference value of gamma")
                 else:
                     # residue = str(other_peak.aa_number)+other_peak.aa_name
                     if one_peak.to_check:
@@ -2090,11 +2114,11 @@ class CResidue:
         self.Ix_theor_Ia_ratio_without_NS = 0.0
 
 
-    def check_if_fatal_error(self):
-        if self.is_gamma_calc:
-            dist = math.sqrt((self.ccr_rate - self.gamma_ref )**2+(self.gamma_ref - self.gamma_ref)**2)
-            if dist > 5:
-                self.fatal_error = True
+    # def check_if_fatal_error(self):
+    #     if self.is_gamma_calc:
+    #         dist = math.sqrt((self.ccr_rate - self.gamma_ref )**2)
+    #         if dist > 5:
+    #             self.fatal_error = True
             # quotient = self.ccr_rate/self.gamma_ref
             # if 1.25 < quotient < 0.75:
             #     self.fatal_error = True
@@ -2245,68 +2269,72 @@ def WeightedLRegression_expresion_by_hand(x:list,y:list,uncertainty_val:list)->d
                                                                                     "factor_a_for_y_x":float, 
                                                                                     "factor_b_for_y_x":float, 
                                                                                     "r2":float]:
-    RaportBox.write("\nby Hand\n")
-    list_of_invert_squer_uncertainty = []
-    list_of_avg_x = []
-    list_of_avg_square_x = []
-    list_of_avg_y = []
-    list_of_x_avgx_y_avgy_div_uncertainty = []
-    list_of_x_avgx_squer_div_uncertainty = []
+    if len(x)>1:
+        RaportBox.write("\nby Hand\n")
+        list_of_invert_squer_uncertainty = []
+        list_of_avg_x = []
+        list_of_avg_square_x = []
+        list_of_avg_y = []
+        list_of_x_avgx_y_avgy_div_uncertainty = []
+        list_of_x_avgx_squer_div_uncertainty = []
 
-    for i in range(len(x)):
-        if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
-            list_of_invert_squer_uncertainty.append(deepcopy(1/(uncertainty_val[i]**2)))
-            list_of_avg_x.append(deepcopy(x[i]/(uncertainty_val[i]**2)))
-            list_of_avg_y.append(deepcopy(y[i]/(uncertainty_val[i]**2)))
-            list_of_avg_square_x.append(deepcopy((x[i]**2)/(uncertainty_val[i]**2)))
+        for i in range(len(x)):
+            if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
+                list_of_invert_squer_uncertainty.append(deepcopy(1/(uncertainty_val[i]**2)))
+                list_of_avg_x.append(deepcopy(x[i]/(uncertainty_val[i]**2)))
+                list_of_avg_y.append(deepcopy(y[i]/(uncertainty_val[i]**2)))
+                list_of_avg_square_x.append(deepcopy((x[i]**2)/(uncertainty_val[i]**2)))
 
-    sum_of_invert_squer_uncertainty = sum(list_of_invert_squer_uncertainty)
-    avg_x = sum(list_of_avg_x)/sum_of_invert_squer_uncertainty
-    avg_y = sum(list_of_avg_y)/sum_of_invert_squer_uncertainty
-    avg_square_x = sum(list_of_avg_square_x)/sum_of_invert_squer_uncertainty
+        sum_of_invert_squer_uncertainty = sum(list_of_invert_squer_uncertainty)
+        avg_x = sum(list_of_avg_x)/sum_of_invert_squer_uncertainty
+        avg_y = sum(list_of_avg_y)/sum_of_invert_squer_uncertainty
+        avg_square_x = sum(list_of_avg_square_x)/sum_of_invert_squer_uncertainty
+        flag = False
+        for i in range(len(x)):
+            if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
+                flag = True
+                list_of_x_avgx_y_avgy_div_uncertainty.append(deepcopy((x[i]-avg_x)*(y[i]-avg_y)/(uncertainty_val[i]**2)))
+                list_of_x_avgx_squer_div_uncertainty.append(deepcopy(((x[i]-avg_x)/uncertainty_val[i])**2))
 
-    for i in range(len(x)):
-        if str(x[i])!='nan' and str(y[i])!='nan' and str(uncertainty_val[i])!='nan':
-            list_of_x_avgx_y_avgy_div_uncertainty.append(deepcopy((x[i]-avg_x)*(y[i]-avg_y)/(uncertainty_val[i]**2)))
-            list_of_x_avgx_squer_div_uncertainty.append(deepcopy(((x[i]-avg_x)/uncertainty_val[i])**2))
+        sum_of_x_avgx_y_avgy_div_uncertainty = sum(list_of_x_avgx_y_avgy_div_uncertainty)
+        sum_of_x_avgx_squer_div_uncertainty = sum(list_of_x_avgx_squer_div_uncertainty)
+        # print_raport(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
+        slope = sum_of_x_avgx_y_avgy_div_uncertainty/sum_of_x_avgx_squer_div_uncertainty  
+        intercept = avg_y-(slope*avg_x)
+        slope_uncertainty = math.sqrt(1/(sum_of_x_avgx_squer_div_uncertainty))
+        intercept_uncertainty = math.sqrt((avg_square_x)/sum_of_x_avgx_squer_div_uncertainty)
 
-    sum_of_x_avgx_y_avgy_div_uncertainty = sum(list_of_x_avgx_y_avgy_div_uncertainty)
-    sum_of_x_avgx_squer_div_uncertainty = sum(list_of_x_avgx_squer_div_uncertainty)
-    # print_raport(f"sum_of_x_avgx_y_avgy_div_uncertainty: {sum_of_x_avgx_y_avgy_div_uncertainty}, sum_of_x_avgx_squer_div_uncertainty: {sum_of_x_avgx_squer_div_uncertainty}")
-    slope = sum_of_x_avgx_y_avgy_div_uncertainty/sum_of_x_avgx_squer_div_uncertainty  
-    intercept = avg_y-(slope*avg_x)
-    slope_uncertainty = math.sqrt(1/(sum_of_x_avgx_squer_div_uncertainty))
-    intercept_uncertainty = math.sqrt((avg_square_x)/sum_of_x_avgx_squer_div_uncertainty)
-
-    # print_raport(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
-    # lr_exp = '{:.2f}*x + {:.2f}'.format(slope,intercept)
-    # # print_raport(f"weighted linear regretion: {lr_exp}")
-    # factor_a_for_y_x = (1-abs(slope))/slope_uncertainty
-    # factor_b_for_y_x = (1-abs(intercept))/intercept_uncertainty
-    # print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
-    
-    y_from_line = []
-    for one_x in x:
-        if str(one_x)!='nan':
-            y_from_line.append(deepcopy(one_x*slope+intercept))
-    # r2 = calc_R2(y,y_from_line)
-    
-    # return_dict = {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
-    #                "slope":slope, 
-    #                "slope_uncertainty":slope_uncertainty, 
-    #                "intercept":intercept, 
-    #                "intercept_uncertainty":intercept_uncertainty, 
-    #                "factor_a_for_y_x":(1-abs(slope))/slope_uncertainty, 
-    #                "factor_b_for_y_x":(1-abs(intercept))/intercept_uncertainty, 
-    #                "r2":calc_R2(y,y_from_line)}
-    return {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
-            "slope":slope, 
-            "slope_uncertainty":slope_uncertainty, 
-            "intercept":intercept, 
-            "intercept_uncertainty":intercept_uncertainty, 
-            "factor_a":(1-abs(slope))/slope_uncertainty, 
-            "factor_b":(1-abs(intercept))/intercept_uncertainty, 
-            "r2":calc_R2(y,y_from_line)}
+        # print_raport(f"slope: {slope:.3f},intercept:{intercept:.3f},slope_uncertainty:{slope_uncertainty:.5f},intercept_uncertainty:{intercept_uncertainty:.5f}")
+        # lr_exp = '{:.2f}*x + {:.2f}'.format(slope,intercept)
+        # # print_raport(f"weighted linear regretion: {lr_exp}")
+        # factor_a_for_y_x = (1-abs(slope))/slope_uncertainty
+        # factor_b_for_y_x = (1-abs(intercept))/intercept_uncertainty
+        # print_raport(f"1-a/delta_a = {factor_a_for_y_x}")
+        
+        y_from_line = []
+        for one_x in x:
+            if str(one_x)!='nan':
+                y_from_line.append(deepcopy(one_x*slope+intercept))
+        # r2 = calc_R2(y,y_from_line)
+        
+        # return_dict = {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
+        #                "slope":slope, 
+        #                "slope_uncertainty":slope_uncertainty, 
+        #                "intercept":intercept, 
+        #                "intercept_uncertainty":intercept_uncertainty, 
+        #                "factor_a_for_y_x":(1-abs(slope))/slope_uncertainty, 
+        #                "factor_b_for_y_x":(1-abs(intercept))/intercept_uncertainty, 
+        #                "r2":calc_R2(y,y_from_line)}
+        return {"equation":'{:.2f}*x + {:.2f}'.format(slope,intercept), 
+                "slope":slope, 
+                "slope_uncertainty":slope_uncertainty, 
+                "intercept":intercept, 
+                "intercept_uncertainty":intercept_uncertainty, 
+                "factor_a":(1-abs(slope))/slope_uncertainty, 
+                "factor_b":(1-abs(intercept))/intercept_uncertainty, 
+                "r2":calc_R2(y,y_from_line)}
+    else:
+        print ("To small number of point to calculate Regression - minimal is 2")
 
 def check_if_min_max(suspect_min:Union[int,float], 
                     suspect_max:Union[int,float], 
@@ -2329,12 +2357,29 @@ def setup_plot_area(plot, min_max_list:list[Union[int,float]]):
     plot.set_aspect('equal', adjustable='box')
     return plot
 
-
-"""Calc and write functions"""
-
-
-
-
+def set_nrow_ncol(number_of_experiment):
+    if 13<=number_of_experiment<=16:
+        nrows=4
+        ncols=4
+    elif 10<=number_of_experiment<=12:
+        nrows=3
+        ncols=4
+    elif number_of_experiment==9:
+        nrows=3
+        ncols=3
+    elif number_of_experiment==8 or number_of_experiment==7:
+        nrows=2
+        ncols=4
+    elif number_of_experiment==6 or number_of_experiment==5:
+        nrows=2
+        ncols=3
+    elif number_of_experiment==4 or number_of_experiment==3:
+        nrows=2
+        ncols=2
+    else:
+        nrows=3
+        ncols=3
+    return nrows,ncols
 """                      MAIN PROGRAM                      """
 
 if __name__ == "__main__":

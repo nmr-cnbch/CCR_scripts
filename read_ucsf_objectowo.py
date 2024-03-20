@@ -75,6 +75,7 @@ if not os.path.exists(args.filename):
     sys.exit(1)
 else:
     print(f"UCSF file: {args.filename}")
+
 if not os.path.exists(args.peak_list): 
     print("There is not such file like this: ", args.peak_list)
     sys.exit(1)
@@ -109,7 +110,10 @@ if args.output_name:
         point_index = str(peak_list_name).index(".")
         peak_list_name = peak_list_name[:point_index]
 
-    peak_list_dir_new = os.path.dirname(args.output_name)+peak_list_name+"_list"
+    if os.path.dirname(args.output_name) == "":
+        peak_list_dir_new = f"./{peak_list_name}_list"
+    else:
+        peak_list_dir_new = f"{os.path.dirname(args.output_name)}/{peak_list_name}_list"
     if not os.path.exists(peak_list_dir_new):
         os.mkdir(peak_list_dir_new)
     print ("Output file path: {}/{}.list".format(peak_list_dir_new,peak_list_name))
@@ -643,9 +647,9 @@ class CSpectrum:
 
 
     def read_intens_point(self, peak_pos_list:list[PointInUCSF]):
-        """Method for reading peak height from UCSF file
+        """Method for reading peak height from UCSF file - need list of PointInUCSF 
             
-           Output: list of peaks height
+           Output: change value of intensity of object in list of PointInUCSF
         """
         with open(self.__filename, "rb") as ucsf_file:
             for indexk, k in enumerate(peak_pos_list):
@@ -720,17 +724,17 @@ class CSpectrum:
         circle_Flag = [False]*(checking_distance+1) #if in this circle is highter place
         checking_places = []
 
-        List_of_around_points, circle_encounter, start_index = spectrum.find_points_in_circle(Orgin_pos, distance=checking_distance+1)
-        print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}",in_terminal=False)
+        List_of_around_points, circle_encounter, start_index = self.find_points_in_circle(Orgin_pos, distance=checking_distance+1)
+        # print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}",in_terminal=False)
 
         for point_pos in List_of_around_points:
             p = PointInUCSF(points_pos=point_pos,spectrum=self)
             checking_places.append(deepcopy(p))
         # print(f"\n\n{one_peak.descript}\nList_of_around_points: {List_of_around_points}\ncircle_encounter: {circle_encounter}\nstart_index: {start_index}")
         
-        spectrum.read_intens_point(checking_places)
-        print_raport(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n",in_terminal=False)
-        print_raport(f"Len of checking_places list: {len(checking_places)}\n",in_terminal=False)
+        self.read_intens_point(checking_places)
+        # print_raport(f"starting point: {checking_places[0].point_pos}, {checking_places[0].point_intensity:.2e}\n",in_terminal=False)
+        # print_raport(f"Len of checking_places list: {len(checking_places)}\n",in_terminal=False)
 
         if len(List_of_around_points) != len(checking_places):
             print(f"""Length of list of points and list of intens is diffrent!
@@ -741,42 +745,32 @@ class CSpectrum:
 
         circle_start = circle_encounter[0]
         circle_end = circle_encounter[1]
-        print_raport(f"circle_start: {circle_start}, circle_end: {circle_end}",in_terminal=False)
+        # print_raport(f"circle_start: {circle_start}, circle_end: {circle_end}",in_terminal=False)
         for indexn in range(circle_start,circle_end+1):
-            if checking_places[indexn].point_intensity > checking_places[start_index].point_intensity:
-                #print(f"indexn: {indexn}, pos: {checking_places[indexn].point_pos} intens: {checking_places[indexn].point_intensity:.2e}")
+            if abs(checking_places[indexn].point_intensity) > abs(checking_places[start_index].point_intensity):
                 suspect_set[indexn] = [checking_places[indexn].point_pos, checking_places[indexn].point_intensity]  #[position, height]
                 circle_Flag[0] = True
-        # for indexn, n_point in enumerate(checking_places[circle_start:circle_end+1]):
-            # if n_point.point_intensity > checking_places[start_index].point_intensity:
-            #     print(f"indexn: {indexn}, pos: {n_point.point_pos} intens: {n_point.point_intensity}")
-            #     suspect_set[indexn] = [n_point.point_pos, n_point.point_intensity]  #[position, height]
-            #     circle_Flag[circle_number] = True
         
         if len(suspect_set) > 1:
-            for circle_number in range(1,checking_distance):
+            for circle_number in range(1,checking_distance+1):
                 circle_start = circle_encounter[circle_number]
-                circle_end = circle_encounter[circle_number+1]
+                if circle_number+1 == len(circle_encounter):
+                    circle_end = len(checking_places)-1
+                else:
+                    circle_end = circle_encounter[circle_number+1]
                 for indexn in range(circle_start,circle_end+1):
-                    if checking_places[indexn].point_intensity > checking_places[start_index].point_intensity:
+                    if abs(checking_places[indexn].point_intensity) > abs(checking_places[start_index].point_intensity):
                         suspekt_peaks = deepcopy([x for x in suspect_set])
                         for suspect_point in suspekt_peaks:
-                            if calc_distance(suspect_set[suspect_point][0],checking_places[indexn].point_pos)<2:
-                                if indexn not in suspect_set and checking_places[indexn].point_intensity > suspect_set[suspect_point][1]:
+                            dist = calc_distance(suspect_set[suspect_point][0],checking_places[indexn].point_pos)
+                            if dist<2:
+                                if indexn not in suspect_set and abs(checking_places[indexn].point_intensity) > abs(suspect_set[suspect_point][1]):
                                     suspect_set[indexn] = [checking_places[indexn].point_pos, checking_places[indexn].point_intensity]  #[position, height]
                                     circle_Flag[circle_number] = True
-                # for indexn, n_point in enumerate(checking_places[circle_start:circle_end+1]):
-                #     if n_point.point_intensity > checking_places[start_index].point_intensity:
-                #         suspekt_peaks = deepcopy([x for x in suspect_set])
-                #         for suspect_point in suspekt_peaks:
-                #             if calc_distance(suspect_set[suspect_point][0],n_point.point_pos)<2:
-                #                 if indexn not in suspect_set and n_point.point_intensity > suspect_set[suspect_point][1]:
-                #                     print(f"indexn: {indexn}, pos: {n_point.point_pos} intens: {n_point.point_intensity}")
-                #                     suspect_set[indexn] = [n_point.point_pos, n_point.point_intensity]  #[position, height]
-                #                     circle_Flag[circle_number] = True
-
+                
             distance_from_starting_point = 0
-            farthest_point_intes = 0
+            farthest_point_intes = checking_places[start_index].point_intensity
+            suspect_path = {0:[checking_places[start_index].point_pos, checking_places[start_index].point_intensity]}
             # print(f"suspect_set: {suspect_set}\ncircle_Flag: {circle_Flag}")
             # print_raport(f"circle_Flag: {circle_Flag}")
 
@@ -784,6 +778,7 @@ class CSpectrum:
                 current_dist = calc_distance(suspect_set[suspect_point][0],checking_places[start_index].point_pos)
                 if abs(suspect_set[suspect_point][1])>abs(farthest_point_intes):   # current_dist > distance_from_starting_point and 
                     distance_from_starting_point = deepcopy(current_dist)
+                    suspect_path[suspect_point] = deepcopy(suspect_set[suspect_point])
                     farthest_point_pos = deepcopy(suspect_set[suspect_point][0])
                     farthest_point_intes = deepcopy(suspect_set[suspect_point][1])
 
@@ -795,22 +790,24 @@ class CSpectrum:
                     one_peak.new_points_pos = farthest_point_pos
                     one_peak.peak_intens = farthest_point_intes
                     # print_raport(f"farthest_point_pos: {farthest_point_pos}, farthest_point_intes: {farthest_point_intes}")
-                    return farthest_point_pos, farthest_point_intes, suspect_set
+                    return farthest_point_pos, farthest_point_intes, suspect_path
             
                 else:
                     one_peak.was_moved = True
                     one_peak.is_center = "yes"
                     one_peak.peak_intens = checking_places[start_index].point_intensity
                     one_peak.new_points_pos = checking_places[start_index]
-                    return checking_places[start_index], checking_places[start_index].point_intensity, suspect_set
+                    return checking_places[start_index].point_pos, checking_places[start_index].point_intensity, suspect_path
             else:
                 one_peak.is_center = "no"
+                one_peak.peak_intens = checking_places[start_index].point_intensity
+                return checking_places[start_index].point_pos, checking_places[start_index].point_intensity, suspect_path
             
         else:
             one_peak.is_center = "yes"
             one_peak.new_points_pos = checking_places[start_index]
             one_peak.peak_intens = checking_places[start_index].point_intensity
-            return checking_places[start_index], checking_places[start_index].point_intensity, suspect_set
+            return checking_places[start_index].point_pos, checking_places[start_index].point_intensity, suspect_set
 
 
     def Center_peaks_new(self,noise_type="termal"):
@@ -844,27 +841,38 @@ class CSpectrum:
             else:
                 minimal_peak_height = self.__peak_level
 
-            if abs(New_intens) < minimal_peak_height and args.noRemoveFlag==False:
+            if abs(New_intens) < minimal_peak_height:
                     one_peak.is_visible = False
                     Peak_not_visible += 1 
-            # elif 
-            # preraring output to info.txt 
-            if one_peak.is_visible == False:
-                peak_centering_info.append("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript))
+                    peak_centering_info.append("\n{}\t({})\t- is not visible".format(indexpeak, one_peak.descript))
+            elif minimal_peak_height < abs(New_intens) < minimal_peak_height*1.5:
+                Peak_to_check += 1
+                peak_centering_info.append("\n{}\t({})\t- check if it is visible".format(indexpeak, one_peak.descript))
             else:
                 Peak_visible += 1
                 peak_centering_info.append("\n{}\t({})".format(indexpeak, one_peak.descript))
             
+            # for index_other_peak, other_peak in enumerate(self.__peaks):
+            #     if index_other_peak != indexpeak:
+            #         if other_peak.is_center:
+            #             dist = calc_distance(one_peak.new_points_pos,other_peak.new_points_pos)
+            #         else:
+            #             dist = calc_distance(one_peak.new_points_pos,other_peak.peak_points_pos)
+            #         if dist < 2:
+            #             one_peak.check_pos = True
+            #             Peak_to_check += 1
+            #             peak_centering_info.append(f"                     probably overlap with: {other_peak.descript}\t")
+
             if len(path_dict)>0:
                 for suspect_point in path_dict:
                     peak_centering_info.append("\t{}\t{}".format(path_dict[suspect_point][0], path_dict[suspect_point][1]))
             
-            peak_centering_info.append("\t{}\t{}".format(New_pos, New_intens))
-            
             if one_peak.is_center == "no":
-                one_peak.to_check = True
+                one_peak.check_pos = True
                 Peak_to_check += 1
-                peak_centering_info.append("                     is not in the highest position\t")
+                peak_centering_info.append("                     problem with finding the peak of peak - peak return to starting point - \t")
+            else:
+                peak_centering_info.append("\t{}\t{}".format(New_pos, New_intens))
 
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
         print_raport("Peaks not moved = {}\nPeaks moved = {}\nPeaks visible = {}\nPeaks not visible = {}\n Peaks to check = {}".format(Peak_not_moved,Peak_moved,Peak_visible,Peak_not_visible, Peak_to_check))
@@ -912,7 +920,7 @@ class CSpectrum:
                 print ("\tw{}".format(i+1), end="", file=listfile)
             print ("\tData Height\t\t\t\tCentering peak list prepare from{}\n".format(peak_list_name), file=listfile)
             for indexpeak, one_peak in enumerate(self.__peaks):
-                if one_peak.is_visible == True:
+                if one_peak.is_visible == True or args.noRemoveFlag:
                     print ("{:{sentence_len}}".format(one_peak.descript, sentence_len=max_lenth_discrip), end="\t", file=listfile)
                     if one_peak.was_moved == True and one_peak.is_center != "no":
                         for i in range(1,self.__spectra_dim):
@@ -926,8 +934,10 @@ class CSpectrum:
                         print ("{:.3f}".format(one_peak.peak_ppm_pos[0]), end="\t", file=listfile)
                     print (one_peak.peak_intens, end=" ", file=listfile) 
                     
-                    if one_peak.is_center == "no":
-                        print ("to_check", file=listfile)
+                    # if one_peak.is_center == "no":
+                    #     print ("to_check", file=listfile)
+                    if one_peak.check_pos:
+                        print ("check_pos", file=listfile)
                     else: print (file=listfile)
         return
 
@@ -952,7 +962,7 @@ class CSpectrum:
                 print ("Average noise level = {:.2e}\n".format(self.__noise_level), file=listfile)
                 print ("{} peak list".format(type_list), new_peak_list)
             for one_peak in self.__peaks:
-                if one_peak.is_visible == True:
+                if one_peak.is_visible == True or args.noRemoveFlag:
                     print ("{}".format(one_peak.descript), end="\t", file=listfile)
                     if one_peak.was_moved == True and one_peak.is_center != "no":
                         for i in range(1,self.__spectra_dim):
@@ -964,8 +974,11 @@ class CSpectrum:
                         print ("{}".format(one_peak.peak_points_pos[0]), end="\t", file=listfile)
                     if one_peak.peak_intens:
                         print (one_peak.peak_intens, end=" ", file=listfile) 
-                    if type_list=="new" and one_peak.is_center == "no":
-                        print ("to_check", file=listfile)
+
+                    # if type_list=="new" and one_peak.is_center == "no":
+                    #     print ("to_check", file=listfile)
+                    if type_list=="new" and one_peak.check_pos:
+                        print ("check_pos", file=listfile)
                     else: print (file=listfile)
         return
 
@@ -986,6 +999,7 @@ class CPeak:
         self.new_points_pos = []         # if peak was moved there will be new position in points
         self.new_ppm_pos = []           # if peak was moved there will be new position in ppm
         self.noise_around_peak = 0.0 
+        self.check_pos = False
 
         if type(input_line) == str:
             input_line = input_line.split()
@@ -1011,7 +1025,7 @@ class PointInUCSF(CSpectrum):
         self._tile_num = []
         self._point_in_tile = []
         self._point_in_file = 0
-        self.point_intensity = 0.0 
+        self.point_intensity = 0.0  #is changing in CSpectrum method: read_intens_point(self, peak_list)
 
         # print(f"CSpectrum.tile_size: {spectrum.tile_size}\nCSpectrum.n_tiles: {spectrum.n_tiles}\nCSpectrum.spectra_dim: {spectrum.spectra_dim}")
         for p in range(len(self._points_pos)):
@@ -1041,6 +1055,10 @@ class PointInUCSF(CSpectrum):
     @property
     def point_in_file(self):
         return self._point_in_file
+    
+    # @property
+    # def point_intensity(self):
+    #     return self._point_intensity
 
 """Other functions"""
 
@@ -1093,7 +1111,7 @@ def generate_5Dvec_set(distance:int) -> list:
     return vec_set
 
 
-def calc_distance(peak1,peak2):
+def calc_distance(peak1:list[int],peak2:list[int]):
         sum_of_squares = 0
         for i in range(len(peak1)):
             # print (peak1, "and", peak2)

@@ -4,29 +4,55 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "calc_CCR_rate_objectowo.py",
-            "args": [
-                "set_for_calcCCRrate_Ubiq_2D",
-                "--seq", "set_for_calcCCRrate_Ubiq_2D/rcsb_pdb_1D3Z.fasta",
-                "--refgamma", "set_for_calcCCRrate_Ubiq_2D/CCRrate_1d3z_strucure_predicted.csv"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "calc_CCR_rate_objectowo.py",
+        //     "args": [
+        //         "set_for_calcCCRrate_Ubiq_2D",
+        //         "--seq", "set_for_calcCCRrate_Ubiq_2D/rcsb_pdb_1D3Z.fasta",
+        //         "--refgamma", "set_for_calcCCRrate_Ubiq_2D/CCRrate_1d3z_strucure_predicted.csv"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "read_ucsf_objectowo.py",
+        //     "args": [
+        //         "./set_for_readucsf/2D_6_CCR_7_a.ucsf",
+        //         "./set_for_readucsf/2D_6_CCR_7_a.list",
+        //         "-o",
+        //         "./set_for_readucsf/2D_6_CCR_7_a_TEST_objectowo_list4.list"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "read_ucsf_objectowo.py",
+        //     "args": [
+        //         "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_131_CCR_9_NH_x.ucsf",
+        //         "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/N_HSQC_Ubiq_2mM_2024_centrowane_na_CCR_5.list",
+        //         "-o","/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_131_CCR_9_NH_x_TEST_2"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "read_ucsf_objectowo.py",
             "args": [
-                "./set_for_readucsf/4D_5_CCR_1_a.ucsf",
-                "./set_for_readucsf/4D_5_CCR_1_a_new_ppm.list",
-                "-o",
-                "./set_for_readucsf/4D_5_CCR_1_a_TEST_objectowo_list4.list"
+                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a.ucsf",
+                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/N_HSQC_Ubiq_2mM_2024_centrowane_na_CCR_5.list",
+                "-o","/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a_TEST_2"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
