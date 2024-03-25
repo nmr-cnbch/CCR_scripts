@@ -530,7 +530,7 @@ class CSpectrum:
 
                Output: list of points: list[[dim1,dim2...]...]
             """
-            great_number_of_points_for_noise = 0.75*number_of_points_for_noise**(self.__spectra_dim)
+            great_number_of_points_for_noise = (0.75*number_of_points_for_noise)**(self.__spectra_dim)
 
             dumpster=[]                       # list of wrong points: e.g. it's peak or really close to peak
             this_peak = self.__peaks[peak_number]

@@ -21,7 +21,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 from abc import ABC, abstractmethod
 
 from BioNMRdictionary import Res1to3, Res3to1, CCRname2PrettyRateNamePLT
@@ -2225,6 +2224,7 @@ def LRegression_expresion(x,y):
     return lr_exp, r2, slope, intercept, matching_factor_for_y_x
 
 def WeightedLRegression_expresion(x,y,uncertainty_val):
+    from sklearn.linear_model import LinearRegression
     regr = LinearRegression()
     # X = np.array([[i,i] for i in x if x!='nan'])
     # Y = np.array([[i,y[index]] for index, i in enumerate(x)])
