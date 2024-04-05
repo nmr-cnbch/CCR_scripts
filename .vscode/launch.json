@@ -17,6 +17,35 @@
         //     "console": "integratedTerminal",
         //     "justMyCode": true
         // },
+
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "calc_CCR_rate_objectowo.py",
+        //     "args": [
+        //         "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA",
+        //         "--seq", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/rcsb_pdb_1D3Z.fasta",
+        //         "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/CCRrate_1d3z_strucure_predicted.csv"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
+
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "calc_CCR_rate_objectowo.py",
+            "args": [
+                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates",
+                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/rcsb_pdb_1D3Z.fasta",
+                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/CCRrate_1d3z_strucure_predicted.csv"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+
         // {
         //     "name": "Python: Current File",
         //     "type": "python",
@@ -31,6 +60,7 @@
         //     "console": "integratedTerminal",
         //     "justMyCode": true
         // },
+
         // {
         //     "name": "Python: Current File",
         //     "type": "python",
@@ -44,18 +74,19 @@
         //     "console": "integratedTerminal",
         //     "justMyCode": true
         // },
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "read_ucsf_objectowo.py",
-            "args": [
-                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a.ucsf",
-                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/N_HSQC_Ubiq_2mM_2024_centrowane_na_CCR_5.list",
-                "-o","/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a_TEST_2"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        }
+
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "read_ucsf_objectowo.py",
+        //     "args": [
+        //         "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a.ucsf",
+        //         "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/N_HSQC_Ubiq_2mM_2024_centrowane_na_CCR_5.list",
+        //         "-o","/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_9/2D_130_CCR_9_NH_a_TEST_2"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // }
     ]
 }

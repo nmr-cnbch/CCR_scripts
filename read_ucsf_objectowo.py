@@ -796,7 +796,7 @@ class CSpectrum:
                     one_peak.was_moved = True
                     one_peak.is_center = "yes"
                     one_peak.peak_intens = checking_places[start_index].point_intensity
-                    one_peak.new_points_pos = checking_places[start_index]
+                    one_peak.new_points_pos = checking_places[start_index].point_pos
                     return checking_places[start_index].point_pos, checking_places[start_index].point_intensity, suspect_path
             else:
                 one_peak.is_center = "no"
@@ -805,10 +805,23 @@ class CSpectrum:
             
         else:
             one_peak.is_center = "yes"
-            one_peak.new_points_pos = checking_places[start_index]
+            one_peak.new_points_pos = checking_places[start_index].point_pos
             one_peak.peak_intens = checking_places[start_index].point_intensity
             return checking_places[start_index].point_pos, checking_places[start_index].point_intensity, suspect_set
 
+    def check_overlap_with_already_centered(self, one_peak:CPeak):
+        overlap = False
+        for index_other_peak, other_peak in enumerate(self.__peaks):
+            if other_peak != one_peak and other_peak.is_center == 'yes':
+                peaks_distance = calc_distance(one_peak.new_points_pos,other_peak.new_points_pos)
+                if peaks_distance < 2:
+                    one_peak.check_pos = True
+                    other_peak.check_pos = True
+                    one_peak.overlap_with[f"{other_peak.descript}"]=peaks_distance
+                    other_peak.overlap_with[f"{one_peak.descript}"]=peaks_distance
+                    overlap = True
+        return overlap
+                    
 
     def Center_peaks_new(self,noise_type="termal"):
         # peaks_moving_dict = {"Peak_not_moved":0,"Peak_moved"}
@@ -851,28 +864,21 @@ class CSpectrum:
             else:
                 Peak_visible += 1
                 peak_centering_info.append("\n{}\t({})".format(indexpeak, one_peak.descript))
-            
-            # for index_other_peak, other_peak in enumerate(self.__peaks):
-            #     if index_other_peak != indexpeak:
-            #         if other_peak.is_center:
-            #             dist = calc_distance(one_peak.new_points_pos,other_peak.new_points_pos)
-            #         else:
-            #             dist = calc_distance(one_peak.new_points_pos,other_peak.peak_points_pos)
-            #         if dist < 2:
-            #             one_peak.check_pos = True
-            #             Peak_to_check += 1
-            #             peak_centering_info.append(f"                     probably overlap with: {other_peak.descript}\t")
 
             if len(path_dict)>0:
                 for suspect_point in path_dict:
-                    peak_centering_info.append("\t{}\t{}".format(path_dict[suspect_point][0], path_dict[suspect_point][1]))
+                    peak_centering_info.append("\t{}\t{:.3e}".format(path_dict[suspect_point][0], path_dict[suspect_point][1]))
             
             if one_peak.is_center == "no":
                 one_peak.check_pos = True
                 Peak_to_check += 1
                 peak_centering_info.append("                     problem with finding the peak of peak - peak return to starting point - \t")
             else:
-                peak_centering_info.append("\t{}\t{}".format(New_pos, New_intens))
+                peak_centering_info.append("\t{}\t{:.3e}".format(New_pos, New_intens))
+                overlapFlag = self.check_overlap_with_already_centered(one_peak)
+                if overlapFlag:
+                    Peak_to_check += 1
+                    peak_centering_info.append(f"                     probably overlap with: {one_peak.overlap_with}\t")
 
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
         print_raport("Peaks not moved = {}\nPeaks moved = {}\nPeaks visible = {}\nPeaks not visible = {}\n Peaks to check = {}".format(Peak_not_moved,Peak_moved,Peak_visible,Peak_not_visible, Peak_to_check))
@@ -902,7 +908,7 @@ class CSpectrum:
             for one_peak in self.__peaks:
                 print (f"{one_peak.descript}\t{one_peak.noise_around_peak:.4e}", file=peak_nois_file)
 
-
+    
     def Print_Peak_List_ppm(self):
         """Method for preparing peak list (txt file in Sparky format)  
             
@@ -936,7 +942,12 @@ class CSpectrum:
                     
                     # if one_peak.is_center == "no":
                     #     print ("to_check", file=listfile)
-                    if one_peak.check_pos:
+                    if len(one_peak.overlap_with)>0:
+                        print ("This peak overlap with:",  end=" ", file=listfile)
+                        for peak_descr in one_peak.overlap_with:
+                            print (f"{peak_descr} ({one_peak.overlap_with[peak_descr]} points)",  end=" ", file=listfile)
+                        print (file=listfile)
+                    elif one_peak.check_pos:
                         print ("check_pos", file=listfile)
                     else: print (file=listfile)
         return
@@ -1000,6 +1011,7 @@ class CPeak:
         self.new_ppm_pos = []           # if peak was moved there will be new position in ppm
         self.noise_around_peak = 0.0 
         self.check_pos = False
+        self.overlap_with = {}
 
         if type(input_line) == str:
             input_line = input_line.split()

@@ -86,15 +86,15 @@ def Res3to1(res:str) -> str:
     return i
 
 def CCRname2PrettyRateNamePLT(ccrname):
-    if ccrname=="CCR_1": i="C$^{a}_{i-1}H^{a}_{i-1}$ - N$_{i}H^{N}_{i}$"          #
-    elif ccrname=="CCR_2": i="C$^{a}_{i}H^{a}_{i}$ - N$_{i}H^{N}_{i}$" 
-    elif ccrname=="CCR_3": i="N$_{i-1}H^{N}_{i-1}$ - N$_{i}H^{N}_{i}$"
-    elif ccrname=="CCR_4": i="$H^{N}_{i}H^{a}_{i-1}$ - C$_{i-1}$"
-    elif ccrname=="CCR_5": i="C$^{a}_{i}H^{a}_{i}$ - C$_{i}$"
-    elif ccrname=="CCR_6": i="C$^{a}_{i}H^{a}_{i}$ - C$_{i-1}$"
-    elif ccrname=="CCR_7": i="N$_{i}H^{N}_{i}$ - C$_{i}$"
-    elif ccrname=="CCR_8": i="C$_{i-1}$ - C$_{i}$"
-    elif ccrname=="CCR_9": i="C$^{a}_{i-1}H^{a}_{i-1}$ - C$^{a}_{i}H^{a}_{i}$"
+    if ccrname=="CCR_1": i="C$^{\\alpha}_{i-1}H^{\\alpha}_{i-1}$ DD - N$_{i}H^{N}_{i}$ DD"          #
+    elif ccrname=="CCR_2": i="C$^{\\alpha}_{i}H^{\\alpha}_{i}$ DD - N$_{i}H^{N}_{i}$ DD" 
+    elif ccrname=="CCR_3": i="N$_{i-1}H^{N}_{i-1}$ DD - N$_{i}H^{N}_{i}$ DD"
+    elif ccrname=="CCR_4": i="$H^{N}_{i}H^{\\alpha}_{i-1}$ DD - C$_{i-1}$ CSA"
+    elif ccrname=="CCR_5": i="C$^{\\alpha}_{i}H^{\\alpha}_{i}$ DD - C$_{i}$ CSA"
+    elif ccrname=="CCR_6": i="C$^{\\alpha}_{i}H^{\\alpha}_{i}$ DD - C$_{i-1}$ CSA"
+    elif ccrname=="CCR_7": i="N$_{i}H^{N}_{i}$ DD - C$_{i}$ CSA"
+    elif ccrname=="CCR_8": i="C$_{i-1}$ CSA - C$_{i}$ CSA"
+    elif ccrname=="CCR_9": i="C$^{\\alpha}_{i-1}H^{\\alpha}_{i-1}$ DD - C$^{\\alpha}_{i}H^{\\alpha}_{i}$ DD"
     else:
         print ("Wrong name of CCR (",ccrname,")for matplotlib module")
         sys.exit(1)
