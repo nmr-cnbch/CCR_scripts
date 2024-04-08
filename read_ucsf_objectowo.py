@@ -908,7 +908,18 @@ class CSpectrum:
             for one_peak in self.__peaks:
                 print (f"{one_peak.descript}\t{one_peak.noise_around_peak:.4e}", file=peak_nois_file)
 
-    
+    def Print_Noise_around_peaks(self) -> None:
+        """Method for calculation averange noise level around particular peak
+            
+           Output: 
+        """
+        noise_peak_list = f"{peak_list_dir_new}/{peak_list_name}_peaks_noise.list"
+        with open(noise_peak_list, 'w') as peak_nois_file:
+            print (f"  Peak description   \tPeak uncertainty (noise value around peak)", file=peak_nois_file)
+            for one_peak in self.__peaks:
+                print (f"{one_peak.descript}\t{one_peak.noise_around_peak:.4e}", file=peak_nois_file)
+
+
     def Print_Peak_List_ppm(self):
         """Method for preparing peak list (txt file in Sparky format)  
             
@@ -950,7 +961,6 @@ class CSpectrum:
                     elif one_peak.check_pos:
                         print ("check_pos", file=listfile)
                     else: print (file=listfile)
-        return
 
 
     def Print_Peak_List_points(self, type_list):
@@ -991,7 +1001,6 @@ class CSpectrum:
                     if type_list=="new" and one_peak.check_pos:
                         print ("check_pos", file=listfile)
                     else: print (file=listfile)
-        return
 
 
 
@@ -1177,8 +1186,11 @@ if __name__ == "__main__":
             """Print peak list"""
             print ("\n=== Printing new peak lists ===")
 
-            NewPeakList_ppm = spectrum.Print_Peak_List_ppm()
-            NewPeakList_points = spectrum.Print_Peak_List_points("new")
+            if noise_type == "artifacts":
+                spectrum.Print_Noise_around_peaks()
+
+            spectrum.Print_Peak_List_ppm()
+            spectrum.Print_Peak_List_points("new")
             print ("=== Printing new peak lists finished ===")
             
             # print ("\n=== Noise around peaks calculation ===")
