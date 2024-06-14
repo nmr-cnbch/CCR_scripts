@@ -2697,7 +2697,9 @@ if __name__ == "__main__":
                             ref_flag=refgammaFlag)
     ExperimentsSet.CalcCCRrates()
     plot_together_list = []
-    ExperimentsSet.Compere_with_reference(ref_dict=gamma_ref_dict)
+    
+    if refgammaFlag:
+        ExperimentsSet.Compere_with_reference(ref_dict=gamma_ref_dict)
     for key in ExperimentsSet.to_compere_dict:
         exp = ExperimentsSet.ccr_set[ExperimentsSet.to_compere_dict[key][-1]]
         plot_together_list.append(deepcopy(exp))
