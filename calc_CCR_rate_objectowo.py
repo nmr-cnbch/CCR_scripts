@@ -19,6 +19,7 @@ from copy import deepcopy
 from typing import Union
 from pathlib import Path
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 import numpy as np
 from scipy import stats
 from abc import ABC, abstractmethod
@@ -106,7 +107,7 @@ if not os.path.exists(RaportDir):
         os.mkdir(RaportDir)
 
 if args.PublicationFlag:
-    output_style = "presentation"
+    output_style = "publication"
 elif args.PresentationFlag:
     output_style = "presentation"
 else:
@@ -238,7 +239,8 @@ class CCRSet:
 
             for exp_key, exp_properties in json_data.items():
                 # exp_properties = json_data[properties]
-                
+                # if exp_properties["type_of_CCR"] not in CCR_dict:
+                #     exp_name = exp_properties["type_of_CCR"]
                 if "symetrical_reconstrution" in exp_properties and exp_properties["symetrical_reconstrution"]==True:
                     one_experiment = CCR_SymRec(exp_properties)
                 elif len(exp_properties["NS"])==4:
@@ -469,7 +471,7 @@ class CCRSet:
             nrows,ncols = set_nrow_ncol(len(exp_tab))
 
         colours_set = ['red','gold','darkturquoise','darkviolet','darkorange','limegreen','blue','lightpink']
-        fig, axs = plt.subplots(nrows=nrows,ncols=ncols)
+        fig, axs = plt.subplots(nrows=nrows,ncols=ncols, layout='constrained')
         # if not style:
         #     fig.suptitle(f"Comparision of experimental CCR rates with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\" ")
         
@@ -486,19 +488,24 @@ class CCRSet:
                     ax.axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray', label='y=x') 
                     ax.scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=2, color='#252525ff', label='1d3z') #
                     ax.errorbar(exp_ptl_data['good'][0], exp_ptl_data['good'][1], 
-                            yerr=exp_ptl_data['good'][2], 
-                            fmt='none', color='#252525ff') #
+                            yerr=exp_ptl_data['good'][2], ecolor='#c2a0f8ff', 
+                            fmt='o', markerfacecolor='#252525ff', markeredgecolor='none',markersize=2) #252525ff
+                    
+                    
                     
                     #fatal errors points:
                     if style != 'none':
-                        dot_colours = '#252525ff'
+                        dot_colours1 = '#252525ff'
+                        dot_colours2 = '#c2a0f8ff'
                     else:
-                        dot_colours = 'red'
+                        dot_colours1 = 'red'
+                        dot_colours2 = 'red'
                     if len(exp_ptl_data['fatal'][0])>0 and len(exp_ptl_data['fatal'][1])>0 and len(exp_ptl_data['fatal'][2])>0:
-                        ax.scatter(exp_ptl_data['fatal'][0],exp_ptl_data['fatal'][1],s=2, color=dot_colours) #
                         ax.errorbar(exp_ptl_data['fatal'][0], exp_ptl_data['fatal'][1], 
-                                yerr=exp_ptl_data['fatal'][2], 
-                                fmt='none', color=dot_colours) #
+                                yerr=exp_ptl_data['fatal'][2], ecolor=dot_colours2, 
+                            fmt='o', markerfacecolor=dot_colours1, markeredgecolor='none',markersize=2) #
+                        ax.scatter(exp_ptl_data['fatal'][0],exp_ptl_data['fatal'][1],s=2, color=dot_colours1) #
+                        
                         
                     weighted_reg_dict = WeightedLRegression_expresion_by_hand(x=exp_ptl_data['good'][0],
                                                                             y=exp_ptl_data['good'][1],
@@ -513,11 +520,24 @@ class CCRSet:
                                                                                                                                                                 weighted_reg_dict["factor_b"],
                                                                                                                                                                 len(exp_ptl_data['good'][1]))
                     
+                    label_text2 = "{}\ndelta_a: {:.3f}\ndelta_b: {:.3f}\nfactor \'a\' = {:.1f}".format(weighted_reg_dict["equation"], 
+                                                                                                                weighted_reg_dict["slope_uncertainty"], 
+                                                                                                                weighted_reg_dict["intercept_uncertainty"],
+                                                                                                                weighted_reg_dict["factor_a"],)
+                    
                     text_pos_x = min_max_value[indexa][0] - (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
                     text_pos_y = min_max_value[indexa][1] + (abs(min_max_value[indexa][0])+abs(min_max_value[indexa][1]))/5
                     
                     if style == "publication":
-                        ax.set_title(f'{CCRname2PrettyRateNamePLT(exp.CCRname())}', fontsize=8.5)
+                        ax.set_title(f'{CCRname2PrettyRateNamePLT(exp.CCRname())}', fontsize=8.5, color ='#252525ff' )
+                        trans = mtransforms.ScaledTranslation(10/72, -5/72, fig.dpi_scale_trans)
+                        ax.text(-0.05, 1.0, f'Exp. {exp.CCRname()[4:]}', transform=ax.transAxes + trans,
+                                fontsize=7, verticalalignment='top')
+                        
+                        # ax.text(text_pos_x,text_pos_y,
+                        #     f'Exp. {exp.CCRname()[4:]}', 
+                        #     horizontalalignment='left', verticalalignment='top',
+                        #     fontsize=7)
                         # ax.text(text_pos_x,text_pos_y,
                         #     f'$R^{2}$ = {weighted_reg_dict["r2"]:.2f}', 
                         #     horizontalalignment='left', verticalalignment='top',
@@ -532,11 +552,16 @@ class CCRSet:
                         ax.axline([0,weighted_reg_dict["intercept"]],slope=weighted_reg_dict["slope"], 
                               linestyle=(0, (5, 5)), linewidth=1, color='mediumorchid', 
                               label=label_text)
+                        # ax.text(text_pos_x,text_pos_y,
+                        #     f'$R^{2}$ = {weighted_reg_dict["r2"]:.2f}', 
+                        #     horizontalalignment='left', verticalalignment='top',
+                        #     fontsize=9)
                         ax.text(text_pos_x,text_pos_y,
-                            f'$R^{2}$ = {weighted_reg_dict["r2"]:.2f}', 
+                            label_text2, 
                             horizontalalignment='left', verticalalignment='top',
                             fontsize=9)
                         ax.set_title(f"{exp.CCRname()} {Add_text[1:]}", fontsize=10) 
+
                     ax = setup_plot_area(ax,min_max_value[indexa])
                     ax.tick_params(labelsize=8)
 
@@ -547,19 +572,21 @@ class CCRSet:
             add2 = exp_tab[0].Additional_text()
 
         if style == "publication":
-            plt.subplots_adjust(hspace=0.3,wspace = 0.3)
+            # plt.subplots_adjust(hspace=0.3,wspace = 0.3)
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=10)
             fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=10)
+            # fig.supxlabel('2D conventional \u0393, $s^{-1}$', fontsize=10)
+            # fig.supylabel('4D NUS \u0393, $s^{-1}$', fontsize=10)
             cm = 1/2.54  # centimeters in inches
             fig.set_figwidth(17.4*cm)
             if nrows == 3:
                 fig.set_figheight(17*cm)
             elif nrows == 2:
                 fig.set_figheight(10*cm)
-            fig.savefig("{}/{}_all_exp_vs_calc{}.svg".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
-                    pad_inches=0.3, transparent=transparent_plot)
+            fig.savefig("{}/{}_all_exp_vs_calc{}.eps".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
+                   transparent=transparent_plot, dpi=1200, format='eps')  # pad_inches=0.3, 
         elif style == "presentation":
-            plt.subplots_adjust(hspace=0.3,wspace = 0.25)
+            # plt.subplots_adjust(hspace=0.3,wspace = 0.25)
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$', fontsize=11)
             fig.supylabel('experimental \u0393, $s^{-1}$', fontsize=11)
             lines, labels = axs.flat[0].get_legend_handles_labels()
@@ -567,15 +594,16 @@ class CCRSet:
             fig.set_figwidth(12)
             fig.set_figheight(6)
             fig.savefig("{}/{}_all_exp_vs_calc{}.svg".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
-                    pad_inches=0.3, transparent=transparent_plot)
+                     transparent=transparent_plot, dpi=1200, format='svg')
         else:
-            plt.subplots_adjust(hspace=0.3,wspace = 0.25)
+            # plt.subplots_adjust(hspace=0.3,wspace = 0.25)
             fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
             fig.supylabel('experimental \u0393, $s^{-1}$')
             fig.set_figwidth(ncols*4)
             fig.set_figheight(nrows*4)
+            # fig.legend()
         fig.savefig("{}/{}_all_exp_vs_calc{}.png".format(file_director,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
-                pad_inches=0.3, transparent=transparent_plot)
+                transparent=transparent_plot, dpi=1200, format='png')
         plt.close()
         plt.clf()
 
@@ -583,7 +611,7 @@ class CCRSet:
         ccr_name = exp_tab[0].CCRname()
         # plt.rcParams['font.size'] = '14'
         min_max_value = [+100.0,-100.0]
-        fig, axs = plt.subplots(nrows=2,ncols=len(exp_tab))
+        fig, axs = plt.subplots(nrows=2,ncols=len(exp_tab),layout='constrained')
         if not style:
             fig.suptitle(f"Comparision of CCR rates ({ccr_name}) for diffrent experiment variant with structure-predicted CCR rates based on:\n\"{gamma_cal_file_name}\"")
         
@@ -647,22 +675,24 @@ class CCRSet:
         fig.supxlabel('structure-predicted \u0393, $s^{-1}$')
         fig.supylabel('experimental \u0393, $s^{-1}$')
 
-        plt.subplots_adjust(hspace=0.3,wspace = 0.3)
+        # plt.subplots_adjust(hspace=0.3,wspace = 0.3)
 
         if style == "publication":
             cm = 1/2.54  # centimeters in inches
             fig.set_figwidth(17.4*cm)
             fig.set_figheight(17*cm)
-            fig.savefig("{}/{}_exp_vs_calc_diff.svg".format(file_director, ccr_name), bbox_inches="tight", 
-                    pad_inches=0.3, transparent=transparent_plot)
+            fig.savefig("{}/{}_exp_vs_calc_diff.eps".format(file_director, ccr_name), bbox_inches="tight", 
+                     transparent=transparent_plot, dpi=1200, format='eps')
         elif style == "presentation":
             fig.set_figwidth(len(exp_tab)*3.5)
             fig.set_figheight(7)
+            fig.savefig("{}/{}_exp_vs_calc_diff.svg".format(file_director, ccr_name), bbox_inches="tight", 
+                     transparent=transparent_plot, dpi=1200, format='svg')
         else:
             fig.set_figwidth(len(exp_tab)*3.5)
             fig.set_figheight(7)
         fig.savefig("{}/{}_exp_vs_calc_diff.png".format(file_director, ccr_name), bbox_inches="tight", 
-                pad_inches=0.3, transparent=transparent_plot)
+                 transparent=transparent_plot, dpi=1200, format='png')   #pad_inches=0.3,
         plt.close()
         plt.clf()
 
@@ -1100,7 +1130,7 @@ class CCRClass:
         self._cross_name = []       # type: list[str]
             
         self._n_dim = int(exp_dict["dimension"])             
-        self._CCR_pos = deepcopy(CCR_dict[self._CCR_name]["angle_pos"])
+        self._CCR_pos = 100
         self._tc_vol = float(exp_dict["TC"])      
 
         self._is_peak_uncertainty = False
@@ -1141,6 +1171,12 @@ class CCRClass:
             else:
                 self._cross_name = [f'{exp_dict["dir_cross"]}_{self._CCR_name}_x']
 
+        if "CCR_pos" in exp_dict:
+            self._CCR_pos = deepcopy(int(exp_dict["CCR_pos"]))
+        else:
+            self._CCR_pos = deepcopy(int(CCR_dict[self._CCR_name]["angle_pos"]))
+
+
         if "other" in exp_dict:
             self._other = exp_dict["other"]
             
@@ -1164,7 +1200,9 @@ class CCRClass:
         if "angle_name" in exp_dict:
             self._angle.append(deepcopy(exp_dict["angle_name"])) 
         else:
-            self._angle.append(deepcopy(CCR_dict[self._CCR_name]["angle"]))
+            try:
+                self._angle.append(deepcopy(CCR_dict[self._CCR_name]["angle"]))
+            except: self._angle.append("nan")
     
         if "H_roi" in exp_dict:
             self._Hroi=float(exp_dict["H_roi"])
@@ -1362,7 +1400,7 @@ other: {self._other}
     def check_overlap(self, peak1:CResidue, peak2:CResidue, version=0):
         peaks_distance = self.calc_distance(peak1.peak_pos_points[version], peak2.peak_pos_points[version])
         if peaks_distance <= 5:
-            RaportBox.write(f"\nCheck overlap for {peak1.descript}: {peak1.peak_pos_points[version]} and {peak2.descript}:{peak2.peak_pos_points[version]} - distance: {peaks_distance}")
+            RaportBox.write(f"\nCheck overlap for {peak1.descript}: {peak1.peak_pos_points[version]} and {peak2.descript}:{peak2.peak_pos_points[version]} - distance: {peaks_distance:.3f}")
             if peaks_distance <= 3:
                 peak1.is_overlap = True
                 peak2.is_overlap = True
@@ -1679,7 +1717,7 @@ other: {self._other}
             for one_peak in self._peaks:
                 one_row = {}
                 one_row["AA"] = one_peak.aa_number
-                if one_peak.is_ccr_rate == True and one_peak.ccrrate_calculation_error == False and one_peak.aa_name != "G":
+                if one_peak.is_ccr_rate and not one_peak.is_overlap and not one_peak.ccrrate_calculation_error and one_peak.aa_name != "G":
                     one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
                 else:
                     one_row["CCR rate"] = "nan"
@@ -2108,10 +2146,10 @@ class CCR_normal(CCRClass):
                     one_row["intensity in cross"] = "{:.2e}".format(one_peak.peak_intens[1])
                     one_row["Peak uncertainty (auto)"] = "{:.2e}".format(one_peak.peak_uncertainty[0])
                     one_row["Peak uncertainty (cross)"] = "{:.2e}".format(one_peak.peak_uncertainty[1])
-                    if one_peak.is_ccr_rate and one_peak.is_overlap == False and one_peak.ccrrate_calculation_error == False:
-                        one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
-                    else:
-                        one_row["CCR rate"] = blank_text
+                if one_peak.is_ccr_rate and not one_peak.is_overlap and not one_peak.ccrrate_calculation_error:
+                    one_row["CCR rate"] = '{:.4f}'.format(one_peak.ccr_rate)
+                else:
+                    one_row["CCR rate"] = blank_text
 
                 if one_peak.ccrrate_error_value != -99999.0:
                     one_row['Uncertainty'] = '{:.4f}'.format(one_peak.ccrrate_error_value)            # ERROR GAMMA INFO, 9.11.2023
@@ -2171,7 +2209,7 @@ class CCR_SymRec(CCRClass):
         super().__init__(exp_dict)   
 
     def Read_peaklist(self, file_director, points_mode=False):
-        NameFlag = [False, False]
+        NameFlag = [False, False, False, False]
         if points_mode == False:
             list_of_names_ends = [".list","_new_ppm.list"]
         else:
@@ -2203,9 +2241,15 @@ class CCR_SymRec(CCRClass):
             p_lines_x_2 = pl_x_2.readlines()
             if points_mode:
             # if points_mode and "Average noise level" in p_lines_a[1] and p_lines_x[1]:
-                self._noise = [float(p_lines_a_1[1].split("=")[1]), float(p_lines_a_2[1].split("=")[1]), 
-                               float(p_lines_x_1[1].split("=")[1]), float(p_lines_x_2[1].split("=")[1])]
-                print_raport(f"auto_noise = {self._noise[0]} and {self._noise[1]}, cross_noise = {self._noise[2]} and {self._noise[3]}")
+                try:
+                    self._noise = [float(p_lines_a_1[1].split("=")[1]), float(p_lines_a_2[1].split("=")[1]), 
+                                float(p_lines_x_1[1].split("=")[1]), float(p_lines_x_2[1].split("=")[1])]
+                    print_raport(f"auto_noise = {self._noise[0]} and {self._noise[1]}, cross_noise = {self._noise[2]} and {self._noise[3]}")
+                except:
+                    if len(self._noise)>0:
+                        print_raport(f"noise from input file: auto_noise = {self._noise[0]} and {self._noise[1]}, cross_noise = {self._noise[2]} and {self._noise[3]}")
+                    else:
+                        print_raport(f"No info about noise level")
                 # RaportBox.write(f"auto_noise = {self._noise[0]}, cross_noise = {self._noise[1]}")
             for indexl, line in enumerate(p_lines_a_1):
                 if indexl > 1 and len(line) > 1:
@@ -2285,10 +2329,10 @@ class CCR_SymRec(CCRClass):
                 other_peak = self._peaks[res_num]
                 self.calc_uncertainty_value(indexp)
                 try:
-                    ccr_rate_vol = atanh((peak.peak_intens[1]*self._ns[0])/(peak.peak_intens[0]*self._ns[1]))/self._tc_vol
+                    ccr_rate_vol = atanh((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3]))/self._tc_vol
                     other_peak.is_ccr_rate = True
                 except:
-                    ccr_rate_vol = (peak.peak_intens[1]*self._ns[0])/(peak.peak_intens[0]*self._ns[1]) #"atanh(x) - x shoudl be beetween -1 and 1"
+                    ccr_rate_vol = (peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3]) #"atanh(x) - x shoudl be beetween -1 and 1"
                     other_peak.ccrrate_calculation_error = True
                 other_peak.ccr_rate = ccr_rate_vol
                 
@@ -2314,12 +2358,13 @@ class CCR_SymRec(CCRClass):
 
 
     def read_input_file(self,file_director:str,seq_dict:dict):
-        self.Read_peaklist(file_director,seq_dict, points_mode=True)
-        self.Read_peaklist(file_director,seq_dict, points_mode=False)
+        self.Prepare_peaklist(seq_dict)
         for one_peak in self._peaks:
             one_peak.peak_uncertainty = [0.0, 0.0, 0.0, 0.0]
             one_peak.peak_pos = [[],[],[],[]]
             one_peak.peak_pos_points = [[],[],[],[]]
+        self.Read_peaklist(file_director, points_mode=True)
+        self.Read_peaklist(file_director, points_mode=False)
         self.Read_peak_uncertainty(file_director, self._auto_name[0], version=0)
         self.Read_peak_uncertainty(file_director, self._auto_name[1], version=1)
         self.Read_peak_uncertainty(file_director, self._cross_name[0], version=2)

@@ -76,8 +76,8 @@ def CCRname2Ratename(ccrname):
     elif ccrname=="CCR_9": i="Ca1Ha1_Ca2Ha2"
     
     else:
-        print ("CCRname2Ratename - Wrong name of CCR (",ccrname,"), check the experiment set file")
-        sys.exit(1)
+        print (f"CCRname2Ratename - the name of CCR ({ccrname}) is not in dictionary, so it could not be replace\n PS. You can add this CCR to dictionary (file CCR_dict.py)")
+        return ccrname
     return i
 
 def CCRname2Ratename2(ccrname):
@@ -91,8 +91,8 @@ def CCRname2Ratename2(ccrname):
     elif ccrname=="CCR_8": i="C0_C1"
     elif ccrname=="CCR_9": i="Ca1Ha1_Ca2Ha2"
     else:
-        print ("CCRname2Ratename2 - Wrong name of CCR (",ccrname,"), check the experiment set file")
-        sys.exit(1)
+        print (f"CCRname2Ratename2 - the name of CCR ({ccrname}) is not in dictionary, so it could not be replace\n PS. You can add this CCR to dictionary (file CCR_dict.py")
+        return ccrname
     return i
 
 
