@@ -486,7 +486,7 @@ class CCRSet:
                 if exp.is_peaklist() and exp.is_reference():
                     exp_ptl_data = set_of_data[indexa]
                     ax.axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray', label='y=x') 
-                    ax.scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=2, color='#252525ff', label='1d3z') #
+                    ax.scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=2, color='#252525ff', ) #
                     ax.errorbar(exp_ptl_data['good'][0], exp_ptl_data['good'][1], 
                             yerr=exp_ptl_data['good'][2], ecolor='#c2a0f8ff', 
                             fmt='o', markerfacecolor='#252525ff', markeredgecolor='none',markersize=2) #252525ff
@@ -1280,68 +1280,71 @@ other: {self._other}
 
     @staticmethod
     def read_aminoacid_number(peak_description:str) -> int:
-        aminoacids = peak_description.split("-")
-        first_dim_sign_list = list(aminoacids[0])
-        last_dim_sign_list = list(aminoacids[-1])
-        # RaportBox.write(f"{first_dim_sign_list}, {last_dim_sign_list}")
-        digit_list_first = []
-        digitFlag_first = False
-        digit_list_last = []
-        digitFlag_last = False
+        try:
+            aminoacids_number = int(peak_description)
+        except:
+            aminoacids = peak_description.split("-")
+            first_dim_sign_list = list(aminoacids[0])
+            last_dim_sign_list = list(aminoacids[-1])
+            # RaportBox.write(f"{first_dim_sign_list}, {last_dim_sign_list}")
+            digit_list_first = []
+            digitFlag_first = False
+            digit_list_last = []
+            digitFlag_last = False
 
-        for indexn, sign in enumerate(first_dim_sign_list):
-            if digitFlag_first==False:
-                if sign.isdigit():
-                    digit_list_first.append(deepcopy(indexn))
-                    digitFlag_first = True
-            elif digitFlag_first:
-                if not sign.isdigit():
-                    digit_list_first.append(deepcopy(indexn))
-                    digitFlag_first = False
+            for indexn, sign in enumerate(first_dim_sign_list):
+                if digitFlag_first==False:
+                    if sign.isdigit():
+                        digit_list_first.append(deepcopy(indexn))
+                        digitFlag_first = True
+                elif digitFlag_first:
+                    if not sign.isdigit():
+                        digit_list_first.append(deepcopy(indexn))
+                        digitFlag_first = False
 
-        for indexn, sign in enumerate(last_dim_sign_list):
-            if digitFlag_last==False:
-                if sign.isdigit():
-                    digit_list_last.append(deepcopy(indexn))
-                    digitFlag_last = True
-            elif digitFlag_last:
-                if not sign.isdigit():
-                    digit_list_last.append(deepcopy(indexn))
-                    digitFlag_last = False
+            for indexn, sign in enumerate(last_dim_sign_list):
+                if digitFlag_last==False:
+                    if sign.isdigit():
+                        digit_list_last.append(deepcopy(indexn))
+                        digitFlag_last = True
+                elif digitFlag_last:
+                    if not sign.isdigit():
+                        digit_list_last.append(deepcopy(indexn))
+                        digitFlag_last = False
 
-        if len(digit_list_first)>=2:
-            aminoacids_number_first = ''.join([n for n in first_dim_sign_list[digit_list_first[0]:digit_list_first[1]]])
-        else: aminoacids_number_first = 'nan'
-        
-        if len(digit_list_last)>=2:
-            aminoacids_number_last = ''.join([n for n in last_dim_sign_list[digit_list_last[0]:digit_list_last[1]]])
-        else: aminoacids_number_last = 'nan'
-        
-        # RaportBox.write(f"\ndigit_list_first: {digit_list_first}, digit_list_last: {digit_list_last}\n")
-        # RaportBox.write(f"aminoacids_number_first: {aminoacids_number_first}, aminoacids_number_last: {aminoacids_number_last}\n")
+            if len(digit_list_first)>=2:
+                aminoacids_number_first = ''.join([n for n in first_dim_sign_list[digit_list_first[0]:digit_list_first[1]]])
+            else: aminoacids_number_first = 'nan'
+            
+            if len(digit_list_last)>=2:
+                aminoacids_number_last = ''.join([n for n in last_dim_sign_list[digit_list_last[0]:digit_list_last[1]]])
+            else: aminoacids_number_last = 'nan'
+            
+            # RaportBox.write(f"\ndigit_list_first: {digit_list_first}, digit_list_last: {digit_list_last}\n")
+            # RaportBox.write(f"aminoacids_number_first: {aminoacids_number_first}, aminoacids_number_last: {aminoacids_number_last}\n")
 
-        if aminoacids_number_first == aminoacids_number_last:
-            aminoacids_number = aminoacids_number_first
-            HaveNumberFlag = True
-        elif aminoacids_number_first.isdigit() and aminoacids_number_last == 'nan':
-            aminoacids_number = aminoacids_number_first
-            HaveNumberFlag = True
-        elif aminoacids_number_last.isdigit() and aminoacids_number_first == 'nan':
-            aminoacids_number = aminoacids_number_last
-            HaveNumberFlag = True
-        else:
-            if first_dim_sign_list[digit_list_first[1]+1] == 'N' or first_dim_sign_list[digit_list_first[1]+1] == 'H':
+            if aminoacids_number_first == aminoacids_number_last:
                 aminoacids_number = aminoacids_number_first
                 HaveNumberFlag = True
-            elif last_dim_sign_list[digit_list_last[1]+1] == 'N' or last_dim_sign_list[digit_list_last[1]+1] == 'H':
+            elif aminoacids_number_first.isdigit() and aminoacids_number_last == 'nan':
+                aminoacids_number = aminoacids_number_first
+                HaveNumberFlag = True
+            elif aminoacids_number_last.isdigit() and aminoacids_number_first == 'nan':
                 aminoacids_number = aminoacids_number_last
                 HaveNumberFlag = True
-            else: HaveNumberFlag = False
+            else:
+                if first_dim_sign_list[digit_list_first[1]+1] == 'N' or first_dim_sign_list[digit_list_first[1]+1] == 'H':
+                    aminoacids_number = aminoacids_number_first
+                    HaveNumberFlag = True
+                elif last_dim_sign_list[digit_list_last[1]+1] == 'N' or last_dim_sign_list[digit_list_last[1]+1] == 'H':
+                    aminoacids_number = aminoacids_number_last
+                    HaveNumberFlag = True
+                else: HaveNumberFlag = False
 
-        if HaveNumberFlag == False:
-            print_raport(f"Problem with number reading in: {first_dim_sign_list} and {last_dim_sign_list}")
-            aminoacids_number = "0"
-        # print(f"aminoacids_number: {aminoacids_number}")
+            if HaveNumberFlag == False:
+                print_raport(f"Problem with number reading in: {first_dim_sign_list} and {last_dim_sign_list}")
+                aminoacids_number = "0"
+            # print(f"aminoacids_number: {aminoacids_number}")
         return aminoacids_number
 
     def Read_peak_uncertainty(self, file_director:str, list_verson:str, version:int):
@@ -1399,13 +1402,15 @@ other: {self._other}
          
     def check_overlap(self, peak1:CResidue, peak2:CResidue, version=0):
         peaks_distance = self.calc_distance(peak1.peak_pos_points[version], peak2.peak_pos_points[version])
-        if peaks_distance <= 5:
+        if peaks_distance <= 4:
             RaportBox.write(f"\nCheck overlap for {peak1.descript}: {peak1.peak_pos_points[version]} and {peak2.descript}:{peak2.peak_pos_points[version]} - distance: {peaks_distance:.3f}")
-            if peaks_distance <= 3:
+            if peaks_distance < 2:
                 peak1.is_overlap = True
                 peak2.is_overlap = True
                 peak1.overlap_peaks[f"{peak2.aa_number}_{version}"]=peaks_distance
                 peak2.overlap_peaks[f"{peak1.aa_number}_{version}"]=peaks_distance
+                RaportBox.write(f"\nPeaks: {peak1.descript} and {peak2.descript} marked as overlap")
+            
 
 
     def check_overlap_for_all_peaks(self):
@@ -2329,10 +2334,10 @@ class CCR_SymRec(CCRClass):
                 other_peak = self._peaks[res_num]
                 self.calc_uncertainty_value(indexp)
                 try:
-                    ccr_rate_vol = atanh((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3]))/self._tc_vol
+                    ccr_rate_vol = atanh(math.sqrt((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])))/self._tc_vol
                     other_peak.is_ccr_rate = True
                 except:
-                    ccr_rate_vol = (peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3]) #"atanh(x) - x shoudl be beetween -1 and 1"
+                    ccr_rate_vol = ((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])) #"atanh(x) - x shoudl be beetween -1 and 1"
                     other_peak.ccrrate_calculation_error = True
                 other_peak.ccr_rate = ccr_rate_vol
                 

@@ -823,7 +823,7 @@ class CSpectrum:
         return overlap
                     
 
-    def Center_peaks_new(self,noise_type="termal"):
+    def Center_peaks_new(self,noise_type="termal", max_distans = 3):
         # peaks_moving_dict = {"Peak_not_moved":0,"Peak_moved"}
         Peak_not_moved = 0
         Peak_moved = 0
@@ -836,7 +836,7 @@ class CSpectrum:
 
         for indexpeak, one_peak in enumerate(self.__peaks):
             Orgin_pos = one_peak.peak_points_pos
-            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,Orgin_pos, checking_distance=5)
+            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,Orgin_pos, checking_distance=max_distans)
             
             if one_peak.is_center == "yes":
                 peak_height_list.append(New_intens)
