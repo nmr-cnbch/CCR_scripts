@@ -879,7 +879,12 @@ class CSpectrum:
                 if overlapFlag:
                     Peak_to_check += 1
                     peak_centering_info.append(f"                     probably overlap with: {one_peak.overlap_with}\t")
-
+        
+        print(peak_height_list)
+        
+        for i in peak_centering_info:
+            print_raport(i, in_terminal=False)
+        
         average_peaks_level = round(sum(peak_height_list)/len(peak_height_list), 1)
         print_raport("Peaks not moved = {}\nPeaks moved = {}\nPeaks visible = {}\nPeaks not visible = {}\n Peaks to check = {}".format(Peak_not_moved,Peak_moved,Peak_visible,Peak_not_visible, Peak_to_check))
         print_raport("Average peaks height = {:.2e}".format(average_peaks_level))
@@ -891,8 +896,7 @@ class CSpectrum:
             print_raport(f"Minimal signal_to_noise: {self.__minimal_signal_to_noise}")
             print_raport("Signal to noise ratio = {:.2f}".format(signal_to_noise))
         print_raport("\n", in_terminal=False)
-        for i in peak_centering_info:
-            print_raport(i, in_terminal=False)
+        
 
 
     def CalcNoise_around_peaks(self) -> None:
@@ -1179,7 +1183,7 @@ if __name__ == "__main__":
             print ("\n=== Peak centering and intensity reading ===")
             # spectrum.Center_peaks()
 
-            spectrum.Center_peaks_new(noise_type=noise_type)
+            spectrum.Center_peaks_new(noise_type=noise_type,max_distans = 4)
             print ("=== Peak centering and intensity reading finished ===")
 
 
