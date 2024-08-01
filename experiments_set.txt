@@ -12,7 +12,7 @@ angle_names: psi                         # angle: phi, psi
 angle_pos: -1                     # angle position of all peaks: -2, -1, 0, 1, 2
 NS_auto: 4                       # number of scans in auto version
 NS_cross: 24                      # number of scans in cross version
-TC: 28                              # time d8
+TC: 0.028                              # time d8
 H_roi: 7.0 8.6               #
 
 
@@ -29,14 +29,17 @@ NS_auto: 4                       # number of scans in auto version
 NS_cross: 24                      # number of scans in cross version
 
 
-type_of_CCR: 'CCR_AA'            # name of CCR, this name will be use do make spectra and peaklist
-dir_auto: 10                      # dir name of auto version 
-dir_cross: 25                     # dir name of cross version 
-dimension: 3                     # dimensionality of spectra
-nucl: N CO CA H                           # nuclei of all peaks: H, N, C, CA, CB, HA, HB
-pos_nucl: 1 -1 -2 1                      # nuclei position of all peaks: -2, -1, 0, 1, 2 
-angle_num:    2                     # number of measured angle: 1, 2
-angle_names: phi psi                        # angle: phi, psi
-angle_pos: 1 -1                    # angle position of all peaks: -2, -1, 0, 1, 2
-NS_auto: 3                       # number of scans in auto version
-NS_cross: 10                      # number of scans in cross version
+type_of_CCR: 'CCR_AA'         # name of CCR, this name will be use do make charts and peaklist
+dir_auto: 10                  # dir name of auto version 
+dir_cross: 25                 # dir name of cross version 
+dimension: 4                  # dimensionality of spectra
+nucl: N CO CA H               # nuclei of all peaks: H, N, C, CA, CB, HA, HB
+pos_nucl: 1 -1 -2 1           # nuclei position of all peaks: -2, -1, 0, 1, 2 
+angle_num:    2               # number of measured angle: 1, 2
+angle_names: phi psi          # angle: phi, psi
+angle_pos: 1 -1               # angle position of all peaks: -2, -1, 0, 1, 2
+NS_auto: 3                    # number of scans in auto version
+NS_cross: 10                  # number of scans in cross version
+TC: 0.0286                    # time of ccr evolution 
+H_roi: 6.0 9.6                # downfield and upfield of direct dimention
+other: 100NUS                 # add this as a readable comment for the script to particular experiment.
