@@ -241,7 +241,7 @@ class CCRSet:
                 # exp_properties = json_data[properties]
                 # if exp_properties["type_of_CCR"] not in CCR_dict:
                 #     exp_name = exp_properties["type_of_CCR"]
-                if "symetrical_reconstrution" in exp_properties and exp_properties["symetrical_reconstrution"]==True:
+                if "symetrical_reconversion" in exp_properties and exp_properties["symetrical_reconversion"]==True:
                     one_experiment = CCR_SymRec(exp_properties)
                 elif len(exp_properties["NS"])==4:
                     one_experiment = CCR_SymRec(exp_properties)

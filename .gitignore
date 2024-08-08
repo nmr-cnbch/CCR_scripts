@@ -21,6 +21,8 @@ calcCCRrate_diff_NUS_old/
 set_for_calcCCRrate_Ubiq_2D
 old_versions/
 
+CCRprepereTopSpin.py
+read_point_list_and_compere.py
 
 # C extensions
 *.so
