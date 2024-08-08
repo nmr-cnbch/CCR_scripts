@@ -205,9 +205,6 @@ There is several types of output:
 
 
 
-
-
-
 <br><br>
 
 **Citation:**  
