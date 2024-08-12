@@ -1,0 +1,42 @@
+{
+   
+    "CCR_1_200NUS":{
+        "symetrical_reconstrution": false,
+        "type_of_CCR": "CCR_1",
+        "dir_auto": "CS_0_01_200NUS",
+        "dir_cross": "CS_0_01_200NUS",
+        "dimension": 4,
+        "NS": [4,24],
+        "TC": 0.0286
+        },
+    
+    "CCR_2_200NUS":{
+        "symetrical_reconstrution": false,
+        "type_of_CCR": "CCR_2" ,
+        "dir_auto": "CS_0_01_200NUS",
+        "dir_cross": "CS_0_01_200NUS",
+        "dimension": 4 ,
+        "NS": [4,32],
+        "TC": 0.0286 
+        },
+        
+    "CCR_3_200NUS":{
+        "symetrical_reconstrution": false,
+        "type_of_CCR": "CCR_3" ,
+        "dir_auto": "CS_0_01_200NUS",
+        "dir_cross": "CS_0_01_200NUS",
+        "dimension": 4 ,
+        "NS": [4,32],
+        "TC": 0.028
+        },
+      
+    "CCR_4_200NUS":{
+        "symetrical_reconstrution": false,
+        "type_of_CCR": "CCR_4" ,
+        "dir_auto": "CS_0_01_200NUS",
+        "dir_cross": "CS_0_01_200NUS",
+        "dimension": 4 ,
+        "NS": [4,32],
+        "TC": 0.028
+        },
+}

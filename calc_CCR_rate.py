@@ -164,12 +164,12 @@ class CCRSet:
                 for line in range(expset_lines[i],expset_lines[i+1]):
                     if lines[line] != "\n":
                         items=lines[line].split()
-                        if "auto_name"in lines[line]:
-                            # print ("auto_name_file", items[1])
-                            one_experiment.auto_name =items[1]
-                        if "cross_name"in lines[line]:
-                            # print ("cross_name_file", items[1])
-                            one_experiment.cross_name =items[1]
+                        if "ref_name"in lines[line]:
+                            # print ("ref_name_file", items[1])
+                            one_experiment.ref_name =items[1]
+                        if "trans_name"in lines[line]:
+                            # print ("trans_name_file", items[1])
+                            one_experiment.trans_name =items[1]
                         if "type_of_CCR" in lines[line]:
                             one_experiment._CCR_name=items[1]
                             if items[1] not in self.to_compere_dict:
@@ -178,13 +178,13 @@ class CCRSet:
                                 self.to_compere_dict[items[1]].append(deepcopy(i))
                             # print ("CCR_NAME", items[1])
                         if "dir_auto" in lines[line]:
-                            auto_name_dir = items[1]+"_"+one_experiment._CCR_name+"_a"
-                            # print ("auto_name_dir", auto_name_dir)
-                            one_experiment.auto_name = auto_name_dir
+                            ref_name_dir = items[1]+"_"+one_experiment._CCR_name+"_a"
+                            # print ("ref_name_dir", ref_name_dir)
+                            one_experiment.ref_name = ref_name_dir
                         if "dir_cross" in lines[line]:
-                            cross_name_dir = items[1]+"_"+one_experiment._CCR_name+"_x"
-                            # print ("cross_name_dir", cross_name_dir)
-                            one_experiment.cross_name=cross_name_dir
+                            trans_name_dir = items[1]+"_"+one_experiment._CCR_name+"_x"
+                            # print ("trans_name_dir", trans_name_dir)
+                            one_experiment.trans_name=trans_name_dir
                         if "dimension" in lines[line]:
                             one_experiment.n_dim=int(items[1])
                         if "nucl" in lines[line]:
@@ -224,7 +224,7 @@ class CCRSet:
                             one_experiment.noise[1]=float(items[2])
                 one_experiment.CCR_pos = deepcopy(self.CCR_dict[one_experiment._CCR_name]["angle_pos"])
                 self.ccr_set.append(deepcopy(one_experiment))
-                # print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experiment._CCR_name,one_experiment.other,one_experiment.auto_name,one_experiment.cross_name))
+                # print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experiment._CCR_name,one_experiment.other,one_experiment.ref_name,one_experiment.trans_name))
                 # # print ("Experiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(i, one_experiment._CCR_name, one_experiment.n_dim, one_experiment.nucl_name, one_experiment.nucl_pos, one_experiment.n_angle, one_experiment.angle_pos, one_experiment.angle, one_experiment.ns, one_experiment.tc_vol, one_experiment.Hroi), file=RaportBox)
                 # RaportBox.write("\nExperiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n".format(i, one_experiment._CCR_name, one_experiment.n_dim, 
                 #                                                                                           one_experiment.nucl_name, one_experiment.nucl_pos, 
@@ -255,7 +255,7 @@ class CCRSet:
                 
                 self.ccr_set.append(deepcopy(one_experiment))
                 # print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(exp_properties["type_of_CCR"],exp_properties["other"],
-                #                                                                    one_experiment.auto_name,one_experiment.cross_name))
+                #                                                                    one_experiment.ref_name,one_experiment.trans_name))
 #                 RaportBox.write(f"""
 # Experiment number: {len(self.ccr_set)}
 # CCR name: {exp_properties["type_of_CCR"]}
@@ -1118,7 +1118,7 @@ class CCRSet:
 
 
 class CCRClass:
-    __slots__ = ['_CCR_name', '_auto_name','_cross_name','_noise','_ns', '_n_dim','_CCR_pos',
+    __slots__ = ['_CCR_name', '_ref_name','_trans_name','_noise','_ns', '_n_dim','_CCR_pos',
                  '_tc_vol','_is_peak_uncertainty','_peaks','_is_peaklist','_other','_is_reference'
                  '_nucl_name','_nucl_pos','_Hroi','_n_angle','_angle','_angle_pos']
     
@@ -1126,8 +1126,8 @@ class CCRClass:
         self._CCR_name = exp_dict["type_of_CCR"]       
         self._noise = []      
         self._ns = exp_dict["NS"]         
-        self._auto_name = []       # type: list[str]
-        self._cross_name = []       # type: list[str]
+        self._ref_name = []       # type: list[str]
+        self._trans_name = []       # type: list[str]
             
         self._n_dim = int(exp_dict["dimension"])             
         self._CCR_pos = 100
@@ -1147,29 +1147,29 @@ class CCRClass:
         self._angle = []           # angle: phi, psi                                     
         self._angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2    
 
-        if "auto_name"in exp_dict:
-            if isinstance(exp_dict["auto_name"],list):
-                self._auto_name = exp_dict["auto_name"]
+        if "ref_name"in exp_dict:
+            if isinstance(exp_dict["ref_name"],list):
+                self._ref_name = exp_dict["ref_name"]
             else:
-                self._auto_name = [exp_dict["auto_name"]]
+                self._ref_name = [exp_dict["ref_name"]]
 
         elif "dir_auto" in exp_dict:
             if isinstance(exp_dict["dir_auto"],list):
-                self._auto_name = f'{exp_dict["dir_auto"]}_{self._CCR_name}_a'
+                self._ref_name = f'{exp_dict["dir_auto"]}_{self._CCR_name}_a'
             else:
-                self._auto_name = [f'{exp_dict["dir_auto"]}_{self._CCR_name}_a']
+                self._ref_name = [f'{exp_dict["dir_auto"]}_{self._CCR_name}_a']
 
-        if "cross_name"in exp_dict:
-            if isinstance(exp_dict["cross_name"],list):
-                self._cross_name = exp_dict["cross_name"]
+        if "trans_name"in exp_dict:
+            if isinstance(exp_dict["trans_name"],list):
+                self._trans_name = exp_dict["trans_name"]
             else:
-                self._cross_name = [exp_dict["cross_name"]]
+                self._trans_name = [exp_dict["trans_name"]]
 
         elif "dir_cross" in exp_dict:
             if isinstance(exp_dict["dir_cross"],list):
-                self._cross_name = f'{exp_dict["dir_cross"]}_{self._CCR_name}_x'
+                self._trans_name = f'{exp_dict["dir_cross"]}_{self._CCR_name}_x'
             else:
-                self._cross_name = [f'{exp_dict["dir_cross"]}_{self._CCR_name}_x']
+                self._trans_name = [f'{exp_dict["dir_cross"]}_{self._CCR_name}_x']
 
         if "CCR_pos" in exp_dict:
             self._CCR_pos = deepcopy(int(exp_dict["CCR_pos"]))
@@ -1209,8 +1209,8 @@ class CCRClass:
 
         print_raport(f"""
 CCR name: {self._CCR_name}
-auto name: {self._auto_name}
-cross name: {self._cross_name}
+auto name: {self._ref_name}
+cross name: {self._trans_name}
 n dim: {self._n_dim}
 CCR pos: {self._CCR_pos}
 ns: {self._ns}
@@ -1748,7 +1748,7 @@ other: {self._other}
         
         with open(new_list, 'w') as listfile:
             sentence_len_7_dim = int(7*self._n_dim)
-            print ("\tauto list name = {}\tcross list name = {}\tTc = {}".format(self._auto_name[0], self._cross_name[0], self._tc_vol), file=listfile) 
+            print ("\tauto list name = {}\tcross list name = {}\tTc = {}".format(self._ref_name[0], self._trans_name[0], self._tc_vol), file=listfile) 
             print ("{0}\t{1:4}\t{2:5}\t{3:5}\t CCR rate \t CCR Uncertainty \t CCR theor \t Ix theor \t Ix/Ia \t Comments".format("AA",
                                                                                                                     "peak position",
                                                                                                                     "intensity in auto",
@@ -1845,8 +1845,8 @@ other: {self._other}
                 headers.append(deepcopy('w{}'.format(i)))
             headers.extend(deepcopy(['intensity in auto','intensity in cross','CCR rate','Uncertainty','Comments','Reference Gamma', 'Ix Theor', 'Ix/Ia', 'Ix/Ia without NS']))
             writer_row = csv.writer(csv_file,delimiter=",")
-            writer_row.writerow(['auto list name =',self._auto_name[0]])
-            writer_row.writerow(['cross list name =',self._cross_name[0]])
+            writer_row.writerow(['auto list name =',self._ref_name[0]])
+            writer_row.writerow(['cross list name =',self._trans_name[0]])
             writer_row.writerow(['Tc =', self._tc_vol])
             writer_row.writerow(['---','---','---','---','---','---','---','---','---'])
             # writer_row.writerow(['AA','{:^{sentence_len1}}'.format('peak position',sentence_len1=7*s_dim),'intensity in auto','intensity in cross','CCR rate','Comments'])
@@ -1920,7 +1920,7 @@ class CCR_normal(CCRClass):
             list_of_names_ends = [".list","_new_ppm.list"]
         else:
             list_of_names_ends = ["_points.list","_new_points.list"]
-        peak_list_basic_names = [self._auto_name[0], self._cross_name[0]]
+        peak_list_basic_names = [self._ref_name[0], self._trans_name[0]]
         peak_list_names = ["None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
@@ -1982,7 +1982,7 @@ class CCR_normal(CCRClass):
                                         res.to_check = True
                                         
         else:
-            print_raport ("Missing file for {} and {}! {}\n".format(self._auto_name[0], self._cross_name[0], peak_list_names))
+            print_raport ("Missing file for {} and {}! {}\n".format(self._ref_name[0], self._trans_name[0], peak_list_names))
             self._is_peaklist = False
     
     def read_input_file(self,file_director:str,seq_dict:dict):
@@ -1993,8 +1993,8 @@ class CCR_normal(CCRClass):
             res.peak_pos_points = [[],[]]
         self.Read_peaklist(file_director, points_mode=True)
         self.Read_peaklist(file_director, points_mode=False)
-        self.Read_peak_uncertainty(file_director, self._auto_name[0], version=0)
-        self.Read_peak_uncertainty(file_director, self._cross_name[0], version=1)
+        self.Read_peak_uncertainty(file_director, self._ref_name[0], version=0)
+        self.Read_peak_uncertainty(file_director, self._trans_name[0], version=1)
         
     def calc_uncertainty_value(self,peak_number):
         Ia = self._peaks[peak_number].peak_intens[0]
@@ -2122,8 +2122,8 @@ class CCR_normal(CCRClass):
 
             if file_type == 'csv':
                 writer_row = csv.writer(new_file,delimiter=",")
-                writer_row.writerow(['auto list name =',self._auto_name[0]])
-                writer_row.writerow(['cross list name =',self._cross_name[0]])
+                writer_row.writerow(['auto list name =',self._ref_name[0]])
+                writer_row.writerow(['cross list name =',self._trans_name[0]])
                 writer_row.writerow(['Tc =', self._tc_vol])
                 writer_row.writerow(['$R^2$ =  =', self.r2])
                 writer_row.writerow(['---','---','---','---','---','---','---','---','---'])
@@ -2131,8 +2131,8 @@ class CCR_normal(CCRClass):
                 writer = csv.DictWriter(new_file, fieldnames=headers, delimiter=",")
                 writer.writeheader()
             elif file_type == 'txt':
-                print ("\tauto list name = {}\tcross list name = {}\tTc = {}\t$R^2$ = {}".format(self._auto_name[0], 
-                                                                                     self._cross_name[0], 
+                print ("\tauto list name = {}\tcross list name = {}\tTc = {}\t$R^2$ = {}".format(self._ref_name[0], 
+                                                                                     self._trans_name[0], 
                                                                                      self._tc_vol,
                                                                                      self.r2), 
                                                                                      file=new_file) 
@@ -2219,8 +2219,8 @@ class CCR_SymRec(CCRClass):
             list_of_names_ends = [".list","_new_ppm.list"]
         else:
             list_of_names_ends = ["_points.list","_new_points.list"]
-        peak_list_basic_names = [self._auto_name[0], self._auto_name[1], 
-                                 self._cross_name[0], self._cross_name[1]]
+        peak_list_basic_names = [self._ref_name[0], self._ref_name[1], 
+                                 self._trans_name[0], self._trans_name[1]]
         peak_list_names = ["None","None","None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
@@ -2297,8 +2297,8 @@ class CCR_SymRec(CCRClass):
                                 res.peak_intens = [ float(item_a_1[self._n_dim+1]) , float(item_a_2[self._n_dim+1]),
                                                    float(item_x_1[self._n_dim+1]) , float(item_x_2[self._n_dim+1]) ]
         else:
-            print_raport ("Missing file for {} / {} and {} / {}! {}\n".format(self._auto_name[0], self._auto_name[1], 
-                                                                              self._cross_name[0], self._cross_name[1], 
+            print_raport ("Missing file for {} / {} and {} / {}! {}\n".format(self._ref_name[0], self._ref_name[1], 
+                                                                              self._trans_name[0], self._trans_name[1], 
                                                                               peak_list_names))
             self._is_peaklist = False
        
@@ -2370,10 +2370,10 @@ class CCR_SymRec(CCRClass):
             one_peak.peak_pos_points = [[],[],[],[]]
         self.Read_peaklist(file_director, points_mode=True)
         self.Read_peaklist(file_director, points_mode=False)
-        self.Read_peak_uncertainty(file_director, self._auto_name[0], version=0)
-        self.Read_peak_uncertainty(file_director, self._auto_name[1], version=1)
-        self.Read_peak_uncertainty(file_director, self._cross_name[0], version=2)
-        self.Read_peak_uncertainty(file_director, self._cross_name[1], version=3)
+        self.Read_peak_uncertainty(file_director, self._ref_name[0], version=0)
+        self.Read_peak_uncertainty(file_director, self._ref_name[1], version=1)
+        self.Read_peak_uncertainty(file_director, self._trans_name[0], version=2)
+        self.Read_peak_uncertainty(file_director, self._trans_name[1], version=3)
 
 
 
@@ -2708,7 +2708,9 @@ if __name__ == "__main__":
     for key in ExperimentsSet.to_compere_dict:
         exp = ExperimentsSet.ccr_set[ExperimentsSet.to_compere_dict[key][-1]]
         plot_together_list.append(deepcopy(exp))
-    ExperimentsSet.plot_gamma_gamma_all_together(plot_together_list, style=output_style)
+    
+    if len(plot_together_list)>0:
+        ExperimentsSet.plot_gamma_gamma_all_together(plot_together_list, style=output_style)
     ExperimentsSet.Compere_diff_ver_exp()
 
     RaportBox.close()

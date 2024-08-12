@@ -103,8 +103,8 @@ file_director         path to to director with all required
 ```
 
 symetrical_reconversion: bool
-auto_name: str or list[str]            # file name of peak list from reference version 
-cross_name: str or list[str]           # file name of peak list from transfer version 
+ref_name: str or list[str]            # file name of peak list from reference version 
+trans_name: str or list[str]           # file name of peak list from transfer version 
 dimension: int                      # dimensionality of spectra
 TC: float                           # time of ccr evolution 
 NS: list[int]                       # number of scans in the reference and the transfer version
@@ -123,8 +123,8 @@ Example if experiment is in dictionary (CCR_dict.py file) and was recorded witho
 {"CCR_1_100NUS":{
         "symetrical_reconversion": false,
         "type_of_CCR": "CCR_1",
-        "auto_name": "CCR_1_100NUS_a",
-        "auto_name": "CCR_1_100NUS_x",
+        "ref_name": "CCR_1_100NUS_a",
+        "trans_name": "CCR_1_100NUS_x",
         "dimension": 4,
         "NS": [4,24],
         "TC": 0.0286,
@@ -138,8 +138,8 @@ Example if experiment is NOT in dictionary (CCR_dict.py file):
 {"CCR_x":{
         "symetrical_reconversion": false,
         "type_of_CCR": "CCR_x",
-        "auto_name": "CCR_1_100NUS_a",
-        "auto_name": "CCR_1_100NUS_x",
+        "ref_name": "CCR_1_100NUS_a",
+        "trans_name": "CCR_1_100NUS_x",
         "dimension": 4,
         "NS": [4,24],
         "TC": 0.028,
@@ -148,13 +148,13 @@ Example if experiment is NOT in dictionary (CCR_dict.py file):
         }
 }
 ```
-If you are using symetrical reconversion approach you should extend /auto_name/, /cross_name/ to list of the transfers and the references versions file names and extend /NS/ to four-item list ([ref, ref, trans, trans]). 
+If you are using symetrical reconversion approach you should extend /ref_name/, /trans_name/ to list of the transfers and the references versions file names and extend /NS/ to four-item list ([ref, ref, trans, trans]). 
 ```
 "CO_COCA_trans":{
         "symetrical_reconstrution": true,
         "type_of_CCR": "CO_COCA_trans",
-        "auto_name": ["63_CO_COCA_1_1", "66_CO_COCA_2_2"],
-        "cross_name": ["64_CO_COCA_1_2","65_CO_COCA_2_1"],
+        "ref_name": ["63_CO_COCA_1_1", "66_CO_COCA_2_2"],
+        "trans_name": ["64_CO_COCA_1_2","65_CO_COCA_2_1"],
         "dimension": 3,
         "NS": [16,16,32,32],
         "TC": 0.06,
@@ -178,7 +178,7 @@ other: 100NUS
 
 Peak uncertainity is calculated from noise level for each peak. The script can use the same noise level for every peak or use informations from individual noise level for each peak. 
 The information about noise level can be place:
-- in input.json as parametr "noise"
+- in \input.json\ as parametr "noise"
 - in peak list with posistions in points - second row "Average noise level = "+number
 - in file with peak uncertainity (name+"_peaks_noise.list")
 
