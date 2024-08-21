@@ -31,7 +31,7 @@ import random
 
 parser = argparse.ArgumentParser(
                     prog='read_ucsf',
-                    description="read_ucsf script after reading ucsf file and peak list (in Sparky format), check peak intensity of peak and if it is not in the highest position - move it. \n After this script prints peak lists in ppm value and points value.",
+                    description="The script compares UCSF file and peak list (in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format), and adjusts the positions of the peaks. The output is the corrected peak lists in ppm value and spectra points.",
                     epilog='Text at the bottom of help')
 
 parser.add_argument("filename", metavar="ucsf_path", type=Path, 
@@ -41,30 +41,28 @@ parser.add_argument("peak_list", metavar="peak_list_path", type=Path,
                     help="path to peak list in SPARKY format")
 
 parser.add_argument("-np", "--npoints", dest='Number_of_points_for_noise', type=int, default=10, 
-                    help="to change number of points for calculate noise level: N^(spectra dimentionality + 1); normally is N = 10")
+                    help="to change the number of points used to calculate the noise level: N^(spectra dimentionality + 1); normally is N = 10")
 
 parser.add_argument("-pl", "--peaklevel", dest='peak_level', type=float, default=0.0,
-                    help="if you know level when starting appear, add this with scientific numer notation e.g. 1e+7")
+                    help="add this to set up minimal peak height, in scientific notation e.g. 1e+7")
 
 parser.add_argument("-nrm", "--noRemove", dest='noRemoveFlag', action="store_true", default=False,
-                    help="add this if you do not want remove invisible __peaks")
+                    help="add this if you do NOT want to remove invisible peaks")
 
 parser.add_argument("-op", "--onlypoints", dest='OnlyPoints', action="store_true",  default=False,
-                    help="add this if you want only change ppm value to points value")
+                    help="add this if you want to only change ppm value to points value")
 
 parser.add_argument("-o", "--output_name", type=Path, 
                     help="add this if you want specific output name")
 
 parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  default=False,
-                    help="add this if you want calculate only noise level")
+                    help="add this if you want to calculate only the noise level")
 
 parser.add_argument("-sn", "--signal3noise", dest='SignalToNoise', type=float,
-                    help="add this if you want setup minimal signal to noise ratio")
+                    help="add this if you want to setup minimal signal to noise ratio")
 
 parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', action="store_true",  default=False,
-                    help="""add this if you your spectrum was reconstructed. 
-                    For reconstracted spectra we calculate 'noise' by measure random points on H-cross-section with peaks. 
-                    Otherwise, for traditional collect spectra noise is calculated by measure random points from across the spectrum""")
+                    help="add this if your spectrum was reconstructed. For reconstructed spectra we calculate 'noise' by measuring the height of random points on H-cross-section with peaks. Otherwise, for traditionally recorded spectra the noise is calculated by measuring the height of random points from across the spectrum")
 
 args = parser.parse_args()
 
@@ -98,7 +96,7 @@ if args.SignalToNoise:
 
 if args.ReconstructionFlag:
     noise_type="artifacts"
-    print (f"Reconstructed spectrum - noise will calculate by measure random points on H-cross-section with peaks") 
+    print (f"Reconstructed spectrum - the noise will calculate by measure random points on H-cross-section with the peaks") 
 else:
     noise_type="termal"
 
@@ -303,7 +301,7 @@ class CSpectrum:
              onepeak.calc_peak_points(self)
 
 
-    def find_points_aroun_peak(self,try_position:list[int], orgin_pos:list[int],distance=1) -> tuple[list[list[int]],int]:
+    def find_points_aroun_peak(self,try_position:list[int], origin_pos:list[int],distance=1) -> tuple[list[list[int]],int]:
         """Method for prepering list of points around of peak
            and list index where is the position of the place that is being checked for being the top of the peak 
             
@@ -315,7 +313,7 @@ class CSpectrum:
             for i in vector_set2:
                 TestList = try_position[:]
                 TestList[k] += i
-                if abs(TestList[k]-orgin_pos[k])<=distance*2 and TestList[k] not in list_of_around_points:
+                if abs(TestList[k]-origin_pos[k])<=distance*2 and TestList[k] not in list_of_around_points:
                     list_of_around_points.append(deepcopy(TestList))
         try_index = list_of_around_points.index(try_position)
         return list_of_around_points, try_index
@@ -330,33 +328,33 @@ class CSpectrum:
         elif self.__spectra_dim == 5:
             return generate_5Dvec_set(distance)
 
-    def find_points_in_circle(self,orgin_pos:list[int],distance=5) -> tuple[list[list[int]],list,int]:
+    def find_points_in_circle(self,origin_pos:list[int],distance=5) -> tuple[list[list[int]],list,int]:
         """Method for prepering list of points around of peak
            and list index where is the position of the place that is being checked for being the top of the peak 
             
            Output: list of points around of peak (list[[dim1,dim2...]...]), list index of checking place
         """
-        list_of_around_points = [orgin_pos]
+        list_of_around_points = [origin_pos]
         circle_encounter = []
         for one_circle in range(1,distance+1):
             circle_encounter.append(deepcopy(len(list_of_around_points)))
             vector_set = self.dispatch_generate_vec(one_circle)
             #print_raport(f"spectra dim: {self.__spectra_dim} circle number: {one_circle}, vector_set: {vector_set}")
             for one_vec in vector_set:   #type: ignore
-                Test_pos = orgin_pos[:]
+                Test_pos = origin_pos[:]
                 if len(one_vec) == len(Test_pos):
                     for k in range(self.__spectra_dim):
                         if Test_pos[k]+one_vec[k]<= self.__points_num[k]:
                             Test_pos[k] += one_vec[k]
-                    if calc_distance(Test_pos,orgin_pos)<=(one_circle*math.sqrt(2)) and Test_pos not in list_of_around_points:
+                    if calc_distance(Test_pos,origin_pos)<=(one_circle*math.sqrt(2)) and Test_pos not in list_of_around_points:
                         list_of_around_points.append(deepcopy(Test_pos))
-        try_index = list_of_around_points.index(orgin_pos)
+        try_index = list_of_around_points.index(origin_pos)
         if try_index != 0:
             print(f"Starting point is not at first place = {try_index}")
         return list_of_around_points, circle_encounter, try_index
     
 
-    def find_points_in_peak_line(self,try_position:list[int], orgin_pos:list[int],distance=1) -> tuple[list[list[int]],int]:
+    def find_points_in_peak_line(self,try_position:list[int], origin_pos:list[int],distance=1) -> tuple[list[list[int]],int]:
         """Method for prepering list of points lin the line of peak throu all dimentions
            and list index where is the position of the place that is being checked for being the top of the peak 
             
@@ -369,7 +367,7 @@ class CSpectrum:
             for i in vector_set2:
                 TestList = try_position[:]
                 TestList[k] += i
-                if abs(TestList[k]-orgin_pos[k])<=distance*2:
+                if abs(TestList[k]-origin_pos[k])<=distance*2:
                     list_of_around_points.append(deepcopy(TestList))
         try_index = list_of_around_points.index(try_position)
         # points_intens = self.read_intens(list_of_around_points)
@@ -653,6 +651,7 @@ class CSpectrum:
         """
         with open(self.__filename, "rb") as ucsf_file:
             for indexk, k in enumerate(peak_pos_list):
+
                 try:
                     ucsf_file.seek(k.point_in_file)                                       
                     ucsf_data = ucsf_file.read(4)
@@ -719,12 +718,12 @@ class CSpectrum:
             print ("=== Noise calculation finished ===")
 
 
-    def try_centering_this_peak(self,one_peak:CPeak,Orgin_pos:list,checking_distance:int)->tuple[list[int],int,dict]:
+    def try_centering_this_peak(self,one_peak:CPeak,origin_pos:list,checking_distance:int)->tuple[list[int],int,dict]:
         # checking_distance = 5
         circle_Flag = [False]*(checking_distance+1) #if in this circle is highter place
         checking_places = []
 
-        List_of_around_points, circle_encounter, start_index = self.find_points_in_circle(Orgin_pos, distance=checking_distance+1)
+        List_of_around_points, circle_encounter, start_index = self.find_points_in_circle(origin_pos, distance=checking_distance+1)
         # print_raport(f"\n\n{one_peak.descript}\ncircle_encounter: {circle_encounter}",in_terminal=False)
 
         for point_pos in List_of_around_points:
@@ -835,8 +834,8 @@ class CSpectrum:
         noise_list = []
 
         for indexpeak, one_peak in enumerate(self.__peaks):
-            Orgin_pos = one_peak.peak_points_pos
-            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,Orgin_pos, checking_distance=max_distans)
+            origin_pos = one_peak.peak_points_pos
+            New_pos, New_intens, path_dict = spectrum.try_centering_this_peak(one_peak,origin_pos, checking_distance=max_distans)
             
             if one_peak.is_center == "yes":
                 peak_height_list.append(New_intens)
@@ -880,7 +879,7 @@ class CSpectrum:
                     Peak_to_check += 1
                     peak_centering_info.append(f"                     probably overlap with: {one_peak.overlap_with}\t")
         
-        print(peak_height_list)
+        # print(peak_height_list)
         
         for i in peak_centering_info:
             print_raport(i, in_terminal=False)
@@ -979,8 +978,8 @@ class CSpectrum:
             print ("\tAssignment", end="", file=listfile) 
             for i in range(self.__spectra_dim):
                 print ("\tw{}".format(i+1), end="", file=listfile)
-            if type_list == "orgin":
-                print ("\tData Height\t\t\t\t Orgin peaklist in points\n", file=listfile)
+            if type_list == "origin":
+                print ("\tData Height\t\t\t\t origin peaklist in points\n", file=listfile)
                 # print ("{} peak list".format(type_list), new_peak_list)
             else:
                 print ("\tData Height\t\t\t\tCentering peak list prepare from{}".format(peak_list_name), file=listfile)
@@ -1164,7 +1163,7 @@ if __name__ == "__main__":
         txtfile.write("File name: {}\n\n".format(args.filename))
     print("=== Reading input files finished ===")
     spectrum.calc_peaks_positions_in_points()
-    spectrum.Print_Peak_List_points("orgin")
+    spectrum.Print_Peak_List_points("origin")
     if args.OnlyPoints == False:
 
         """Noise calculation"""

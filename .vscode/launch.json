@@ -36,11 +36,11 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "calc_CCR_rate_objectowo.py",
+            "program": "calc_CCR_rate.py",
             "args": [
                 "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates",
                 "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/rcsb_pdb_1D3Z.fasta",
-                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/CCRrate_1d3z_strucure_predicted.csv"
+                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/CCRrate_6v5d_strucure_predicted_tau_gammaNNH.csv"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
