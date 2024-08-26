@@ -75,19 +75,20 @@ Our scripts can work with any type of CCR rates but a few of them were already p
 
 
 An equation used for calculating CCR rates is:   
-$\Gamma = \frac{1}{Tc}\cdot arctanh(\frac{I_{trans}}{I_{ref}}\frac{NS_{ref}}{NS_{trans}})$    
+$\Gamma = \frac{1}{Tc}\cdot arctanh(\frac{I_{trans}}{I_{ref}}\frac{NS_{ref}}{NS_{trans}})$ 
+where: $I_{trans/ref}$ - peak intensity in the transfer/reference version, $NS_{trans/ref}$ - number of scans in the transfer/reference version 
 *Additionally for CCR 5 and 6 the CCR rates are multiplied by -1, to achieve proper results.*
 
 
 ### Input files (obligatory):  
-- peak lists with peak positions in chemical shifts (`name+"_ppm.list"`) and peak heights
-- peak lists with peak positions in points (`name+"_points.list"`) and peak heights
-- JSON file with experiments description   
+- peak lists with peak positions in ppm and peak heights (`name+"_ppm.list"`)
+- peak lists with peak positions in spectral points and peak heights (`name+"_points.list"`)
+- JSON file with experiments description ('XXXXXXXXXXXXXXXXXXXXXXXXXXXX')   
 - sequence in FASTA format (`seq` file)     
 
 ### Input files (optional): 
-- peak lists with peak names and uncertainties (`name+"_peaks_noise.list"`)
-- file with reference values of CCR rates
+- peak lists with peak names and noise level (`name+"_peaks_noise.list"`)
+- file with reference values of CCR rates (XXXXXXXXXXXXXXXXXXXXXX) - for results validation
 
 <br>
 
@@ -98,17 +99,17 @@ python3 calc_CCR_rate [-h] [-s SEQ_FILE_NAME] [-r REFGAMMA] [-e EXPSET] [-pub] [
 
 ### Positional arguments:       
 ```bash
-file_directory         path to directory with all required files
+file_directory         path to the directory with all required files
 ```
 
 ### Optional arguments:       
 ```bash
--h, --help              show this help message and exit
--s, --seq               if name of the file with amino acid sequence is not 'seq', add this with the name of file
--r, --refgamma          if you have a file with reference values of CCR rates, add this with the name of the file (file must be .csv, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)
--e, --expset            if you want to use experiments setup file with different filename than 'input.json' (structure of the file must be the same as the original file)
--pub, --publication     if you want the picture outputs to be in the publication size
--pres, --presentation   if you want the picture outputs to be in the presentation size
+-h, --help              show the help message and exit
+-s, --seq               name of the file with amino acid sequence (default: 'seq')
+-r, --refgamma          name of the file with reference values of CCR rates (file must be in csv format, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)
+-e, --expset            experiments setup file ('input.json') - the structure of the file must be the same as the original one
+-pub, --publication     prepare output figures in publication size
+-pres, --presentation   prepare output figures in presentation size
 ```
 
 
@@ -116,23 +117,23 @@ file_directory         path to directory with all required files
 ### Structure of the 'input.json' file
 
 ```bash
-symmetrical_reconversion: bool
-ref_name: string or list[string]        # file name of the peak list from the reference version 
-trans_name: string or list[string]      # file name of the peak list from the transfer version 
+symmetrical_reconversion: bool          # true: symmetrical reconversion approach
+ref_name: string or list[string]        # file name of the peak list of the reference spectrum 
+trans_name: string or list[string]      # file name of the peak list of the transfer spectrum 
 dimension: integer                      # dimensionality of the spectra
-TC: float                               # time of the ccr evolution 
-NS: list[integer]                       # number of scans in the reference and the transfer version
+TC: float                               # length of the ccr evolution delay
+NS: list[integer]                       # number of scans in the reference and the transfer version of the experiment
 
 angle_pos: list[integer]                # relative angle position: -2, -1, 0, 1, 2
-CCR_pos:                                # relative CCR rate position: -2, -1, 0, 1, 2
-nucl: list[string]                      # nuclei of all peaks: H, N, C, CA, CB, HA, HB
-pos_nucl: list[integer]                 # nuclei position of all peaks: -2, -1, 0, 1, 2 
+CCR_pos:                                # relative CCR rate position: -2, -1, 0, 1, 2 XXXXXXXXXXXXXXXXXXXXXX nie rozumiem, co ten parametr określa
+nucl: list[string]                      # nuclei of all peaks: H, N, C, CA, CB, HA, HB XXXXXXXXXXXXXXXXXXXXX do czego jest ta informacja? W przykładach poniżej tego parametru nie ma...
+pos_nucl: list[integer]                 # nuclei position of all peaks: -2, -1, 0, 1, 2 XXXXXXXXXXXXXXXXXXXXXXX j.w.
 angle_num: integer                      # number of measured angles: 1, 2
 angle_names: list[string]               # angles: phi, psi
-noise: list[integer]                    # noise level in the reference and the transfer version
-other: string                           # add this as a readable comment for the script to particular experiment
+noise: list[integer]                    # noise level in the reference and the transfer spectrum
+other: string                           # a readable comment for the script to particular experiment
 ```
-Example if an experiment is in the dictionary `CCR_dict.py` and was recorded without symmetrical reconversion:
+Example if an experiment is in the dictionary `CCR_dict.py` and was recorded without symmetrical reconversion: XXXXXXXXXXXXXXXXX nie rozumiem, co to za katalog CCR_dict.py i dlaczego ma rozszerzenie .py? 
 ```json
 {"CCR_1_100NUS":{
     "symmetrical_reconversion": false,
@@ -178,7 +179,7 @@ If you are using symmetrical reconversion approach you should extend `ref_name`,
 
 
 ### Additional options:
-You can compare different data for the same CCR rate. If the script finds 2 data sets for the same type of CCR rate then it will prepare a graph comparing them. Remember to add comments to specific experiments in the `input.json` like:
+You can compare different data for the same CCR rate. If the script finds 2 data sets for the same type of CCR rate then it will prepare a graph comparing them. XXXXXXXXXXXXXXXXXX sam to zrobi czy trzeba mu dać plik z 'reference CCR values' (jeden z opcjonalnych) Remember to add comments to specific experiments in the `input.json` like:
 ``` 
 other: [number - 3 digits][parameter - 3 letters]
 ``` 
@@ -197,10 +198,10 @@ The information about noise level can be placed:
 
 
 ### Output:
-There are several types of output:
-- table with CCR rates values and standard deviation for every residue for every experiment (`CCRrate.csv`)
-- table for each experiment with CCR rates for every residue (`type_of_CCR+".csv"`)
-- text file (`RaportBox.txt`) with whole terminal output and additional information to evaluate script functionality
+There are several input files:
+- table with CCR rates values and their uncertainties for each residue for each experiment (`CCRrate.csv`) XXXXXXXXXXXXXXX nie rozumiem różnicy pomiędzy tym i kolejnym
+- table for each experiment with CCR rates for each residue (`type_of_CCR+".csv"`)
+- text file (`RaportBox.txt`) with whole terminal output and additional information to evaluate script performance
 
 
 
