@@ -1,7 +1,7 @@
 # CCR_scripts   
-Set of Python scripts for working with NMR spectra (UCSF [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format), including:
-  - read_ucsf.py
-  - calc_CCR_rate.py
+A set of Python scripts for analyzing NMR spectra  for cross-correlated relaxation (CCR) effect measurements. The set includes:
+  - read_ucsf.py (adjusting the positions of peaks in the peak list, to fit the spectral peaks' positions)
+  - calc_CCR_rate.py (calculating the CCR rates, using peak intensities)
 
 
 ### software required:
@@ -17,42 +17,41 @@ Set of Python scripts for working with NMR spectra (UCSF [Sparky](https://nmrfam
 
 
 ## read_ucsf.py    
-The script compares UCSF file and peak list (in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format), and adjusts the positions of the peaks. The output is the corrected peak lists in ppm value and spectra points.
+The script adjusts the positions of peaks in the peak list (provided as an input) using the spectrum file (also provided as input, in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format, *.ucsf). The output is the corrected peak list. The peak positions are given in ppm and spectral points.
 
-### Launch in command line:  
+### Launch in a command line:  
 ```bash
-python3 read_ucsf [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nrm] [-op] [-o OUTPUT_NAME] [-n] [-sn SIGNALTONOISE] [-rec] ucsf_path peak_list_path
+python3 read_ucsf [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nrm] [-op] [-o OUTPUT_NAME] [-n] [-sn SIGNALTONOISE] [-rec] spectrum_path peak_list_path
 ```
 
 ### Positional arguments:        
 ```bash
-  ucsf_path             path to UCSF file
-  peak_list_path        path to peak list in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format
+  spectrum_path         path to spectrum file (Sparky format, *.ucsf, https://nmrfam.wisc.edu/nmrfam-sparky-distribution/)
+  peak_list_path        path to peak list file (Sparky format)
 ```
 
 ### Optional arguments:      
 ```bash
-  -h, --help            show this help message and exit
-  -np, --npoints        to change the number of points used to calculate the noise level: N^(spectra dimentionality + 1); normally is N = 10
-  -pl, --peaklevel      add this to set up minimal peak height, in scientific notation e.g. 1e+7
-  -nrm, --noRemove      add this if you do NOT want to remove invisible peaks
-  -op, --onlypoints     add this if you want to only change ppm value to points value
-  -o, --output_name     add this if you want specific output name
-  -n, --noise           add this if you want to calculate only the noise level
-  -sn, --signal3noise   add this if you want to setup minimal signal to noise ratio
-  -rec, --reconstructedspectrum
-                        add this if your spectrum was reconstructed. For reconstructed spectra we calculate 'noise' by measuring the height of random points on H-cross-section with peaks. Otherwise, for traditionally recorded spectra the noise is calculated by measuring the height of random points from across the spectrum
+  -h, --help            show the help message and exit
+  -np, --npoints        the number of randomly chosen points used to calculate the noise level (default: 1000 for 2D spectrum, 10000 for 3D, 100000 for 4D)
+  -pl, --peaklevel      the minimal peak height, in scientific notation e.g. 1e+7 (default: XXXXXXXXXXXXXXXXXXXXXXX)
+  -nrm, --noRemove      do NOT remove invisible peaks
+  -op, --onlypoints     change ppm value to spectral points value
+  -o, --output_name     output name (default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx)
+  -n, --noise           calculate only the noise level
+  -sn, --signal3noise   the minimal signal to noise ratio (default: none)
+  -rec, --reconstructedspectrum      calculate the spectral noise using the random points at peak proton position - required for spectra reconstructed from NUS data (if this argument is not used, the noise is calculated using random points from across the spectrum)
 ```
-### Files required:
+### Input files:
   - multidimensional NMR spectra in ucsf-[Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format
   - peak list in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format  
 
 ### Output:
 The directory with the following files:
-- original peak list with chemical shifts converted to points in the spectrum (`name+"_origin_points.list"`)
-- two peak lists after moving peaks, one contains peaks positions in chemical shifts (`name+"_new_ppm.list"`), another one with points in the spectrum (`name+"_new_points.list"`)
-- peak list which contains only peak names and uncertainties (`name+"_peaks_noise.list"`)
-- text file (`info.txt`) with whole terminal output and additional information to evaluate script functionality
+- the original peak list with peak positions given in  spectral points (`name+"_origin_points.list"`)
+- two peak lists after adjusting peak positions, one contains peak positions in ppm (`name+"_new_ppm.list"`), another one in spectral points (`name+"_new_points.list"`)
+- the peak list which contains only peak names and respective noise levels (`name+"_peaks_noise.list"`)
+- the text file (`info.txt`) with whole terminal output and additional information to evaluate script performance
 
 
 
@@ -60,9 +59,9 @@ The directory with the following files:
 
 ## calc_CCR_rate.py
 
-The script to calculate cross-correlated relaxation (CCR) rates, measured by quantitative approach (two spectra: reference and transfer). 
+The script calculates the cross-correlated relaxation (CCR) rates, using peak intensities from the two spectra, reference and transfer (quantitative gamma approach). 
    
-Our scripts can work with any type of CCR rate but a few of them were already pre-programmed:
+Our scripts can work with any type of CCR rates but a few of them were already pre-programmed:
 |   |   |
 |---|---|     
 | CCR_1 | H<sup>N</sup><sub>i</sub>N<sub>i</sub> DD – C<sup>α</sup><sub>i-1</sub>H<sup>α</sup><sub>i-1</sub> DD |      
@@ -76,17 +75,17 @@ Our scripts can work with any type of CCR rate but a few of them were already pr
 
 
 An equation used for calculating CCR rates is:   
-$\Gamma = \frac{1}{Tc}\cdot arctanh(\frac{I_{trans}}{I_{ref}})$    
-*Additionally for CCR 5 and 6 the CCR rates are multiplied by -1, which is consistent with the experiment.*
+$\Gamma = \frac{1}{Tc}\cdot arctanh(\frac{I_{trans}}{I_{ref}}\frac{NS_{ref}}{NS_{trans}})$    
+*Additionally for CCR 5 and 6 the CCR rates are multiplied by -1, to achieve proper results.*
 
 
-### Files required:  
+### Input files (obligatory):  
 - peak lists with peak positions in chemical shifts (`name+"_ppm.list"`) and peak heights
 - peak lists with peak positions in points (`name+"_points.list"`) and peak heights
 - JSON file with experiments description   
 - sequence in FASTA format (`seq` file)     
 
-### Additional files: 
+### Input files (optional): 
 - peak lists with peak names and uncertainties (`name+"_peaks_noise.list"`)
 - file with reference values of CCR rates
 
@@ -211,7 +210,7 @@ There are several types of output:
 ---
 
 ### Citation:  
-If you use those scripts please cite:
+If you use these scripts please cite:
 
 
 
