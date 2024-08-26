@@ -37,7 +37,7 @@ python3 read_ucsf [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nrm] 
   -pl, --peaklevel      the minimal peak height, in scientific notation e.g. 1e+7 (default: XXXXXXXXXXXXXXXXXXXXXXX)
   -nrm, --noRemove      do NOT remove invisible peaks
   -op, --onlypoints     change ppm value to spectral points value
-  -o, --output_name     output name (default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx)
+  -o, --output_name     output name (default: origin peaklist name from peak_list_path)
   -n, --noise           calculate only the noise level
   -sn, --signal3noise   the minimal signal to noise ratio (default: none)
   -rec, --reconstructedspectrum      calculate the spectral noise using the random points at peak proton position - required for spectra reconstructed from NUS data (if this argument is not used, the noise is calculated using random points from across the spectrum)
@@ -48,11 +48,11 @@ python3 read_ucsf [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nrm] 
 
 ### Output:
 The directory with the following files:
-- the original peak list with peak positions given in  spectral points (`name+"_origin_points.list"`)
-- two peak lists after adjusting peak positions, one contains peak positions in ppm (`name+"_new_ppm.list"`), another one in spectral points (`name+"_new_points.list"`)
-- the peak list which contains only peak names and respective noise levels (`name+"_peaks_noise.list"`)
+- the original peak list with peak positions given in  spectral points (`output_name+"_origin_points.list"`)
+- two peak lists after adjusting peak positions, one contains peak positions in ppm (`output_name+"_new_ppm.list"`), another one in spectral points (`name+"_new_points.list"`)
+- the peak list which contains only peak names and respective noise levels (`output_name+"_peaks_noise.list"`)
 - the text file (`info.txt`) with whole terminal output and additional information to evaluate script performance
-
+`output_name` can be origin peaklist name from peak_list_path or output_name setup by user in command line
 
 
 <br><br>
@@ -83,12 +83,12 @@ where: $I_{trans/ref}$ - peak intensity in the transfer/reference version, $NS_{
 ### Input files (obligatory):  
 - peak lists with peak positions in ppm and peak heights (`name+"_ppm.list"`)
 - peak lists with peak positions in spectral points and peak heights (`name+"_points.list"`)
-- JSON file with experiments description ('XXXXXXXXXXXXXXXXXXXXXXXXXXXX')   
+- JSON file with experiments description (`input.json`)   
 - sequence in FASTA format (`seq` file)     
 
 ### Input files (optional): 
 - peak lists with peak names and noise level (`name+"_peaks_noise.list"`)
-- file with reference values of CCR rates (XXXXXXXXXXXXXXXXXXXXXX) - for results validation
+- CSV file with reference values of CCR rates (no specific name, "," delimiter) - for results validation
 
 <br>
 
@@ -105,9 +105,9 @@ file_directory         path to the directory with all required files
 ### Optional arguments:       
 ```bash
 -h, --help              show the help message and exit
--s, --seq               name of the file with amino acid sequence (default: 'seq')
+-s, --seq               name of the file with amino acid sequence (default: `seq`)
 -r, --refgamma          name of the file with reference values of CCR rates (file must be in csv format, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)
--e, --expset            experiments setup file ('input.json') - the structure of the file must be the same as the original one
+-e, --expset            experiments setup file (`input.json`) - the structure of the file must be the same as the original one
 -pub, --publication     prepare output figures in publication size
 -pres, --presentation   prepare output figures in presentation size
 ```
@@ -126,8 +126,6 @@ NS: list[integer]                       # number of scans in the reference and t
 
 angle_pos: list[integer]                # relative angle position: -2, -1, 0, 1, 2
 CCR_pos:                                # relative CCR rate position: -2, -1, 0, 1, 2 XXXXXXXXXXXXXXXXXXXXXX nie rozumiem, co ten parametr określa
-nucl: list[string]                      # nuclei of all peaks: H, N, C, CA, CB, HA, HB XXXXXXXXXXXXXXXXXXXXX do czego jest ta informacja? W przykładach poniżej tego parametru nie ma...
-pos_nucl: list[integer]                 # nuclei position of all peaks: -2, -1, 0, 1, 2 XXXXXXXXXXXXXXXXXXXXXXX j.w.
 angle_num: integer                      # number of measured angles: 1, 2
 angle_names: list[string]               # angles: phi, psi
 noise: list[integer]                    # noise level in the reference and the transfer spectrum
