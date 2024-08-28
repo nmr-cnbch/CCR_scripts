@@ -100,7 +100,7 @@ print("File with amino acid sequence: {}".format(seq_file_name))
 if args.refgamma: 
     refgammaFlag = True
     gamma_cal_file_name = args.refgamma
-    print ("Reference CCR rates are inclued from: {}".format(gamma_cal_file_name)) 
+    print ("Reference CCR rates are included from: {}".format(gamma_cal_file_name)) 
 else: 
     refgammaFlag = False
     gamma_cal_file_name = None
@@ -108,7 +108,7 @@ else:
 
 if args.expset:
     exp_file_name = "{}/{}".format(file_directory,args.expset)
-    print("Diffrent experiment set file: {}".format(exp_file_name)) 
+    print("Different experiment set file: {}".format(exp_file_name)) 
 else: exp_file_name = "{}/input.json".format(file_directory)
 
 RaportDir = f"{file_directory}/all_outputs/"
@@ -293,17 +293,17 @@ class CCRSet:
                 # for one_peak in one_exp.peak_list():
                 #     print_raport(f"{one_peak.aa_number}: {one_peak.ccr_rate}")
                 one_exp.WriteCCRRate_small()
-                print_raport("Calculation of CCR rates for {}{} is ready".format(one_exp.CCRname(),Add_text))
+                print_raport("Calculation of CCR rates for {}{} completed".format(one_exp.CCRname(),Add_text))
         self.Write_ALL_CCRRate_CSV()
         
 
     def Compere_with_reference(self,ref_dict):
-        print_raport ("\n=== Compering with reference values of CCR rates ===\n")
+        print_raport ("\n=== Comparing with reference values of CCR rates ===\n")
         for one_exp in self.ccr_set:
             if one_exp.is_peaklist():
                 one_exp.Add_ref_gamma(ref_dict["seq_num"],ref_dict[one_exp.CCRname()])
                 if one_exp.is_reference:
-                    print(f"\nCompering CCR rates with calculated for {one_exp.CCRname()}")
+                    print(f"\nComparing CCR rates with calculated for {one_exp.CCRname()}")
                     one_exp.calc_theor_Ix()
                     one_exp.check_if_fatal_error()
                     # one_exp.WriteCCRRate_all_info()
@@ -313,11 +313,11 @@ class CCRSet:
                     one_exp.plot_gamma_gamma(style=output_style)
                     one_exp.plot_error_histogram()
         # self.plot_gamma_gamma_all_together(self.ccr_set, style=output_style)
-        print_raport ("=== Compering with reference values of CCR rates finished ===\n")
+        print_raport ("=== Comparing with reference values of CCR rates completed ===\n")
 
     def Compere_diff_ver_exp(self):
         if self.__ref_flag:
-            print_raport ("\n=== Compering diffrent versions of CCR rates with reference values ===\n")
+            print_raport ("\n=== Comparing diffrent versions of CCR rates with reference values ===\n")
             for CCR_type in self.to_compere_dict:
                 if len(self.to_compere_dict[CCR_type])>1:
                     ExpTable = []
@@ -326,13 +326,13 @@ class CCRSet:
                     self.plot_gamma_gamma_and_diff_together(ExpTable)
                     self.plot_cross_intens_theor_exp_together(ExpTable)
                     self.plot_error_histogram_together(ExpTable)
-                    print_raport (f"\n{CCR_type} - ready\n")
+                    print_raport (f"\n{CCR_type} - completed\n")
             self.Write_zeroCCRrates_Analisis_CSV()
             self.Write_ErrorCCRrates_Analisis_CSV()
             self.Write_diffCCRrates_Analisis_CSV()
-            print_raport ("=== Compering diffrent versions of CCR rates with reference values finished ===\n")
+            print_raport ("=== Comparing different versions of CCR rates with reference values completed ===\n")
         else:
-            print_raport ("\n=== Compering experiments with diffrent number of NUS points ===\n")
+            print_raport ("\n=== Comparing experiments with different numbers of NUS points ===\n")
             for CCR_type in self.to_compere_dict:
                 if len(self.to_compere_dict[CCR_type])>1:
                     max_number = 0.0
@@ -350,8 +350,8 @@ class CCRSet:
                                 min_number = nus_number
                                 min_exp = exp_number
                     self.plot_gamma_exp_vs_epx(self.ccr_set[min_exp],self.ccr_set[max_exp], str(int(min_number)),str(int(max_number)))
-                    print_raport (f"\n{CCR_type} - ready\n")
-            print_raport ("\n=== Compering experiments with diffrent number of NUS points finished ===\n")
+                    print_raport (f"\n{CCR_type} - completed\n")
+            print_raport ("\n=== Comparing experiments with different numbers of NUS points completed ===\n")
     
     @staticmethod
     def prepare_gamma_calc_vs_gamma_exp_table(exp_tab:list[CCRClass],
@@ -774,13 +774,13 @@ class CCRSet:
             Ix_experimental = []
             for one_peak in exp_tab[indext].peak_list():
                 if one_peak.is_peak and one_peak.Ix_theor!=0.0:
-                    # print ("we have peak {} for spectra {} ({})".format(one_peak.aa_number,ccr_name,add[indexa]))
+                    # print ("there is peak {} for spectra {} ({})".format(one_peak.aa_number,ccr_name,add[indexa]))
                     # print("Intensity of Ix_theory: {}, Ix_experimental: {}, min_max_value: {}".format(one_peak.Ix_theor, one_peak.peak_intens[1],min_max_value))
                     Ix_theory.append(deepcopy(one_peak.Ix_theor))
                     Ix_experimental.append(deepcopy(one_peak.peak_intens[1]))
                     min_max_value = check_if_min_max(one_peak.Ix_theor,one_peak.peak_intens[1],min_max_value)
             set_of_data.append(deepcopy([Ix_theory,Ix_experimental]))
-            # print("lenth of Ix_theory: {}, Ix_experimental: {} for spectra {} ({})".format(len(Ix_theory), len(Ix_experimental),ccr_name,add[indext]))
+            # print("length of Ix_theory: {}, Ix_experimental: {} for spectra {} ({})".format(len(Ix_theory), len(Ix_experimental),ccr_name,add[indext]))
             # print(Ix_theory, Ix_experimental)
 
         for indext, one_exp in enumerate(exp_tab):
@@ -1282,7 +1282,7 @@ other: {self._other}
             if one_kwarg in option_dict:
                 info_dict[one_kwarg] = option_dict[one_kwarg]
             else:
-                print_raport(f"There is no option like {one_kwarg}")
+                print_raport(f"There is no option {one_kwarg}")
         return info_dict
     
     def Prepare_peaklist(self, seq_dict:dict,):
@@ -1364,7 +1364,7 @@ other: {self._other}
         peaklistfile = f"{file_directory}/peak_lists/{list_verson}_peaks_noise.list"
 
         if os.path.exists(peaklistfile):
-            RaportBox.write(f"\n\nLISTA:{peaklistfile}\n")
+            RaportBox.write(f"\n\nLIST:{peaklistfile}\n")
             with open(peaklistfile, 'r') as peak_noise_file:  
                 p_lines_a = peak_noise_file.readlines()
                 for indexl, line in enumerate(p_lines_a):
@@ -1383,7 +1383,7 @@ other: {self._other}
             # self._is_peak_uncertainty = False
             for residue in self._peaks:
                 residue.peak_uncertainty=[self._noise[0],self._noise[1]]
-            print_raport (f"There is no file like: {peaklistfile}!, so there will be used averange noise value\n")
+            print_raport (f"There is no file: {peaklistfile}!, so average noise value will be used\n")
     
     @abstractmethod
     def Read_peaklist(self, file_directory, seq_dict:dict, points_mode=False):
@@ -1424,7 +1424,7 @@ other: {self._other}
                 peak2.is_overlap = True
                 peak1.overlap_peaks[f"{peak2.aa_number}_{version}"]=peaks_distance
                 peak2.overlap_peaks[f"{peak1.aa_number}_{version}"]=peaks_distance
-                RaportBox.write(f"\nPeaks: {peak1.descript} and {peak2.descript} marked as overlap")
+                RaportBox.write(f"\nPeaks: {peak1.descript} and {peak2.descript} marked as overlapping")
             
 
 
@@ -1738,8 +1738,8 @@ other: {self._other}
                 else:
                     one_row["CCR rate"] = "nan"
                 writer.writerow(one_row)
-        # print ("CCR rate for CCR efect between {} rates are in file: {}".format(CCRname2Ratename(ccr_name), new_list), file=RaportBox)
-        RaportBox.write("CCR rate for CCR efect between {} rates are in file: {}\n".format(CCRname2Ratename(self._CCR_name), new_list))
+        # print ("CCR rate for CCR effect between {} rates are in file: {}".format(CCRname2Ratename(ccr_name), new_list), file=RaportBox)
+        RaportBox.write("CCR rate for CCR effect between {} rates are in file: {}\n".format(CCRname2Ratename(self._CCR_name), new_list))
         return
 
     def WriteCCRRate_all_info(self):
@@ -1961,7 +1961,7 @@ class CCR_normal(CCRClass):
                         item_x = p_lines_x[indexl].split()
                         # Reading description
                         if item_a[0] != item_x[0]:
-                            print ("Error: reference ({}) and transfer ({}) peak list are not compatible:\n{} ? {}".format(peak_list_names[0], peak_list_names[1], item_a[0], item_x[0]))
+                            print ("Error: reference ({}) and transfer ({}) peak lists are not compatible:\n{} ? {}".format(peak_list_names[0], peak_list_names[1], item_a[0], item_x[0]))
                             sys.exit()
                         description = item_a[0]
                         aminoacids_number = self.read_aminoacid_number(description)
@@ -1975,7 +1975,7 @@ class CCR_normal(CCRClass):
                                     for i in range(1,self._n_dim+1):
                                         res.peak_pos_points[0].append(deepcopy(int(item_a[i])))
                                         res.peak_pos_points[1].append(deepcopy(int(item_x[i])))
-                                        # print ("residua append --->", residue.peak_pos_points)
+                                        # print ("residues append --->", residue.peak_pos_points)
                                 else: 
                                     for i in range(1,self._n_dim+1):
                                         res.peak_pos[0].append(deepcopy(float(item_a[i])))
@@ -2071,21 +2071,21 @@ class CCR_normal(CCRClass):
                         other_peak.is_theor_values = True
                 elif one_peak.is_gamma_calc and other_peak.is_peak==False:
                     if one_peak.to_check:
-                        print_raport(f"{residue} - This residue don't have referens (reference) peak and check peak position!!!")
-                    else: print_raport(f"{residue} - This residue don't have referens (reference) peak")
+                        print_raport(f"{residue} - This residue doesn't have reference peak and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue doesn't have reference peak")
                 elif one_peak.is_gamma_calc==False and other_peak.is_peak:
                     if one_peak.to_check:
-                        print_raport(f"{residue} - This residue don't have reference value of gamma and check peak position!!!")
-                    else: print_raport(f"{residue} - This residue don't have reference value of gamma")
+                        print_raport(f"{residue} - This residue doesn't have reference value of gamma and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue doesn't have reference value of gamma")
                 elif one_peak.is_overlap:
                     if one_peak.to_check:
-                        print_raport(f"{residue} - This residue overlap with: {one_peak.overlap_peaks} and check peak position!!!")
-                    else: print_raport(f"{residue} - This residue overlap with: {one_peak.overlap_peaks}")
+                        print_raport(f"{residue} - This residue overlaps with: {one_peak.overlap_peaks} and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue overlaps with: {one_peak.overlap_peaks}")
                 else:
                     # residue = str(other_peak.aa_number)+other_peak.aa_name
                     if one_peak.to_check:
-                        print_raport(f"{residue} - This residue don't have reference value of gamma or referens (reference) peak and check peak position!!!")
-                    else: print_raport(f"{residue} - This residue don't have reference value of gamma or referens (reference) peak")
+                        print_raport(f"{residue} - This residue doesn't have reference value of gamma or reference peak and check peak position!!!")
+                    else: print_raport(f"{residue} - This residue doesn't have reference value of gamma or reference peak")
     
     
     def WriteCCRRate_all_info_new(self, file_type:str):
@@ -2244,7 +2244,7 @@ class CCR_SymRec(CCRClass):
                     RaportBox.write("There is no such file or directory: {}\n".format(peaklistfile))
         
         if NameFlag[0] == True and NameFlag[1] == True:
-            RaportBox.write("\n\nLISTA:{}\n".format(peak_list_names))
+            RaportBox.write("\n\nLIST:{}\n".format(peak_list_names))
             pl_a_1 = open(peak_list_names[0], 'r')
             pl_a_2 = open(peak_list_names[1], 'r')
             pl_x_1 = open(peak_list_names[2], 'r')
@@ -2274,7 +2274,7 @@ class CCR_SymRec(CCRClass):
                     item_x_2 = p_lines_x_2[indexl].split()
                     # Reading description
                     if item_a_1[0] != item_x_1[0] or item_a_2[0] != item_x_2[0] or  item_a_1[0] != item_x_2[0] or item_a_2[0] != item_x_1[0]:
-                        print ("Error: reference ({} / {}) and transfer ({} / {}) peak list are not compatible:\n{}/{} ? {}/{}".format(peak_list_names[0], peak_list_names[1],
+                        print ("Error: reference ({} / {}) and transfer ({} / {}) peak lists are not compatible:\n{}/{} ? {}/{}".format(peak_list_names[0], peak_list_names[1],
                                                                                                                              peak_list_names[2], peak_list_names[3], 
                                                                                                                             item_a_1[0], item_a_2[0],
                                                                                                                             item_x_1[0], item_x_2[0]))
@@ -2293,7 +2293,7 @@ class CCR_SymRec(CCRClass):
                                     res.peak_pos_points[1].append(deepcopy(int(item_a_2[i])))
                                     res.peak_pos_points[2].append(deepcopy(int(item_x_1[i])))
                                     res.peak_pos_points[3].append(deepcopy(int(item_x_2[i])))
-                                    # print ("residua append --->", residue.peak_pos_points)
+                                    # print ("residues append --->", residue.peak_pos_points)
                             else: 
                                 for i in range(1,self._n_dim+1):
                                     res.peak_pos[0].append(deepcopy(float(item_a_1[i])))
@@ -2366,7 +2366,7 @@ class CCR_SymRec(CCRClass):
                     other_peak.Ix_theor_Ia_ratio_without_NS = one_peak.Ix_theor_Ia_ratio*self._ns[0]/self._ns[1]
                 else:
                     residue = str(other_peak.aa_number)+other_peak.aa_name
-                    print_raport("This residue ({}) don't have reference value of gamma or referens (reference) peak".format(residue))
+                    print_raport("This residue ({}) doesn't have reference value of gamma or reference peak".format(residue))
 
 
     def read_input_file(self,file_directory:str,seq_dict:dict):
@@ -2519,7 +2519,7 @@ def LRegression_expresion(x,y):
     matching_factor_for_y_x = (1-slope)/std_err #if it is <1 is good, >1 means that we have weak corellation x=y 
     r2 = r**2
     lr_exp = '{:.3f}*x + {:.3f}'.format(slope,intercept)
-    RaportBox.write(f"\nlinear regretion: {lr_exp}, r2: {r**2:.3f}\n p: {p}, std_err:{std_err}\n")
+    RaportBox.write(f"\nlinear regression: {lr_exp}, r2: {r**2:.3f}\n p: {p}, std_err:{std_err}\n")
     lr_exp_y_list = []
     for i in x:
         lr_exp_y_list.append(deepcopy(slope*i+intercept))
@@ -2545,7 +2545,7 @@ def WeightedLRegression_expresion(x,y,uncertainty_val):
     RaportBox.write(f"slope: {slope:.3f}, intercept: {intercept:.3f}")
     # print(f"r2: {r2:.3f}, \nregr.coef_:{regr.coef_},\nreg.intercept_:{regr.intercept_}")
     lr_exp = '{:.3f}*x + {:.3f}'.format(slope,intercept)
-    RaportBox.write(f"weighted linear regretion: {lr_exp}, r2: {r2:.3f}")
+    RaportBox.write(f"weighted linear regression: {lr_exp}, r2: {r2:.3f}")
     return lr_exp, r2,slope, intercept
 
 def calc_R2(exp_list,theory_list):
