@@ -104,13 +104,14 @@ file_directory         path to the directory with all required files
 -h, --help              show the help message and exit
 -s, --seq               name of the file with amino acid sequence (default: `seq`)
 -e, --expset            experiments setup file (default: `input.json`)
+-pld, --peaklist_dir    directory with all input peak lists (default: identical as file_directory)
 ```
 
 
 
 ### Structure of the 'input.json' file
 ```
-type_of_CCR                             # name of pre-defined CCR experiment (
+type_of_CCR                             # name of pre-defined CCR experiment or (for experiments not pre-defined) user's name of the experiment (used also for output data naming)
 CCR_pos *:                              # position of residue (relative to the residue of the directly-detected nucleus) which CCR rate provides information on: -2, -1, 0, 1, 2
 dimension **: integer                   # dimensionality of the spectra 
 TC ***: float                           # length of the CCR relaxation delay in seconds 
@@ -138,7 +139,7 @@ Example of 'input.json' file for experiment pre-defined in `CCR_dict.py`:
 Example of 'input.json' file for experiment not pre-defined in `CCR_dict.py`:
 ```json
 {"CCR_x":{
-    "type_of_CCR": "CCR_x", XXXXXXXXXXXXXXXXXXXXXXXX czy to jest obowiązkowy argument???
+    "type_of_CCR": "CCR_x"
     "CCR_pos": -1,
     "dimension": 3,
     "TC": 0.028,
