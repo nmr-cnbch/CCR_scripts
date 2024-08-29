@@ -1,0 +1,9 @@
+{"CCR_5_100NUS":{
+    "type_of_CCR": "CCR_5",
+    "dimension": 2,
+    "TC": 0.0286,
+    "ref_name": "2D_CCR_5_a",
+    "trans_name": "2D_CCR_5_x",
+    "NS": [4,24]
+    }
+}
