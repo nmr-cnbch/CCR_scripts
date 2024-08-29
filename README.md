@@ -120,7 +120,7 @@ NS: list[integer]                       # number of scans in the reference and t
 
 ```
 
-$^*$ if type_of_CCR is given, this value is set automatically    
+\* if type_of_CCR is given, this value is set automatically    
 ** if type_of_CCR is given, this value is set automatically, however, it can be changed here if eg. the experiment was run in a lower-dimensional version    
 *** for CCR_1, CCR_2, CCR_5 and CCR_6, this value is set automatically: 0.0286
   
