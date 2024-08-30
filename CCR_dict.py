@@ -6,59 +6,61 @@ CCR_dict = {
         "ratename":"Ca1Ha1_N2Hn2",
         "TC": 0.0286,
         "angle": "psi",
-        "angle_pos": -1,
+        "CCR_pos": -1,
         "angle_num": 1,
     },
     "CCR_2":{
         "ratename":"N1Hn1_Ca1Ha1",
         "TC": 0.0286,
         "angle":"phi",
-        "angle_pos":0,
+        "CCR_pos":0,
         "angle_num": 1
         },
     "CCR_3":{
         "ratename":"N1Hn1_N2Hn2",
         "angle":"phi, psi",
-        "angle_pos":-1,
+        "CCR_pos":-1,
         "angle_num": 2
         },
     "CCR_4":{
         "ratename":"Ha1Hn2_cCSA1",
         "angle":"phi",
-        "angle_pos":-1,
+        "CCR_pos":-1,
         "angle_num": 1
         },
     "CCR_5":{
         "ratename":"Ca1Ha1_cCSA1",
         "TC": 0.0286,
         "angle":"psi",
-        "angle_pos":-1,
-        "angle_num": 1
+        "CCR_pos":-1,
+        "angle_num": 1,
+        "rate_mult": True
         },
     "CCR_6":{
         "ratename":"cCSA0_Ca1Ha1",
         "TC": 0.0286,
         "angle":"phi",
-        "angle_pos":0,
-        "angle_num": 1
+        "CCR_pos":0,
+        "angle_num": 1,
+        "rate_mult": True
         },
     "CCR_7":{
         "ratename":"N1Hn1_cCSA1",
         "angle":"phi, psi",
-        "angle_pos":0,
+        "CCR_pos":0,
         "angle_num": 2
         },
     "CCR_8":{
         "ratename":"cCSA0_cCSA1",
         "angle":"phi, psi",
-        "angle_pos":0,
+        "CCR_pos":0,
         "angle_num": 1
         },
     "CCR_9":{
         "ratename":"Ca1Ha1_Ca2Ha2",
         "TC": 0.0286,
         "angle":"phi, psi",
-        "angle_pos":-1,
+        "CCR_pos":-1,
         "angle_num": 2
         }
 }

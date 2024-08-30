@@ -41,28 +41,28 @@ parser.add_argument("peak_list", metavar="peak_list_path", type=Path,
                     help="path to peak list in SPARKY format")
 
 parser.add_argument("-np", "--npoints", dest='Number_of_points_for_noise', type=int, default=10, 
-                    help="to change the number of points used to calculate the noise level: N^(spectra dimentionality + 1); normally is N = 10")
+                    help=")the number of randomly chosen points used to calculate the noise level (default: 1000 for 2D spectrum, 10000 for 3D, 100000")
 
 parser.add_argument("-pl", "--peaklevel", dest='peak_level', type=float, default=0.0,
                     help="add this to set up minimal peak height, in scientific notation e.g. 1e+7")
 
 parser.add_argument("-nrm", "--noRemove", dest='noRemoveFlag', action="store_true", default=False,
-                    help="add this if you do NOT want to remove invisible peaks")
+                    help="do NOT remove invisible peaks (use this option always for transfer versions of experiments!")
 
 parser.add_argument("-op", "--onlypoints", dest='OnlyPoints', action="store_true",  default=False,
-                    help="add this if you want to only change ppm value to points value")
+                    help=argparse.SUPPRESS) #"add this if you want to only change ppm value to points value"
 
-parser.add_argument("-o", "--output_name", type=Path, 
-                    help="add this if you want specific output name")
+parser.add_argument("-o", "--output_dir", type=Path, 
+                    help="name of output directory (default: spectrum file name from spectrum_path)")
 
 parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  default=False,
-                    help="add this if you want to calculate only the noise level")
+                    help=argparse.SUPPRESS) #"add this if you want to calculate only the noise level")
 
 parser.add_argument("-sn", "--signal3noise", dest='SignalToNoise', type=float,
                     help="add this if you want to setup minimal signal to noise ratio")
 
-parser.add_argument("-rec", "--reconstrutedspecrum", dest='ReconstructionFlag', action="store_true",  default=False,
-                    help="add this if your spectrum was reconstructed. For reconstructed spectra we calculate 'noise' by measuring the height of random points on H-cross-section with peaks. Otherwise, for traditionally recorded spectra the noise is calculated by measuring the height of random points from across the spectrum")
+parser.add_argument("-NUS", dest='ReconstructionFlag', action="store_true",  default=False,
+                    help=" for non-uniformly sampled data, calculate the spectral noise using the random points at the peak's proton position (if this argument is not used, for conventionally-sampled data, the noise is calculated using random points from across the spectrum")
 
 args = parser.parse_args()
 
@@ -102,30 +102,37 @@ else:
 
 
 
-if args.output_name:
-    peak_list_name = os.path.basename(args.output_name)
-    if "." in str(peak_list_name):
-        point_index = str(peak_list_name).index(".")
-        peak_list_name = peak_list_name[:point_index]
+peak_list_name = os.path.basename(args.filename)
+if peak_list_name[-5:]==".ucsf":
+    peak_list_name=peak_list_name[:-5]
 
-    if os.path.dirname(args.output_name) == "":
+if args.output_dir:
+    #peak_list_name = os.path.basename(args.output_name)
+    #if "." in str(peak_list_name):
+        #point_index = str(peak_list_name).index(".")
+        #peak_list_name = peak_list_name[:point_index]
+
+    if os.path.dirname(args.output_dir) == "":
         peak_list_dir_new = f"./{peak_list_name}_list"
+        
     else:
-        peak_list_dir_new = f"{os.path.dirname(args.output_name)}/{peak_list_name}_list"
+        peak_list_dir_new = f"{os.path.dirname(args.output_name)}/{peak_list_name}"
     if not os.path.exists(peak_list_dir_new):
         os.mkdir(peak_list_dir_new)
-    print ("Output file path: {}/{}.list".format(peak_list_dir_new,peak_list_name))
+    print (f"Output directory path: {peak_list_dir_new}")
 else: 
-    peak_list_name = os.path.basename(args.peak_list)
-    if "." in str(peak_list_name):
-        point_index = str(peak_list_name).index(".")
-        peak_list_name = peak_list_name[:point_index]
+    #peak_list_name = os.path.basename(args.peak_list)
+    #if "." in str(peak_list_name):
+       # point_index = str(peak_list_name).index(".")
+        #peak_list_name = peak_list_name[:point_index]
 
-    peak_list_dir_new = os.path.dirname(args.peak_list)+peak_list_name+"_list"
+    #tutaj
+    peak_list_dir_new = os.path.dirname(args.filename)+peak_list_name+"_list"
+    #peak_list_dir_new = name_temp+"_list"
+
     if not os.path.exists(peak_list_dir_new):
         os.mkdir(peak_list_dir_new)
-    print ("Output file path: {}/{}".format(peak_list_dir_new,peak_list_name))
-
+    print (f"Output directory path: {peak_list_dir_new}")
 
 
 
@@ -938,7 +945,7 @@ class CSpectrum:
             print ("\tAssignment", end="", file=listfile) 
             for i in range(self.__spectra_dim):
                 print ("\tw{}".format(i+1), end="", file=listfile)
-            print ("\tData Height\t\t\t\tCentering peak list prepare from{}\n".format(peak_list_name), file=listfile)
+            print ("\tData Height\t\t\t\tCentered peak list prepare from {}\n".format(peak_list_name), file=listfile)
             for indexpeak, one_peak in enumerate(self.__peaks):
                 if one_peak.is_visible == True or args.noRemoveFlag:
                     print ("{:{sentence_len}}".format(one_peak.descript, sentence_len=max_lenth_discrip), end="\t", file=listfile)
@@ -982,7 +989,7 @@ class CSpectrum:
                 print ("\tData Height\t\t\t\t origin peaklist in points\n", file=listfile)
                 # print ("{} peak list".format(type_list), new_peak_list)
             else:
-                print ("\tData Height\t\t\t\tCentering peak list prepare from{}".format(peak_list_name), file=listfile)
+                print ("\tData Height\t\t\t\tCentered peak list prepare from {}".format(peak_list_name), file=listfile)
                 print ("Average noise level = {:.2e}\n".format(self.__noise_level), file=listfile)
                 print ("{} peak list".format(type_list), new_peak_list)
             for one_peak in self.__peaks:
@@ -1159,8 +1166,8 @@ if __name__ == "__main__":
         spectrum = CSpectrum(args.filename,args.peak_list)
     # Spectra_dim, Nucl_name, Points_number, Tile_size, Spectrometer_fq, SW_size, SW_size_ppm, __data_center, N_Tiles = read_ucsf_info(filename)
     # Peaks = read_peaklist(args.peak_list, Spectra_dim)                       # reading position of peak from peak list in Sparky format
-    with open('{}/info.txt'.format(peak_list_dir_new), 'w') as txtfile:
-        txtfile.write("File name: {}\n\n".format(args.filename))
+    with open('{}/info.txt'.format(peak_list_dir_new), 'a') as txtfile:
+        txtfile.write("********************************\nFile name: {}\n\n".format(args.filename))
     print("=== Reading input files finished ===")
     spectrum.calc_peaks_positions_in_points()
     spectrum.Print_Peak_List_points("origin")

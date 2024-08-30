@@ -74,17 +74,19 @@ parser.add_argument("file_directory", metavar="file_directory", type=Path,
 parser.add_argument("-s", "--seq", dest='seq_file_name', type=Path, default='seq', 
                     help="if name of the file with amino acid sequence is not 'seq', add this with the name of file")
 
+parser.add_argument("-pld", "--peaklist_dir", type=Path, help="directory with all input peak lists (default: identical as file_directory)")
+
 parser.add_argument("-r", "--refgamma", type=Path, 
-                    help="if you have a file with reference values of CCR rates, add this with the name of the file (file must be .csv, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)")
+                    help=argparse.SUPPRESS) #"if you have a file with reference values of CCR rates, add this with the name of the file (file must be .csv, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)")
 
 parser.add_argument("-e", "--expset", type=Path, 
                     help="if you want to use experiments setup file with different filename than 'input.json' (structure of the file must be the same as the original file)")
 
 parser.add_argument("-pub", "--publication", dest='PublicationFlag', action="store_true",  default=False,
-                    help="if you want the picture outputs to be in the publication size")
+                    help=argparse.SUPPRESS) #"if you want the picture outputs to be in the publication size")
 
 parser.add_argument("-pres", "--presentation", dest='PresentationFlag', action="store_true",  default=False,
-                    help="if you want the picture outputs to be in the presentation size")
+                    help=argparse.SUPPRESS)#"if you want the picture outputs to be in the presentation size")
 
 args = parser.parse_args()
 
@@ -110,6 +112,13 @@ if args.expset:
     exp_file_name = "{}/{}".format(file_directory,args.expset)
     print("Different experiment set file: {}".format(exp_file_name)) 
 else: exp_file_name = "{}/input.json".format(file_directory)
+
+if args.peaklist_dir:
+    peaklist_directory = args.peaklist_dir
+else:
+    peaklist_directory = file_directory
+print(f"The peak lists are taking from the directory: {peaklist_directory}")
+
 
 RaportDir = f"{file_directory}/all_outputs/"
 RaportBoxFile = f"{RaportDir}RaportBox.txt"
@@ -139,8 +148,9 @@ class CSeq:
 
 class CCRSet:
     
-    def __init__(self,file_directory:Path,exp_file:Path,seq_dict:dict,ref_flag=False):
+    def __init__(self,file_directory:Path,peaklist_directory:Path, exp_file:Path,seq_dict:dict,ref_flag=False):
         self.__working_dir = file_directory
+        self.__peaklist_dir = peaklist_directory
         self.ccr_set = []        # type: list[CCRClass]
         self.__protein_seq = seq_dict
         self.to_compere_dict = {}
@@ -151,7 +161,7 @@ class CCRSet:
             exp.read_input_file(self.__working_dir,self.__protein_seq)
 
     
-    def ReadExpSet(self,exp_file):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum
+    def ReadExpSet(self,exp_file):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum #DO USUNIECIA
         with open(exp_file, "r") as exp_set:
             lines = exp_set.readlines()
             expset_lines=[]
@@ -1129,8 +1139,7 @@ class CCRSet:
 
 class CCRClass:
     __slots__ = ['_CCR_name', '_ref_name','_trans_name','_noise','_ns', '_n_dim','_CCR_pos',
-                 '_tc_vol','_is_peak_uncertainty','_peaks','_is_peaklist','_other','_is_reference'
-                 '_nucl_name','_nucl_pos','_Hroi','_n_angle','_angle','_angle_pos']
+                 '_tc_vol','_rate_mult','_is_peak_uncertainty','_peaks','_is_peaklist','_other','_is_reference']
     
     def __init__(self,exp_dict):
         self._CCR_name = exp_dict["type_of_CCR"]       
@@ -1141,21 +1150,16 @@ class CCRClass:
             
         self._n_dim = int(exp_dict["dimension"])             
         self._CCR_pos = 100
-        self._tc_vol = float(exp_dict["TC"])      
+        self._tc_vol = float(exp_dict["TC"])   
+        self._rate_mult = False
 
-        self._is_peak_uncertainty = False
+        #self._is_peak_uncertainty = False
         self._peaks = []               # type: list[CResidue] 
         self._is_peaklist = False
         self._other = ""
         self._is_reference = False
         self.r2 = 'nan'
 
-        self._nucl_name = []            # nuclei of all peaks: H, N, C, CA, CB, HA, HB
-        self._nucl_pos = []             # nuclei position of all peaks: -2, -1, 0, 1, 2 
-        self._Hroi = []       # downfield and upfield of direct dimension
-        self._n_angle = 0          # number of measured angle  
-        self._angle = []           # angle: phi, psi                                     
-        self._angle_pos = []       # angle position of all peaks: -2, -1, 0, 1, 2    
 
         if "ref_name"in exp_dict:
             if isinstance(exp_dict["ref_name"],list):
@@ -1186,39 +1190,14 @@ class CCRClass:
         else:
             self._CCR_pos = deepcopy(int(CCR_dict[self._CCR_name]["angle_pos"]))
 
+        if "rate_mult" in exp_dict:
+            self._rate_mult = exp_dict["rate_mult"]
 
         if "other" in exp_dict:
             self._other = exp_dict["other"]
             
         if "noise" in exp_dict:
             self._noise = exp_dict["noise"]
-
-        if "nucl" in exp_dict:
-            self._nucl_name.append(deepcopy(exp_dict["nucl"]))
-                
-        if "pos_nucl" in exp_dict:
-            self._nucl_pos.append(deepcopy(exp_dict["pos_nucl"]))
-
-        if "angle_num" in exp_dict:
-            self._n_angle = int(exp_dict["angle_num"])
-        else:
-            if "angle_num" in CCR_dict[self._CCR_name]:
-                self._n_angle = deepcopy(CCR_dict[self._CCR_name]["angle_num"])
-            else:
-                pass
-
-        if "angle_pos" in exp_dict:
-            self._angle_pos.append(deepcopy(exp_dict["angle_pos"]))
-
-        if "angle_name" in exp_dict:
-            self._angle.append(deepcopy(exp_dict["angle_name"])) 
-        else:
-            try:
-                self._angle.append(deepcopy(CCR_dict[self._CCR_name]["angle"]))
-            except: self._angle.append("nan")
-    
-        if "H_roi" in exp_dict:
-            self._Hroi=float(exp_dict["H_roi"])
 
         print_raport(f"""
 CCR name: {self._CCR_name}
@@ -1250,7 +1229,7 @@ other: {self._other}
     def s_dim(self)->int:
         return self._n_dim
     
-    def give_info_about(self,peak_number,**kwargs):
+    def give_info_about(self,peak_number,**kwargs):  #do usuniecia
         info_dict = {}
         one_peak = self._peaks(peak_number)
         option_dict = {
@@ -1935,7 +1914,7 @@ class CCR_normal(CCRClass):
         peak_list_names = ["None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
-                peaklistfile = f"{file_directory}/peak_lists/{list_verson}{l}"
+                peaklistfile = f"{file_directory}/{list_verson}{l}"
                 try:
                     f=open(peaklistfile)
                     NameFlag[indexlv] = True
@@ -2038,7 +2017,7 @@ class CCR_normal(CCRClass):
                 self.calc_uncertainty_value(indexp)
                 try:
                     # print (peak.peak_intens[1], self.ns[0], peak.peak_intens[0],self.ns[1], "---->", (peak.peak_intens[1]*self.ns[0])/(peak.peak_intens[0]*self.ns[1]))
-                    if self._CCR_name == "CCR_5" or self._CCR_name == "CCR_6":
+                    if self._rate_mult:
                         ccr_rate_vol = -atanh((peak.peak_intens[1]*self._ns[0])/(peak.peak_intens[0]*self._ns[1]))/self._tc_vol
                     else:
                         ccr_rate_vol = atanh((peak.peak_intens[1]*self._ns[0])/(peak.peak_intens[0]*self._ns[1]))/self._tc_vol
