@@ -27,17 +27,16 @@ python3 read_ucsf.py [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nr
 ### Obligatory arguments:        
 ```
   spectrum_path         path to spectrum file ( [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/ format, *.ucsf, https://nmrfam.wisc.edu/nmrfam-sparky-distribution/)
-  peak_list_path        path to peak list file (Sparky format)
+  peak_list_path        path to peak list file (Sparky format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum
 ```
 
 ### Optional arguments:      
 ```
   -h, --help            show the help message and exit
   -np, --npoints        the number of randomly chosen points used to calculate the noise level (default: 1000 for 2D spectrum, 10000 for 3D, 100000 for 4D)
-  -pl, --peaklevel      the minimal peak height, in scientific notation e.g. 1e+7 (default: XXXXXXXXXXXXXXXXXXXXXXX)
   -nrm, --noRemove      do NOT remove invisible peaks (use this option always for transfer versions of experiments!)
   -o, --output_dir      name of output directory (default: spectrum file name from spectrum_path)
-  -sn, --signal2noise   the minimal signal-to-noise ratio (default: XXXXXXXXXXXXXXXXXXXXXXXXXXXX)
+  -sn, --signal2noise   the minimal signal-to-noise ratio, below the peak can be removed (default: depends on spectrum dimensionality and acquisition type)
   -NUS, --NUS           for non-uniformly sampled data, calculate the spectral noise using the random points at the peak's proton position (if this argument is not used, for conventionally-sampled data, the noise is calculated using random points from across the spectrum)
 ```
 ### Input files:
