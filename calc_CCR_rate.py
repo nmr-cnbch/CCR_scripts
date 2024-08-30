@@ -71,7 +71,7 @@ Additional files:
 parser.add_argument("file_directory", metavar="file_directory", type=Path, 
                     help="path to directory with all required files")
 
-parser.add_argument("-s", "--seq", dest='seq_file_name', type=Path, default='seq', 
+parser.add_argument("-s", "--seq", dest='seq_file_name', type=Path, 
                     help="if name of the file with amino acid sequence is not 'seq', add this with the name of file")
 
 parser.add_argument("-pld", "--peaklist_dir", type=Path, help="directory with all input peak lists (default: identical as file_directory)")
@@ -93,9 +93,12 @@ args = parser.parse_args()
 file_directory = os.path.realpath(args.file_directory)
 print ("\nFile directory",file_directory)
 
-if args.seq_file_name != 'seq':
+if args.seq_file_name:
     seq_file_name = args.seq_file_name 
-else: seq_file_name = "{}/seq".format(file_directory)
+else: 
+    seq_file_name = file_directory+"/seq"
+    if not os.path.exists(seq_file_name):
+        print (f"there is no such file: {seq_file_name}")
 print("File with amino acid sequence: {}".format(seq_file_name)) 
 
 
