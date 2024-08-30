@@ -111,12 +111,14 @@ if args.output_dir:
     #if "." in str(peak_list_name):
         #point_index = str(peak_list_name).index(".")
         #peak_list_name = peak_list_name[:point_index]
-
+    
     if os.path.dirname(args.output_dir) == "":
-        peak_list_dir_new = f"./{peak_list_name}_list"
+        peak_list_dir_new = f"./{args.output_dir}"
         
     else:
-        peak_list_dir_new = f"{os.path.dirname(args.output_dir)}/{peak_list_name}"
+        #peak_list_dir_new = f"{os.path.dirname(args.output_dir)}/{peak_list_name}"
+        peak_list_dir_new = args.output_dir
+
     if not os.path.exists(peak_list_dir_new):
         os.mkdir(peak_list_dir_new)
     print (f"Output directory path: {peak_list_dir_new}")
