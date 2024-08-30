@@ -44,7 +44,7 @@ parser.add_argument("-np", "--npoints", dest='Number_of_points_for_noise', type=
                     help=")the number of randomly chosen points used to calculate the noise level (default: 1000 for 2D spectrum, 10000 for 3D, 100000")
 
 parser.add_argument("-pl", "--peaklevel", dest='peak_level', type=float, default=0.0,
-                    help="add this to set up minimal peak height, in scientific notation e.g. 1e+7")
+                    help=argparse.SUPPRESS)#"add this to set up minimal peak height, in scientific notation e.g. 1e+7")
 
 parser.add_argument("-nrm", "--noRemove", dest='noRemoveFlag', action="store_true", default=False,
                     help="do NOT remove invisible peaks (use this option always for transfer versions of experiments!")
@@ -58,7 +58,7 @@ parser.add_argument("-o", "--output_dir", type=Path,
 parser.add_argument("-n", "--noise", dest='OnlyNoise', action="store_true",  default=False,
                     help=argparse.SUPPRESS) #"add this if you want to calculate only the noise level")
 
-parser.add_argument("-sn", "--signal3noise", dest='SignalToNoise', type=float,
+parser.add_argument("-sn", "--signal2noise", dest='SignalToNoise', type=float,
                     help="add this if you want to setup minimal signal to noise ratio")
 
 parser.add_argument("-NUS", dest='ReconstructionFlag', action="store_true",  default=False,
@@ -116,7 +116,7 @@ if args.output_dir:
         peak_list_dir_new = f"./{peak_list_name}_list"
         
     else:
-        peak_list_dir_new = f"{os.path.dirname(args.output_name)}/{peak_list_name}"
+        peak_list_dir_new = f"{os.path.dirname(args.output_dir)}/{peak_list_name}"
     if not os.path.exists(peak_list_dir_new):
         os.mkdir(peak_list_dir_new)
     print (f"Output directory path: {peak_list_dir_new}")
