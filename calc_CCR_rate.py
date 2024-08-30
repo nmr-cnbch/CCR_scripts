@@ -2686,6 +2686,7 @@ if __name__ == "__main__":
     else: gamma_ref_dict = {}
 
     ExperimentsSet = CCRSet(file_directory=file_directory, 
+                            peaklist_directory=peaklist_directory,
                             exp_file=exp_file_name,
                             seq_dict=SequenceDict,
                             ref_flag=refgammaFlag)
