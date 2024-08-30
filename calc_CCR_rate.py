@@ -90,7 +90,7 @@ parser.add_argument("-pres", "--presentation", dest='PresentationFlag', action="
 
 args = parser.parse_args()
 
-file_directory = args.file_directory
+file_directory = os.path.dirname(args.file_directory)
 print ("\nFile directory",file_directory)
 
 if args.seq_file_name != 'seq':
