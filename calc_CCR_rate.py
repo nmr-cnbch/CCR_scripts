@@ -161,7 +161,7 @@ class CCRSet:
         
         self.ReadExpSet_DICT_JSON(exp_file)
         for exp in self.ccr_set:
-            exp.read_input_file(self.__working_dir,self.__protein_seq)
+            exp.read_peak_files(self.__peaklist_dir,self.__protein_seq)
 
     
     def ReadExpSet(self,exp_file):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum #DO USUNIECIA
@@ -1142,7 +1142,7 @@ class CCRSet:
 
 class CCRClass:
     __slots__ = ['_CCR_name', '_ref_name','_trans_name','_noise','_ns', '_n_dim','_CCR_pos',
-                 '_tc_vol','_rate_mult','_is_peak_uncertainty','_peaks','_is_peaklist','_other','_is_reference']
+                 '_tc_vol','_rate_mult','_is_peak_uncertainty','_peaks','_is_peaklist','_other','_is_reference','r2']
     
     def __init__(self,exp_dict):
         self._CCR_name = exp_dict["type_of_CCR"]       
@@ -1191,7 +1191,7 @@ class CCRClass:
         if "CCR_pos" in exp_dict:
             self._CCR_pos = deepcopy(int(exp_dict["CCR_pos"]))
         else:
-            self._CCR_pos = deepcopy(int(CCR_dict[self._CCR_name]["angle_pos"]))
+            self._CCR_pos = deepcopy(int(CCR_dict[self._CCR_name]["CCR_pos"]))
 
         if "rate_mult" in exp_dict:
             self._rate_mult = exp_dict["rate_mult"]
@@ -1342,8 +1342,8 @@ other: {self._other}
             # print(f"aminoacids_number: {aminoacids_number}")
         return aminoacids_number
 
-    def Read_peak_uncertainty(self, file_directory:str, list_verson:str, version:int):
-        peaklistfile = f"{file_directory}/peak_lists/{list_verson}_peaks_noise.list"
+    def Read_peak_uncertainty(self, peaklist_directory:str, list_verson:str, version:int):
+        peaklistfile = f"{peaklist_directory}/peak_lists/{list_verson}_peaks_noise.list"
 
         if os.path.exists(peaklistfile):
             RaportBox.write(f"\n\nLIST:{peaklistfile}\n")
@@ -1368,11 +1368,11 @@ other: {self._other}
             print_raport (f"There is no file: {peaklistfile}!, so average noise value will be used\n")
     
     @abstractmethod
-    def Read_peaklist(self, file_directory, seq_dict:dict, points_mode=False):
+    def Read_peaklist(self, peaklist_directory, seq_dict:dict, points_mode=False):
         pass
 
     @abstractmethod
-    def read_input_file(self,file_directory:str,seq_dict:dict):
+    def read_peak_files(self,peaklist_directory:str,seq_dict:dict):
         pass
         
     @abstractmethod
@@ -1907,7 +1907,7 @@ class CCR_normal(CCRClass):
     def __init__(self,exp_dict):
         super().__init__(exp_dict)
 
-    def Read_peaklist(self, file_directory, points_mode=False):
+    def Read_peaklist(self, peaklist_directory, points_mode=False):
         NameFlag = [False, False]
         if points_mode == False:
             list_of_names_ends = [".list","_new_ppm.list"]
@@ -1917,7 +1917,7 @@ class CCR_normal(CCRClass):
         peak_list_names = ["None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
-                peaklistfile = f"{file_directory}/{list_verson}{l}"
+                peaklistfile = f"{peaklist_directory}/{list_verson}{l}"
                 try:
                     f=open(peaklistfile)
                     NameFlag[indexlv] = True
@@ -1978,16 +1978,16 @@ class CCR_normal(CCRClass):
             print_raport ("Missing file for {} and {}! {}\n".format(self._ref_name[0], self._trans_name[0], peak_list_names))
             self._is_peaklist = False
     
-    def read_input_file(self,file_directory:str,seq_dict:dict):
+    def read_peak_files(self,peaklist_directory:str,seq_dict:dict):
         self.Prepare_peaklist(seq_dict)
         for res in self._peaks: 
             res.peak_uncertainty = [0.0, 0.0]
             res.peak_pos = [[],[]]
             res.peak_pos_points = [[],[]]
-        self.Read_peaklist(file_directory, points_mode=True)
-        self.Read_peaklist(file_directory, points_mode=False)
-        self.Read_peak_uncertainty(file_directory, self._ref_name[0], version=0)
-        self.Read_peak_uncertainty(file_directory, self._trans_name[0], version=1)
+        self.Read_peaklist(peaklist_directory, points_mode=True)
+        self.Read_peaklist(peaklist_directory, points_mode=False)
+        self.Read_peak_uncertainty(peaklist_directory, self._ref_name[0], version=0)
+        self.Read_peak_uncertainty(peaklist_directory, self._trans_name[0], version=1)
         
     def calc_uncertainty_value(self,peak_number):
         Ia = self._peaks[peak_number].peak_intens[0]
@@ -2205,7 +2205,7 @@ class CCR_SymRec(CCRClass):
     def __init__(self,exp_dict):
         super().__init__(exp_dict)   
 
-    def Read_peaklist(self, file_directory, points_mode=False):
+    def Read_peaklist(self, peaklist_directory, points_mode=False):
         NameFlag = [False, False, False, False]
         if points_mode == False:
             list_of_names_ends = [".list","_new_ppm.list"]
@@ -2216,7 +2216,7 @@ class CCR_SymRec(CCRClass):
         peak_list_names = ["None","None","None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
-                peaklistfile = f"{file_directory}/peak_lists/{list_verson}{l}"
+                peaklistfile = f"{peaklist_directory}/peak_lists/{list_verson}{l}"
                 try:
                     f=open(peaklistfile)
                     NameFlag[indexlv] = True
@@ -2351,18 +2351,18 @@ class CCR_SymRec(CCRClass):
                     print_raport("This residue ({}) doesn't have reference value of gamma or reference peak".format(residue))
 
 
-    def read_input_file(self,file_directory:str,seq_dict:dict):
+    def read_peak_files(self,peaklist_directory:str,seq_dict:dict):
         self.Prepare_peaklist(seq_dict)
         for one_peak in self._peaks:
             one_peak.peak_uncertainty = [0.0, 0.0, 0.0, 0.0]
             one_peak.peak_pos = [[],[],[],[]]
             one_peak.peak_pos_points = [[],[],[],[]]
-        self.Read_peaklist(file_directory, points_mode=True)
-        self.Read_peaklist(file_directory, points_mode=False)
-        self.Read_peak_uncertainty(file_directory, self._ref_name[0], version=0)
-        self.Read_peak_uncertainty(file_directory, self._ref_name[1], version=1)
-        self.Read_peak_uncertainty(file_directory, self._trans_name[0], version=2)
-        self.Read_peak_uncertainty(file_directory, self._trans_name[1], version=3)
+        self.Read_peaklist(peaklist_directory, points_mode=True)
+        self.Read_peaklist(peaklist_directory, points_mode=False)
+        self.Read_peak_uncertainty(peaklist_directory, self._ref_name[0], version=0)
+        self.Read_peak_uncertainty(peaklist_directory, self._ref_name[1], version=1)
+        self.Read_peak_uncertainty(peaklist_directory, self._trans_name[0], version=2)
+        self.Read_peak_uncertainty(peaklist_directory, self._trans_name[1], version=3)
 
 
 

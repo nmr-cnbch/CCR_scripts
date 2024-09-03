@@ -3,8 +3,8 @@
     "CCR_1_200NUS":{
         "symetrical_reconstrution": false,
         "type_of_CCR": "CCR_1",
-        "dir_auto": "CS_0_01_200NUS",
-        "dir_cross": "CS_0_01_200NUS",
+        "ref_name": "spectrum_1_a",
+        "trans_name": "spectrum_1_x",
         "dimension": 4,
         "NS": [4,24],
         "TC": 0.0286
