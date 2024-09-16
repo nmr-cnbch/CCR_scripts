@@ -20,8 +20,8 @@
         
     "CCR_3_200NUS":{
         "type_of_CCR": "CCR_3" ,
-        "ref_name": "spectrum_2_a",
-        "trans_name": "spectrum_2_x",
+        "ref_name": "spectrum_3_a",
+        "trans_name": "spectrum_3_x",
         "dimension": 4 ,
         "NS": [4,32],
         "TC": 0.028
@@ -29,8 +29,8 @@
       
     "CCR_4_200NUS":{
         "type_of_CCR": "CCR_4" ,
-        "ref_name": "spectrum_2_a",
-        "trans_name": "spectrum_2_x",
+        "ref_name": "spectrum_4_a",
+        "trans_name": "spectrum_4_x",
         "dimension": 4 ,
         "NS": [4,32],
         "TC": 0.028
