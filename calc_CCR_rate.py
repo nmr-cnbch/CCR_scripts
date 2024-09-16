@@ -1196,6 +1196,9 @@ class CCRClass:
 
         if "rate_mult" in exp_dict:
             self._rate_mult = exp_dict["rate_mult"]
+        else:
+            if "rate_mult" in CCR_dict[self._CCR_name]:
+                self._rate_mult = CCR_dict[self._CCR_name]["rate_mult"]
 
         if "other" in exp_dict:
             self._other = exp_dict["other"]

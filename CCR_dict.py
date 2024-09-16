@@ -33,7 +33,7 @@ CCR_dict = {
         "TC": 0.0286,
         "angle":"psi",
         "CCR_pos":-1,
-        "angle_num": 1,
+        "angle_num": -1,
         "rate_mult": True
         },
     "CCR_6":{
@@ -41,7 +41,7 @@ CCR_dict = {
         "TC": 0.0286,
         "angle":"phi",
         "CCR_pos":0,
-        "angle_num": 1,
+        "angle_num": -1,
         "rate_mult": True
         },
     "CCR_7":{
