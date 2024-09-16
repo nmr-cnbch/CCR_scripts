@@ -644,6 +644,7 @@ class CCRSet:
         # first row - plot each NUS number in particular plot
         for indext, exp in enumerate(exp_tab):
             exp_ptl_data = set_of_data[indext]
+            print (exp_ptl_data)
             Add_text = exp.Additional_text()
             axs[0,indext].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray') 
             axs[0,indext].scatter(exp_ptl_data['good'][0],exp_ptl_data['good'][1],s=10,) #
@@ -651,14 +652,14 @@ class CCRSet:
                         yerr=exp_ptl_data['good'][2], 
                         fmt='none', color='#252525ff') #
             #fatal errors points:
-            if len(exp_ptl_data['fatal'][3][0])>0 and len(exp_ptl_data['fatal'][3][1])>0 and len(exp_ptl_data['fatal'][3][2])>0:
-                axs[0,indext].scatter(exp_ptl_data['fatal'][3][0],exp_ptl_data['fatal'][3][1],s=3, color='red') #
-                axs[0,indext].errorbar(exp_ptl_data['fatal'][3][0], exp_ptl_data['fatal'][3][1], 
-                        yerr=exp_ptl_data['fatal'][3][2], 
+            if len(exp_ptl_data['fatal'][0])>0 and len(exp_ptl_data['fatal'][1])>0 and len(exp_ptl_data['fatal'][2])>0:
+                axs[0,indext].scatter(exp_ptl_data['fatal'][-1][0],exp_ptl_data['fatal'][-1][1],s=3, color='red') #
+                axs[0,indext].errorbar(exp_ptl_data['fatal'][-1][0], exp_ptl_data['fatal'][-1][1], 
+                        yerr=exp_ptl_data['fatal'][-1][2], 
                         fmt='none', color='red') #
             if len(exp_ptl_data['good'][0])>0:
                 weighted_reg_dict = WeightedLRegression_expresion_by_hand(exp_ptl_data['good'][0], exp_ptl_data['good'][1], exp_ptl_data['good'][2])
-                label_text = "{}:\t{} peaks,\t{},  delta_a: {:.3f}, delta_b: {:.3f}\tr2 = {:.2f}\tfactor \'a\' = {:.1f}, factor \'b\' = {:.1f}".format(Add_text[1:],
+                label_text = "{}:\t{}\ndelta_a: {:.3f}, delta_b: {:.3f}\tr2 = {:.2f}\nfactor \'a\' = {:.1f}, factor \'b\' = {:.1f}".format(Add_text[1:],
                                                                                                                                                                 weighted_reg_dict["equation"], 
                                                                                                                                                                 weighted_reg_dict["slope_uncertainty"], 
                                                                                                                                                                 weighted_reg_dict["intercept_uncertainty"],
@@ -1424,7 +1425,7 @@ other: {self._other}
         for one_peak in self._peaks:
             for indexr, r_seq_num in enumerate(ref_seq_num):
                 # print ("aa_number: {}, seq_number: {}".format(one_peak.aa_number,r_seq_num))
-                if int(one_peak.aa_number) == int(r_seq_num):
+                if int(one_peak.aa_number) == int(r_seq_num) and ref_CCR[indexr] != 'nan':
                     one_peak.is_gamma_calc = True
                     one_peak.gamma_ref = float(ref_CCR[indexr])
                     self._is_reference = True
@@ -1450,6 +1451,92 @@ other: {self._other}
         return add_text
 
     def plot_gamma_gamma(self, transparent_plot=False, add="",add2="",style='none'):
+        if add2 == "":
+            add2 = self._other
+        min_max_value = [+100.0,-100.0]         #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
+        gamma_calculated = []
+        gamma_experimental = []
+        gamma_calc_error = []            # ERROR GAMMA INFO, 9.11.2023
+        gamma_differences = []
+        for one_peak in self._peaks:
+            if one_peak.is_ccr_rate and one_peak.is_gamma_calc and one_peak.aa_name!="G":
+                # print(one_peak.gamma_ref,one_peak.ccr_rate)
+                gamma_calculated.append(deepcopy(one_peak.gamma_ref))
+                gamma_experimental.append(deepcopy(one_peak.ccr_rate))
+                gamma_calc_error.append(deepcopy(one_peak.ccrrate_error_value))            # ERROR GAMMA INFO, 9.11.2023
+                gamma_differences.append(deepcopy(one_peak.ccr_rate-one_peak.gamma_ref))
+                min_max_value = check_if_min_max(one_peak.gamma_ref,one_peak.ccr_rate,min_max_value)
+
+        plt.rcParams['font.size'] = '14'
+
+        wilcoxon_rank = stats.wilcoxon(gamma_calculated,gamma_experimental)[1] # results: statistic, pvalue, zstatistic  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.wilcoxon.html
+        tStudent_2 = stats.ttest_ind(gamma_calculated,gamma_experimental)[0]    # results: statistic, pvalue, df  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html
+        tStudent_3 = stats.ttest_rel(gamma_calculated,gamma_experimental)[0] # results: statistic, pvalue, 
+        avg_distance = np.mean(gamma_differences)
+        std_distance = np.std(gamma_differences)
+        t_critical_val = stats.t.ppf(q=1-.05,df=len(gamma_differences))
+        tStudent_1 = avg_distance/(std_distance/math.sqrt(len(gamma_differences))) #type: ignore
+
+        label = f'structure-predicted vs experimental,\nwilcoxon rank = {wilcoxon_rank:.4f}\ntStudent = {tStudent_2:.4f}\ntStudent for y-x = {tStudent_1:.4f}\nT critical val = {t_critical_val:.4f}\ntStudent_3 = {tStudent_3:.4f}'
+        
+        # Plotting both the curves simultaneously
+        plt.axline([0,0],slope=1, linestyle=(0, (5, 5)), linewidth=1.5, color='darkgray', label='x=y')
+        plt.scatter(gamma_calculated, gamma_experimental, s=5, color='#252525ff', 
+                    label=label)
+        plt.errorbar(gamma_calculated, gamma_experimental, 
+                        yerr=gamma_calc_error, 
+                        fmt='none', color='#252525ff') #
+       
+        # print_raport(f"\n {self._CCR_name}")
+        RaportBox.write(label)
+        if style == "publication":
+            plt.title(f'{CCRname2PrettyRateNamePLT(self.CCRname())}', fontsize=10)
+        elif style == "presentation":
+            plt.title(f'{CCRname2PrettyRateNamePLT(self.CCRname())}', fontsize=10)
+        else:
+            plt.title(self._CCR_name+add)
+            print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
+            linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
+            weighted_reg_dict = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
+            self.r2 = weighted_reg_dict["r2"]
+            plt.axline([0,linear_intercept],slope=linear_slope, linestyle=(0, (5, 5)), 
+                       linewidth=1.5, color='red', 
+                       label=f'l: {linear_expretion}, r2 = {linear_r2:.3f}, \nmatching factor for y=x: {matching_factor_for_y_x_LR:.1f}')
+            plt.axline([0,weighted_reg_dict["intercept"]],slope=weighted_reg_dict["slope"], 
+                       linestyle=(0, (5, 5)), linewidth=1.5, color='purple', 
+                       label=f'lw2: {weighted_reg_dict["equation"]}, \nmatching factor for y=x: {weighted_reg_dict["factor_a"]:.1f}')
+            plt.legend(fontsize="small",bbox_to_anchor=(1.05, 1),
+                            loc='upper left', borderaxespad=0.)
+
+        # Naming the x-axis, y-axis and the whole graph 
+        plt.xlabel('structure-predicted \u0393, $s^{-1}$')
+        plt.ylabel('experimental \u0393, $s^{-1}$')
+        plt.xlim(min_max_value[0]-5.0,min_max_value[1]+5.0)
+        plt.ylim(min_max_value[0]-5.0,min_max_value[1]+5.0)
+        # plt.ticklabel_format(style='plain')
+        start, end = plt.gca().get_ylim()
+        start = (start//5)*5
+        end = ((end//5)+1)*5
+        if abs(start)+abs(end)<= 30:
+            plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 5))
+            plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 5))
+        else:
+            plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 10))
+            plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 10))
+
+        plt.gca().set_aspect('equal', adjustable='box')
+        
+        # To load the display window
+        # plt.savefig("{}/wykresy2/{}_exp_vs_calc.png".format(Dir, tfn[0].name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
+        plt.savefig("{}/{}_exp_vs_calc{}.png".format(file_directory, self._CCR_name,add2), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
+        # plt.show()
+        plt.clf()
+        plt.close()
+    
+
+
+
+    def plot_gamma_gamma_with_fatal(self, transparent_plot=False, add="",add2="",style='none'):
         if add2 == "":
             add2 = self._other
         min_max_value = [+100.0,-100.0]         #minimal and maximal value of CCR rate or reference gamma - it is necessary to make plot  
@@ -2168,7 +2255,7 @@ class CCR_normal(CCRClass):
                 if one_peak.is_peak == False:
                     one_row["Comments"] += ' | No visible peak'
                 if one_peak.fatal_error:
-                    one_row["Comments"] += ' | Fatal Error'
+                    one_row["Comments"] += ' | Fatal Error - experimental data faw away from reference'
                     
 
                 if one_peak.is_gamma_calc and one_peak.is_ccr_rate:
@@ -2390,7 +2477,7 @@ class CResidue:
 
         self.is_gamma_calc = False      # information about the presence of a reference gamma
         self.gamma_ref = -99999.0       # value of gamma (CCR rate) which will use as reference data for experimental data, value additional file with calculated previosly gammas
-        self.fatal_error = False
+        self.fatal_error = False        # experimental data faw away from reference (more than 20% range of rates)
         self.is_theor_values = False
         self.Ix_theor = 'nan'
         self.Ix_theor_Ia_ratio = 'nan'

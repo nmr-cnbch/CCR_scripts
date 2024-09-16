@@ -38,9 +38,10 @@
             "request": "launch",
             "program": "calc_CCR_rate.py",
             "args": [
-                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates",
-                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/rcsb_pdb_1D3Z.fasta",
-                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_rates/CCRrate_6v5d_strucure_predicted_tau_gammaNNH.csv"
+                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates",
+                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/rcsb_pdb_1D3Z.fasta",
+                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/CCRrate_Cisnetti_2004.csv",
+                "-pld", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/peak_lists"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

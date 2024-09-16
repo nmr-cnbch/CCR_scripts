@@ -26,8 +26,8 @@ python3 read_ucsf.py [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nr
 
 ### Obligatory arguments:        
 ```
-  spectrum_path         path to spectrum file ( [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/ format, *.ucsf, https://nmrfam.wisc.edu/nmrfam-sparky-distribution/)
-  peak_list_path        path to peak list file (Sparky format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum
+  spectrum_path         path to spectrum file ([Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format, *.ucsf)
+  peak_list_path        path to peak list file ([Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum
 ```
 
 ### Optional arguments:      
@@ -138,7 +138,7 @@ Example of 'input.json' file for experiment pre-defined in `CCR_dict.py`:
 Example of 'input.json' file for experiment not pre-defined in `CCR_dict.py`:
 ```json
 {"CCR_x":{
-    "type_of_CCR": "CCR_x"
+    "type_of_CCR": "CCR_x",
     "CCR_pos": -1,
     "dimension": 3,
     "TC": 0.028,
