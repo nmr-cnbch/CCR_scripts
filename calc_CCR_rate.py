@@ -98,7 +98,7 @@ if args.seq_file_name:
 else: 
     seq_file_name = file_directory+"/seq"
     if not os.path.exists(seq_file_name):
-        print (f"there is no such file: {seq_file_name}")
+        print (f"there is no file: {seq_file_name}")
 print("File with amino acid sequence: {}".format(seq_file_name)) 
 
 
@@ -113,14 +113,14 @@ else:
 
 if args.expset:
     exp_file_name = "{}/{}".format(file_directory,args.expset)
-    print("Different experiment set file: {}".format(exp_file_name)) 
+    print("Experiment set description file: {}".format(exp_file_name)) 
 else: exp_file_name = "{}/input.json".format(file_directory)
 
 if args.peaklist_dir:
     peaklist_directory = args.peaklist_dir
 else:
     peaklist_directory = file_directory
-print(f"The peak lists are taking from the directory: {peaklist_directory}")
+print(f"The peak lists are taken from the directory: {peaklist_directory}")
 
 
 RaportDir = f"{file_directory}/all_outputs/"
@@ -340,31 +340,29 @@ class CCRSet:
                     self.plot_cross_intens_theor_exp_together(ExpTable)
                     self.plot_error_histogram_together(ExpTable)
                     print_raport (f"\n{CCR_type} - completed\n")
-            self.Write_zeroCCRrates_Analisis_CSV()
-            self.Write_ErrorCCRrates_Analisis_CSV()
-            self.Write_diffCCRrates_Analisis_CSV()
             print_raport ("=== Comparing different versions of CCR rates with reference values completed ===\n")
         else:
-            print_raport ("\n=== Comparing experiments with different numbers of NUS points ===\n")
-            for CCR_type in self.to_compere_dict:
-                if len(self.to_compere_dict[CCR_type])>1:
-                    max_number = 0.0
-                    min_number = 10000000.0
-                    min_exp = -1
-                    max_exp = -1 
-                    for exp_number in self.to_compere_dict[CCR_type]:
-                        nus_number = self.ccr_set[exp_number].Additional_text()[1:-3]
-                        if nus_number.isdigit() == True:
-                            nus_number = float(nus_number)
-                            if nus_number > max_number:
-                                max_number = nus_number
-                                max_exp = exp_number
-                            if nus_number < min_number:
-                                min_number = nus_number
-                                min_exp = exp_number
-                    self.plot_gamma_exp_vs_epx(self.ccr_set[min_exp],self.ccr_set[max_exp], str(int(min_number)),str(int(max_number)))
-                    print_raport (f"\n{CCR_type} - completed\n")
-            print_raport ("\n=== Comparing experiments with different numbers of NUS points completed ===\n")
+            if any(len(self.to_compere_dict[CCR_type])>1 for CCR_type in self.to_compere_dict):
+                print_raport ("\n=== Comparing experiments with different numbers of NUS points ===\n")
+                for CCR_type in self.to_compere_dict:
+                    if len(self.to_compere_dict[CCR_type])>1:
+                        max_number = 0.0
+                        min_number = 10000000.0
+                        min_exp = -1
+                        max_exp = -1 
+                        for exp_number in self.to_compere_dict[CCR_type]:
+                            nus_number = self.ccr_set[exp_number].Additional_text()[1:-3]
+                            if nus_number.isdigit() == True:
+                                nus_number = float(nus_number)
+                                if nus_number > max_number:
+                                    max_number = nus_number
+                                    max_exp = exp_number
+                                if nus_number < min_number:
+                                    min_number = nus_number
+                                    min_exp = exp_number
+                        self.plot_gamma_exp_vs_epx(self.ccr_set[min_exp],self.ccr_set[max_exp], str(int(min_number)),str(int(max_number)))
+                        print_raport (f"\n{CCR_type} - completed\n")
+                print_raport ("\n=== Comparing experiments with different numbers of NUS points completed ===\n")
     
     @staticmethod
     def prepare_gamma_calc_vs_gamma_exp_table(exp_tab:list[CCRClass],
@@ -998,7 +996,7 @@ class CCRSet:
                     aa_dict_nun)
             
         # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
-        RaportBox.write("All info about zero CCR rates are in file: {}\n".format(new_list))
+        RaportBox.write("Information about very small CCR rates are in file: {}\n".format(new_list))
         return
 
     def deepExpAnalisys(self,
@@ -1080,7 +1078,7 @@ class CCRSet:
             
             
         # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
-        RaportBox.write("All info about zero CCR rates are in file: {}\n".format(new_list))
+        RaportBox.write("Information about CCR rates which are off are in file: {}\n".format(new_list))
         return
 
     def Write_diffCCRrates_Analisis_CSV(self):
@@ -1132,7 +1130,7 @@ class CCRSet:
             
             
         # print ("All info from peaks for {} rates are in file: {}".format(ccr_name, new_list), file=RaportBox)
-        RaportBox.write("All info about zero CCR rates are in file: {}\n".format(new_list))
+        RaportBox.write("Information about very small CCR rates are in file: {}\n".format(new_list))
         return
 
 
@@ -1197,8 +1195,9 @@ class CCRClass:
         if "rate_mult" in exp_dict:
             self._rate_mult = exp_dict["rate_mult"]
         else:
-            if "rate_mult" in CCR_dict[self._CCR_name]:
-                self._rate_mult = CCR_dict[self._CCR_name]["rate_mult"]
+            if self._CCR_name in CCR_dict:
+                if "rate_mult" in CCR_dict[self._CCR_name]:
+                    self._rate_mult = CCR_dict[self._CCR_name]["rate_mult"]
 
         if "other" in exp_dict:
             self._other = exp_dict["other"]
@@ -1498,7 +1497,7 @@ other: {self._other}
             plt.title(f'{CCRname2PrettyRateNamePLT(self.CCRname())}', fontsize=10)
         else:
             plt.title(self._CCR_name+add)
-            print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
+            # print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
             linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
             weighted_reg_dict = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
             self.r2 = weighted_reg_dict["r2"]
@@ -1598,7 +1597,7 @@ other: {self._other}
             plt.title(f'{CCRname2PrettyRateNamePLT(self.CCRname())}', fontsize=10)
         else:
             plt.title(self._CCR_name+add)
-            print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
+            # print(f"gamma_calculated:{gamma_calculated} \ngamma_experimental: {gamma_experimental}\ngamma_calc_error: {gamma_calc_error}")
             linear_expretion,linear_r2, linear_slope, linear_intercept, matching_factor_for_y_x_LR= LRegression_expresion(gamma_calculated, gamma_experimental)
             weighted_reg_dict = WeightedLRegression_expresion_by_hand(gamma_calculated, gamma_experimental,gamma_calc_error)
             self.r2 = weighted_reg_dict["r2"]
@@ -2718,7 +2717,7 @@ def WeightedLRegression_expresion_by_hand(x:list,y:list,uncertainty_val:list)->d
                 "factor_b":(1-abs(intercept))/intercept_uncertainty, 
                 "r2":calc_R2(y,y_from_line)}
     else:
-        print ("To small number of point to calculate Regression - minimal is 2")
+        print ("Too small number of point to calculate Regression - minimal is 2")
 
 def check_if_min_max(suspect_min:Union[int,float], 
                     suspect_max:Union[int,float], 
@@ -2785,12 +2784,14 @@ if __name__ == "__main__":
     
     if refgammaFlag:
         ExperimentsSet.Compere_with_reference(ref_dict=gamma_ref_dict)
+
     for key in ExperimentsSet.to_compere_dict:
         exp = ExperimentsSet.ccr_set[ExperimentsSet.to_compere_dict[key][-1]]
         plot_together_list.append(deepcopy(exp))
     
     if len(plot_together_list)>0:
         ExperimentsSet.plot_gamma_gamma_all_together(plot_together_list, style=output_style)
+    
     ExperimentsSet.Compere_diff_ver_exp()
 
     RaportBox.close()

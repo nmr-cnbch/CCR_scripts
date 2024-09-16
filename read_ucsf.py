@@ -118,23 +118,12 @@ if args.output_dir:
     else:
         #peak_list_dir_new = f"{os.path.dirname(args.output_dir)}/{peak_list_name}"
         peak_list_dir_new = args.output_dir
-
-    if not os.path.exists(peak_list_dir_new):
-        os.mkdir(peak_list_dir_new)
-    print (f"Output directory path: {peak_list_dir_new}")
 else: 
-    #peak_list_name = os.path.basename(args.peak_list)
-    #if "." in str(peak_list_name):
-       # point_index = str(peak_list_name).index(".")
-        #peak_list_name = peak_list_name[:point_index]
+    peak_list_dir_new = f"{os.path.dirname(args.filename)}/{peak_list_name}_list"
 
-    #tutaj
-    peak_list_dir_new = os.path.dirname(args.filename)+peak_list_name+"_list"
-    #peak_list_dir_new = name_temp+"_list"
-
-    if not os.path.exists(peak_list_dir_new):
-        os.mkdir(peak_list_dir_new)
-    print (f"Output directory path: {peak_list_dir_new}")
+if not os.path.exists(peak_list_dir_new):
+    os.mkdir(peak_list_dir_new)
+print (f"Output directory path: {peak_list_dir_new}")
 
 
 
