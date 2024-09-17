@@ -35,7 +35,7 @@ parser = argparse.ArgumentParser(
                     epilog='')
 
 parser.add_argument("filename", metavar="spectrum_path", type=Path, 
-                    help="path to spectrum file (Sparky format)")
+                    help="path to spectrum file (Sparky format, *.ucsf)")
 
 parser.add_argument("peak_list", metavar="peak_list_path", type=Path, 
                     help="path to peak list file (Sparky format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum")
@@ -62,7 +62,7 @@ parser.add_argument("-sn", "--signal2noise", dest='SignalToNoise', type=float,
                     help="the minimal signal-to-noise ratio, below the peak can be removed (default: depends on spectrum dimensionality and acquisition type)")
 
 parser.add_argument("-NUS", dest='ReconstructionFlag', action="store_true",  default=False,
-                    help=" for non-uniformly sampled data, calculate the spectral noise using the random points at the peak's proton position (if this argument is not used, for conventionally-sampled data, the noise is calculated using random points from across the spectrum")
+                    help="for non-uniformly sampled data, calculate the spectral noise using the random points at the peak's proton position (if this argument is not used, for conventionally-sampled data, the noise is calculated using random points from across the spectrum)")
 
 args = parser.parse_args()
 

@@ -53,15 +53,15 @@ import json
 parser = argparse.ArgumentParser(
                     prog='calc_CCR_rates',
                     description="""
-The script to calculate cross-correlated relaxation (CCR) rates, measured by quantitative approach (two spectra: reference and transfer). 
+The script to calculate cross-correlated relaxation (CCR) rates, using peak intensities from the two spectra, reference and transfer (quantitative gamma approach). 
    
-Our scripts can work with any type of CCR rate but a few of them were already pre-programmed (see CCR_dict.py). 
+Our scripts can work with any CCR rates, but a few of them are pre-defined (see CCR_dict.py). 
 
 Files required:  
-- peak lists with peak positions in chemical shifts (`name+"_ppm.list"`) and peak heights
-- peak lists with peak positions in points (`name+"_points.list"`) and peak heights
-- JSON file with experiments description   
-- sequence in FASTA format (`seq` file)     
+- peak lists with peak positions in ppm and peak heights (`name+"_ppm.list"`)
+- peak lists with peak positions in spectral points and peak heights (`name+"_points.list"`)
+- JSON file with experiments description (default: `input.json`)   
+- sequence in FASTA format (default: `seq`)     
 
 Additional files: 
 - peak lists with peak names and uncertainties (`name+"_peaks_noise.list"`)
@@ -72,7 +72,7 @@ parser.add_argument("file_directory", metavar="file_directory", type=Path,
                     help="path to directory with all required files")
 
 parser.add_argument("-s", "--seq", dest='seq_file_name', type=Path, 
-                    help="if name of the file with amino acid sequence is not 'seq', add this with the name of file")
+                    help="name of the file with amino acid sequence (default: `seq`)")
 
 parser.add_argument("-pld", "--peaklist_dir", type=Path, help="directory with all input peak lists (default: identical as file_directory)")
 
@@ -80,7 +80,7 @@ parser.add_argument("-r", "--refgamma", type=Path,
                     help=argparse.SUPPRESS) #"if you have a file with reference values of CCR rates, add this with the name of the file (file must be .csv, columns names should be: AA, CCR_name_1, CCR_name_2, CCR_name_2, ...)")
 
 parser.add_argument("-e", "--expset", type=Path, 
-                    help="if you want to use experiments setup file with different filename than 'input.json' (structure of the file must be the same as the original file)")
+                    help="experiments setup file (default: `input.json`)")
 
 parser.add_argument("-pub", "--publication", dest='PublicationFlag', action="store_true",  default=False,
                     help=argparse.SUPPRESS) #"if you want the picture outputs to be in the publication size")
