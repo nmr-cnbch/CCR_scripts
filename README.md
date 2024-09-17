@@ -40,8 +40,8 @@ python3 read_ucsf.py [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nr
   -NUS, --NUS           for non-uniformly sampled data, calculate the spectral noise using the random points at the peak's proton position (if this argument is not used, for conventionally-sampled data, the noise is calculated using random points from across the spectrum)
 ```
 ### Input files:
-  - multidimensional NMR spectra in ucsf-[Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format
-  - peak list in [Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format  
+  - multidimensional NMR spectra in ucsf-Sparky format
+  - peak list in Sparky format  
 
 ### Output:
 The directory with the following files:
