@@ -90,7 +90,7 @@ where: $I_{trans/ref}$ - peak intensity in the transfer/reference version, $NS_{
 
 ### Launch in command line:    
 ```
-python3 calc_CCR_rate.py [-h] [-s SEQ_FILE_NAME] [-e EXPSET] file_directory
+python3 calc_CCR_rate.py [-h] [-s SEQ_FILE_NAME] [-pld PEAKLIST_DIR] [-e EXPSET] file_directory
 ```
 
 ### Obligatory arguments:       
