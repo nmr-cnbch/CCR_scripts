@@ -8,11 +8,10 @@
         //     "name": "Python: Current File",
         //     "type": "python",
         //     "request": "launch",
-        //     "program": "calc_CCR_rate_objectowo.py",
+        //     "program": "calc_CCR_rate.py",
         //     "args": [
-        //         "set_for_calcCCRrate_Ubiq_2D",
-        //         "--seq", "set_for_calcCCRrate_Ubiq_2D/rcsb_pdb_1D3Z.fasta",
-        //         "--refgamma", "set_for_calcCCRrate_Ubiq_2D/CCRrate_1d3z_strucure_predicted.csv"
+        //         "./test_data_2/",
+        //         "-pld", "./test_data_2/peak_lists"
         //     ],
         //     "console": "integratedTerminal",
         //     "justMyCode": true
@@ -22,11 +21,27 @@
         //     "name": "Python: Current File",
         //     "type": "python",
         //     "request": "launch",
-        //     "program": "calc_CCR_rate_objectowo.py",
+        //     "program": "calc_CCR_rate.py",
         //     "args": [
         //         "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA",
         //         "--seq", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/rcsb_pdb_1D3Z.fasta",
-        //         "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/CCRrate_1d3z_strucure_predicted.csv"
+        //         "-pld", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/peak_lists"
+        //        "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_ubiq_4D/PUBLIKACJA/CCRrate_1d3z_strucure_predicted.csv"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // }
+
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "calc_CCR_rate.py",
+        //     "args": [
+        //         "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates",
+        //         "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/rcsb_pdb_1D3Z.fasta",
+        //         "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/CCRrate_Cisnetti_2004.csv",
+        //         "-pld", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/peak_lists"
         //     ],
         //     "console": "integratedTerminal",
         //     "justMyCode": true
@@ -38,14 +53,14 @@
             "request": "launch",
             "program": "calc_CCR_rate.py",
             "args": [
-                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates",
-                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/rcsb_pdb_1D3Z.fasta",
-                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/CCRrate_Cisnetti_2004.csv",
-                "-pld", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_CO_CON/CCR_rates/peak_lists"
+                "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_10/CCR_rates",
+                "--seq", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_10/CCR_rates/rcsb_pdb_1D3Z.fasta",
+                "--refgamma", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_10/CCR_rates/CCRrate_6v5d_strucure_predicted_tau_gammaNNH.csv",
+                "-pld", "/nhome/paulina/sekwencje/CCR/CCR_Ubiq_2D/CCR_10/CCR_rates/peak_lists"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
-        },
+        }
 
         // {
         //     "name": "Python: Current File",

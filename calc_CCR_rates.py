@@ -51,7 +51,7 @@ import json
 
 
 parser = argparse.ArgumentParser(
-                    prog='calc_CCR_rate',
+                    prog='calc_CCR_rates',
                     description="""
 The script to calculate cross-correlated relaxation (CCR) rates, measured by quantitative approach (two spectra: reference and transfer). 
    
@@ -65,7 +65,7 @@ Files required:
 
 Additional files: 
 - peak lists with peak names and uncertainties (`name+"_peaks_noise.list"`)
-- file with reference values of CCR rates""",
+""",
                     epilog='Text at the bottom of help')
 
 parser.add_argument("file_directory", metavar="file_directory", type=Path, 
@@ -163,97 +163,6 @@ class CCRSet:
         for exp in self.ccr_set:
             exp.read_peak_files(self.__peaklist_dir,self.__protein_seq)
 
-    
-    def ReadExpSet(self,exp_file):               # wczytywanie danych z pliku experiments_set.txt do klasy CSpectrum #DO USUNIECIA
-        with open(exp_file, "r") as exp_set:
-            lines = exp_set.readlines()
-            expset_lines=[]
-            symmetrical_rec_Flag = []
-            commentFlag = False
-            for indexl, line in enumerate(lines):
-                if commentFlag == False:
-                    if "type_of_CCR" in line:
-                        expset_lines.append(deepcopy(indexl))
-                if "====" in line:
-                    expset_lines.append(deepcopy(indexl))
-                    commentFlag = changeFlag(commentFlag)
-            if commentFlag == False:
-                expset_lines.append(deepcopy(len(lines)))
-
-            for i in range(0,len(expset_lines)-1):
-                # print ("Lines between ", expset_lines[i], expset_lines[i+1])
-                one_experiment = CCR_normal(self.__working_dir,self.__protein_seq)
-                # one_experiment.name=lines[expset_lines[i]][8:-1]     # ???????????
-                for line in range(expset_lines[i],expset_lines[i+1]):
-                    if lines[line] != "\n":
-                        items=lines[line].split()
-                        if "ref_name"in lines[line]:
-                            # print ("ref_name_file", items[1])
-                            one_experiment.ref_name =items[1]
-                        if "trans_name"in lines[line]:
-                            # print ("trans_name_file", items[1])
-                            one_experiment.trans_name =items[1]
-                        if "type_of_CCR" in lines[line]:
-                            one_experiment._CCR_name=items[1]
-                            if items[1] not in self.to_compere_dict:
-                                self.to_compere_dict[items[1]]=[i]
-                            else:
-                                self.to_compere_dict[items[1]].append(deepcopy(i))
-                            # print ("CCR_NAME", items[1])
-                        if "dir_ref" in lines[line]:
-                            ref_name_dir = items[1]+"_"+one_experiment._CCR_name+"_a"
-                            # print ("ref_name_dir", ref_name_dir)
-                            one_experiment.ref_name = ref_name_dir
-                        if "dir_trans" in lines[line]:
-                            trans_name_dir = items[1]+"_"+one_experiment._CCR_name+"_x"
-                            # print ("trans_name_dir", trans_name_dir)
-                            one_experiment.trans_name=trans_name_dir
-                        if "dimension" in lines[line]:
-                            one_experiment.n_dim=int(items[1])
-                        if "nucl" in lines[line]:
-                            for a in range(1, len(items)):
-                                if items[a] == "#" : break
-                                if items[a] in ["H", "N", "CO", "CA", "CB", "HA", "HB"]:
-                                    one_experiment.nucl_name.append(deepcopy(items[a]))
-                                
-                        if "pos_nucl" in lines[line]:
-                            for a in range(1, len(items)):
-                                if items[a] == "#" : break
-                                one_experiment.nucl_pos.append(deepcopy(int(items[a])))
-                        if "angle_num" in lines[line]:
-                            one_experiment.n_angle=int(items[1])
-                        if "angle_pos" in lines[line]:
-                            for a in range(1, len(items)):
-                                if items[a] == "#" : break
-                                one_experiment.angle_pos.append(deepcopy(int(items[a])))
-                        if "angle_name" in lines[line]:
-                            for a in range(1, len(items)):
-                                if items[a] == "#" : break
-                                one_experiment.angle.append(deepcopy(items[a]))
-                        if "NS_auto" in lines[line]:
-                            one_experiment.ns[0]=int(items[1])
-                        if "NS_cross" in lines[line]:
-                            one_experiment.ns[1]=int(items[1])
-                        if "TC" in lines[line]:
-                            one_experiment.tc_vol=float(items[1])
-                        if "H_roi" in lines[line]:
-                            one_experiment.Hroi[0]=float(items[1])
-                            one_experiment.Hroi[1]=float(items[2])
-                        if "other" in lines[line]:
-                            one_experiment.other=items[1]
-                            # print ("CCR_NAME", items[1])
-                        if "noise" in lines[line]:
-                            one_experiment.noise[0]=float(items[1])
-                            one_experiment.noise[1]=float(items[2])
-                one_experiment.CCR_pos = deepcopy(self.CCR_dict[one_experiment._CCR_name]["angle_pos"])
-                self.ccr_set.append(deepcopy(one_experiment))
-                # print ("{} - {}\n\t reference exp: {}\n\t transfer exp: {}".format(one_experiment._CCR_name,one_experiment.other,one_experiment.ref_name,one_experiment.trans_name))
-                # # print ("Experiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(i, one_experiment._CCR_name, one_experiment.n_dim, one_experiment.nucl_name, one_experiment.nucl_pos, one_experiment.n_angle, one_experiment.angle_pos, one_experiment.angle, one_experiment.ns, one_experiment.tc_vol, one_experiment.Hroi), file=RaportBox)
-                # RaportBox.write("\nExperiment number:{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n".format(i, one_experiment._CCR_name, one_experiment.n_dim, 
-                #                                                                                           one_experiment.nucl_name, one_experiment.nucl_pos, 
-                #                                                                                           one_experiment.n_angle, one_experiment.angle_pos, 
-                #                                                                                           one_experiment.angle, one_experiment.ns, 
-                #                                                                                           one_experiment.tc_vol, one_experiment.Hroi))
 
     def ReadExpSet_DICT_JSON(self,exp_file):               # wczytywanie danych z pliku experiments_set.txt do klasy CCRExp
         with open(exp_file, "r") as json_data_file:
@@ -330,17 +239,18 @@ class CCRSet:
 
     def Compere_diff_ver_exp(self):
         if self.__ref_flag:
-            print_raport ("\n=== Comparing diffrent versions of CCR rates with reference values ===\n")
-            for CCR_type in self.to_compere_dict:
-                if len(self.to_compere_dict[CCR_type])>1:
-                    ExpTable = []
-                    for exp_number in self.to_compere_dict[CCR_type]:
-                        ExpTable.append(deepcopy(self.ccr_set[exp_number]))
-                    self.plot_gamma_gamma_and_diff_together(ExpTable)
-                    self.plot_cross_intens_theor_exp_together(ExpTable)
-                    self.plot_error_histogram_together(ExpTable)
-                    print_raport (f"\n{CCR_type} - completed\n")
-            print_raport ("=== Comparing different versions of CCR rates with reference values completed ===\n")
+            if any(len(self.to_compere_dict[CCR_type])>1 for CCR_type in self.to_compere_dict):
+                print_raport ("\n=== Comparing diffrent versions of CCR rates with reference values ===\n")
+                for CCR_type in self.to_compere_dict:
+                    if len(self.to_compere_dict[CCR_type])>1:
+                        ExpTable = []
+                        for exp_number in self.to_compere_dict[CCR_type]:
+                            ExpTable.append(deepcopy(self.ccr_set[exp_number]))
+                        self.plot_gamma_gamma_and_diff_together(ExpTable)
+                        self.plot_cross_intens_theor_exp_together(ExpTable)
+                        self.plot_error_histogram_together(ExpTable)
+                        print_raport (f"\n{CCR_type} - completed\n")
+                print_raport ("=== Comparing different versions of CCR rates with reference values completed ===\n")
         else:
             if any(len(self.to_compere_dict[CCR_type])>1 for CCR_type in self.to_compere_dict):
                 print_raport ("\n=== Comparing experiments with different numbers of NUS points ===\n")
@@ -916,7 +826,7 @@ class CCRSet:
         plt.close()
 
     def Write_ALL_CCRRate_CSV(self):
-        new_list = f"{file_directory}/CCRrate.csv"
+        new_list = f"{file_directory}/CCRrates.csv"
         with open(new_list, mode='w', newline='') as csv_file:
             headers = ['AA']
             for one_exp in self.ccr_set:
@@ -1150,7 +1060,7 @@ class CCRClass:
         self._ref_name = []       # type: list[str]
         self._trans_name = []       # type: list[str]
             
-        self._n_dim = int(exp_dict["dimension"])             
+        self._n_dim = 0           
         self._CCR_pos = 100
         self._tc_vol = float(exp_dict["TC"])   
         self._rate_mult = False
@@ -1198,6 +1108,16 @@ class CCRClass:
             if self._CCR_name in CCR_dict:
                 if "rate_mult" in CCR_dict[self._CCR_name]:
                     self._rate_mult = CCR_dict[self._CCR_name]["rate_mult"]
+
+        if "dimension" in exp_dict:
+            self._n_dim = int(exp_dict["dimension"])  
+        else:
+            if self._CCR_name in CCR_dict:
+                if "dim" in CCR_dict[self._CCR_name]:
+                    self._rate_mult = CCR_dict[self._CCR_name]["dim"]
+            else:
+                print(f"Error: {self._CCR_name} - dimensionality of spectrum is unknow. Please add this parameter to experiments setup file")
+                sys.exit()
 
         if "other" in exp_dict:
             self._other = exp_dict["other"]
@@ -1815,7 +1735,7 @@ other: {self._other}
 
     def WriteCCRRate_all_info(self):
         add = self.Additional_text()
-        new_list = "{}{}{}_CCRrate.list".format(RaportDir,self._CCR_name,add)
+        new_list = "{}{}{}_CCRrates.list".format(RaportDir,self._CCR_name,add)
         # print ("new_peak_list", new_list, file=RaportBox)
         max_lenth_discrip = 0
         max_lenth_intens = 0
@@ -1910,7 +1830,7 @@ other: {self._other}
 
     def WriteCCRRate_all_info_CSV(self):
         add = self.Additional_text()
-        new_list = "{}{}{}_CCRrate.csv".format(RaportDir,self._CCR_name,add)
+        new_list = "{}{}{}_CCRrates.csv".format(RaportDir,self._CCR_name,add)
         max_lenth_discrip = 0
         max_lenth_intens = 0
         for p in self._peaks:
@@ -2175,9 +2095,9 @@ class CCR_normal(CCRClass):
                     max_lenth_intens=len(str(p.peak_intens[0]))
 
         if file_type == 'csv':
-            new_list = "{}{}{}_CCRrate.csv".format(RaportDir,self._CCR_name,add)
+            new_list = "{}{}{}_CCRrates.csv".format(RaportDir,self._CCR_name,add)
         elif file_type == 'txt':
-            new_list = "{}{}{}_CCRrate.list".format(RaportDir,self._CCR_name,add)
+            new_list = "{}{}{}_CCRrates.list".format(RaportDir,self._CCR_name,add)
 
         with open(new_list, mode='w', newline='') as new_file:
             # headers = ['AA','peak position','intensity in reference','intensity in transfer','CCR rate','Comments']
@@ -2789,7 +2709,7 @@ if __name__ == "__main__":
         exp = ExperimentsSet.ccr_set[ExperimentsSet.to_compere_dict[key][-1]]
         plot_together_list.append(deepcopy(exp))
     
-    if len(plot_together_list)>0:
+    if len(plot_together_list)>0 and refgammaFlag:
         ExperimentsSet.plot_gamma_gamma_all_together(plot_together_list, style=output_style)
     
     ExperimentsSet.Compere_diff_ver_exp()

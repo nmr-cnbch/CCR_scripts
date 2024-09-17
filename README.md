@@ -1,7 +1,7 @@
 # CCR_scripts   
 A set of Python scripts for analyzing NMR spectra  for cross-correlated relaxation (CCR) effect measurements. The set includes:
   - read_ucsf.py (adjusting the positions of peaks in the peak list, to fit the spectral peaks' positions)
-  - calc_CCR_rate.py (calculating the CCR rates, using peak intensities)
+  - calc_CCR_rates.py (calculating the CCR rates, using peak intensities)
 
 
 ### software required:
@@ -26,8 +26,8 @@ python3 read_ucsf.py [-h] [-np NUMBER_OF_POINTS_FOR_NOISE] [-pl PEAK_LEVEL] [-nr
 
 ### Obligatory arguments:        
 ```
-  spectrum_path         path to spectrum file ([Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format, *.ucsf)
-  peak_list_path        path to peak list file ([Sparky](https://nmrfam.wisc.edu/nmrfam-sparky-distribution/) format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum
+  spectrum_path         path to spectrum file (Sparky format, *.ucsf)
+  peak_list_path        path to peak list file (Sparky format) - for transfer spectrum type, please use the already adjusted list of the reference spectrum
 ```
 
 ### Optional arguments:      
@@ -55,7 +55,7 @@ The directory with the following files:
 
 <br><br>
 
-## calc_CCR_rate.py
+## calc_CCR_rates.py
 
 The script calculates the cross-correlated relaxation (CCR) rates, using peak intensities from the two spectra, reference and transfer (quantitative gamma approach). 
    
@@ -90,7 +90,7 @@ where: $I_{trans/ref}$ - peak intensity in the transfer/reference version, $NS_{
 
 ### Launch in command line:    
 ```
-python3 calc_CCR_rate.py [-h] [-s SEQ_FILE_NAME] [-pld PEAKLIST_DIR] [-e EXPSET] file_directory
+python3 calc_CCR_rates.py [-h] [-s SEQ_FILE_NAME] [-pld PEAKLIST_DIR] [-e EXPSET] file_directory
 ```
 
 ### Obligatory arguments:       
@@ -161,9 +161,42 @@ For spectra reconstructed from non-uniformly sampled (NUS) data:
 
 ### Output:
 There are several output files:
-- summary file (for all experiments), with all CCR rate values and their uncertainties for each residue (`CCRrate.csv`)
+- summary file (for all experiments), with all CCR rate values and their uncertainties for each residue (`CCRrates.csv`)
 - separate file for each experiment with CCR rates for each residue (`type_of_CCR+".csv"`) - in the 'all_outputs' subdirectory
 - text file (`RaportBox.txt`) with whole terminal output and additional information to evaluate script performance - in the 'all_outputs' subdirectory
+
+<br>
+
+---  
+---
+
+## Test data: 
+
+You can run the scripts using the test data provided in the folders 'test_data_1' and 'test_data_2'. 
+
+#### `test_data_1`:
+The folder contains two spectra (`\*.ucsf`), initial peak list (`\*.list`), aa-sequence (`seq`) and experiment setup file (`*.json`). In the example below, this folder is localized in the same directory, in which the scripts are saved.    
+To prepare peak lists for the two spectra, the `read_ucsf.py` script should be run twice: first for the reference spectrum, using the following command:    
+```
+python3 ./read_uscf.py ./test_data_1/2D_CCR_5_a.ucsf ./test_data_1/CCR_5_a.list -o ./test_data_1
+```
+The script will create the adjusted peak lists for this spectrum. The `2D_CCR_5_a_new_ppm.list` should be used for the transfer spectrum:
+```
+python3 ./read_uscf.py ./test_data_1/2D_CCR_5_x.ucsf ./test_data_1/2D_CCR_5_a_new_ppm.list -o ./test_data_1 -nrm
+```
+When the adjusted peaklists are ready, we can calculate the CCR rates:
+```
+python3 ./calc_CCR_rates.py ./test_data_1 
+```
+The main output file will be called `CCRrates.csv`.
+
+#### `test_data_2`:
+The folder contains (already adjusted) peak lists of four CCR experiments, gathered in subdirectory `peak_lists`, the sequence (`seq`) and CCR experiments description (`\*.json`). To calculate the CCR rates the following command should be called:
+```
+python3 ./calc_CCR_rates.py ./test_data_2 -pld ./test_data_2/peak_lists 
+```
+
+
 
 <br>
 
