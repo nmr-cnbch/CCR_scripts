@@ -1,0 +1,254 @@
+;===============================================
+;Includes:
+;   - Shaka6 pulse definition
+;   - delays for transfers
+;   - spoff: 1, 2, 3, 8, 5, 7
+;   - p2, p4, p22
+;   - cnst23
+;
+;
+;Not includes (add those to you :
+;   - COS-INEPT, ECHOCOMP, ECHOTIME
+;   - spoff: 4, 6
+;   - p16, d16, d11, d13
+;   - cnst21, cnst22 - only sugested values, set up in Topspin
+;
+;
+;===============================================
+
+
+
+; Shaka6 composite pulse:
+define pulse shaka1
+define pulse shaka2
+define pulse shaka3
+define pulse shaka4
+define pulse shaka5
+define pulse shaka6
+
+"shaka1 = p3*158.0/90"
+"shaka2 = p3*171.2/90"
+"shaka3 = p3*342.8/90"
+"shaka4 = p3*145.5/90"
+"shaka5 = p3*81.2/90"
+"shaka6 = p3*85.3/90"
+
+define delay shakaLength
+"shakaLength = shaka1 + shaka2 + shaka3 + shaka4 + shaka5 + shaka6"
+
+
+; ***** Parameters for selective pulses: *****
+"spoff1=0" ;offset of H2O flip-back
+
+;cnst21: CA offset in ppm [56]
+;cnst22: CO offset in ppm [176]
+;cnst19: HA offset in ppm [4.3]
+;cnst18: HA bandwidth in ppm [3.0]
+
+"cnst23 = (cnst22+cnst21)/2"	; Middle between CA and CO.
+
+"spoff2 = 0"
+"spoff3 = 0"
+"spoff8 = 0"
+"spoff5 = bf2*((cnst21 - cnst22)/1000000)"  ; CA with offset on CO.
+"spoff7 = bf2*((cnst22 - cnst21)/1000000)"  ; CO with offset on CA.
+
+;removed 18.04.2024 by Paulina Bartosińska-Marzec
+;"spoff4 = bf2*((cnst22 - cnst23)/1000000)"  ; CO with offset on CA/CO middle.
+;"spoff6 = spoff4"
+
+
+"p2=p1*2"
+;"p16=0.5m"  ;gradient pulse ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
+"p4=p3*2"
+"p22=p21*2"
+
+
+; ***** Constant delays: *****
+
+;d25: time for N->NHz and H->HNz evolution [5.4 msec]
+define delay timeNH
+"d25=5.4m"  
+"timeNH = d25"
+
+define delay timeNandH  ; Used in the first echo of COS-INEPT.
+"timeNandH = timeNH"
+
+define delay timeHN
+"timeHN = timeNH"
+
+;d24: time for N->COzN evolution [31 msec]
+define delay timeNCO
+"d24=31m"   	 
+"timeNCO = d24"
+
+;d28: time for N->COzN evolution when it's not depends of relaxation [33.5 msec]
+define delay timeNCO_norelax
+"d28=33.5m"   	 
+"timeNCO_norelax = d28"
+
+;d27: time for N->CAzN evolution [28 msec]
+define delay timeNCA
+"d27=28m"   	 
+"timeNCA = d27"
+
+;d29: time for N->CAzNCAz evolution (CAi and CAi-1 in one koherence) [50 msec]
+define delay timeNCACA
+"d29=50m"   	 
+"timeNCACA = d29"
+
+;d30: time for CO->CONz evolution [29 msec]
+define delay timeCON
+"d30=29m"    
+"timeCON = d30"
+
+;d23: time for CO->COCAz evolution [9.1 msec]
+define delay timeCOCA
+"d23=9.1m" 	 
+"timeCOCA = d23"
+
+;d31: time for CA->CANz + NzCA evolution [27.2 msec],
+define delay timeCAN
+"d31=27.2m"   	 
+"timeCAN = d31"
+
+;d32: time for CA->NzCANz evolution (Ni and Ni-1 in one koherence) [55 msec]
+define delay timeCANN
+"d32=55m"   	 
+"timeCANN = d32"
+
+;d22: time for CA->CACOz evolution [6 msec]
+define delay timeCACO
+"d22=6.0m"  
+"timeCACO = d22"
+
+;d37: time for HACA->CACOz evolution when JCAHA and JCACO evolved [6.2 msec]
+define delay timeCACOlong
+"d37=6.2m"  
+"timeCACOlong = d37"
+
+;d33: time for CA->CACOz evolution when it's not depends of relaxation [9.5 msec]
+define delay timeCACO_norelx
+"d33=9.5m"   	 
+"timeCACO_norelx = d33"
+
+;d26: time for CA->CAHAz and HA->CAzHA evolution not optimal for GLY [3.4 msec]
+define delay timeCaHa
+"d26=3.4m"   	 
+"timeCaHa = d26"
+
+;d36: time for HACA->CACOz evolution when JCAHA and JCACO evolved [3.2 msec]
+define delay timeCaHashort
+"d36=3.2m" 
+"timeCaHashort = d36"
+
+;d34: time for CA->CAHAz evolution optimal also for GLY [2.6 msec]
+define delay timeCaHa_GLY
+"d34=2.6m"   	 
+"timeCaHa_GLY = d34"
+
+;d35: time when CA->CACBz do not evolve [28.6 msec]
+define delay time_noCACB ;compensation of CA-CB evolution
+"d35=28.6m"   	 
+"time_noCACB = d35"
+
+
+;"d11=30m" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
+;"d13=4u" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
+;"d16=200u" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
+
+
+; COS-INEPT pulse train:
+;define delay DELTANandH
+;define delay DELTAHN1
+;define delay DELTAHN2
+;"DELTANandH = timeNandH/2 - p16 - d16"
+;"DELTAHN1 = timeHN/2 - p16 - d16 - p21"
+;"DELTAHN2 = timeHN/2 - p16 - d16"
+
+;define delay ECHOCOMP
+;"ECHOCOMP = p21*4/PI"
+
+;define delay ECHOTIME
+;"ECHOTIME = p16 + d16 + de - p1*2/PI"   ; Compensated for de and last pulse.
+
+
+; ***** Other things description: *****
+
+;p1: f1 channel -  90 degree high power pulse
+;p2: f1 channel - 180 degree high power pulse
+;p3: f2 channel -  90 degree high power pulse
+;p4: f2 channel - 180 degree high power pulse
+;p11: f1 channel -  90 degree shaped pulse (water flipback)
+;p13: f2 channel -  90 Q5 Cali/CO
+;p14: f2 channel - 180 Q3 Cali/CO
+;p41: f1 channel - 90 degree eburp and inverse eburp pulse (HN selective)
+;p42: f1 channel - 180 degree reburp pulse (HA selective)
+
+;p16: homospoil/gradient pulse  [1 msec]
+
+;p21: f3 channel -  90 degree high power pulse
+;p22: f3 channel - 180 degree high power pulse
+
+;p53: f4 channel - 90 degree high power pulse
+
+;pl1: power for 1H  pulses
+;pl2: power for 13C pulses
+;pl3: power for 15N pulses
+;pl4: power for 2H pulses
+
+;cpd1: decoupling according to sequence defined by cpdprg1, DIPSI2
+;cpd2: decoupling according to sequence defined by cpdprg2, waltz16
+;cpd4: decoupling according to sequence defined by cpdprg4, waltz16
+
+;d1: [1.2 sec] relaxation delay 
+;d11: [30 msec] delay for disk I/O 
+;d13: [4 usec] short delay 
+;d16: [200 usec] delay for homospoil/gradient recovery 
+
+;cnst21: CA offset in ppm [56]
+;cnst22: CO offset in ppm [176]
+
+;gpnam0: SMSQ10.100
+;gpnam1: SMSQ10.100
+;gpnam2: SMSQ10.100
+;gpnam3: SMSQ10.100
+;gpnam4: SMSQ10.100
+;gpnam5: SMSQ10.100
+;gpnam6: SMSQ10.100
+;gpnam10: SMSQ10.100
+;gpnam11: SMSQ10.100
+;gpnam12: SMSQ10.100
+;gpnam21: SMSQ10.100
+;gpnam22: SMSQ10.100
+
+;gpz0: N and CO homospoil gradient
+;gpz1: Homospoil gradient after H.
+;gpz2: Homospoil gradient after N.
+;gpz3: Homospoil gradient after CO.
+;gpz4: Homospoil gradient after CA.
+;gpz7: Homospoil gradient after N.
+;gpz6: Pair of gradients during CCR.
+;gpz8: Homospoil gradient after CCR.
+;gpz9: Homospoil gradient after N.
+;gpz10: Homospoil gradient after CA.
+;gpz5: Homospoil gradient after CO.
+
+;gpz11: Gradient in first COS-INEPT echo - 5%.
+;gpz12: Gradient in second COS-INEPT echo - -2%.
+
+;gpz21: First coherence selection gradient (on N) - 80%.
+;gpz22: Second coherence selection gradient (on H) - 8.1%.
+
+;sp1: f1 channel - shaped pulse  90 degree  (H2O on resonance)
+;sp2: f2 channel, 90 Q5 Cali/CO on resonance.
+;sp3: f2 channel, 180 Q3 Cali/CO on resonance.
+;sp4: f2 channel, 90 Q5 Cali/CO off resonance.
+;sp5: f2 channel, 180 Q3 Cali with offset on CO.
+;sp6: f2 channel, 90 Q5 Cali/CO off resonance time reversed.
+;sp7: f2 channel, 180 Q3 CO with offset on CA.
+;sp8: f2 channel, 90 Q5 Cali/CO on resonance time reversed.
+
+;l0: flag for auto (0) and cross (1) versions of the experiment
+
+

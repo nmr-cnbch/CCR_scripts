@@ -1,0 +1,393 @@
+;avance-version (12/01/11)
+;4D_CCR_7_N1Hn1_CO1.azk
+;coherence transfer:
+;
+;      F1(H) -> F3(N) -> F2(C=O,T2) -> F2(Ca,T1) -> F2(N) 
+;			-> CCR -> F2(Ca) -> F3(N,T3) -> F1(H,T4)
+;
+;on/off resonance Ca and C=O pulses using shaped pulse
+;phase sensitive using States-TPPI selections (CA, CO dimensions) and Echo/Antiecho gradient selection (N dimension)
+;
+
+;experiment should be run in reference (l0=0) and cross (l0=1) versions
+;CCR evolution time: d8
+;on/off resonance Ca, C=O pulses using shaped pulses: call getprosol
+;
+;CA evolution: constant time, tmax1 cannot exceed maxtmax1
+;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;phase sensitive using Echo/Antiecho gradient selection (T3)
+;
+;$CLASS=HighRes
+;$DIM=4D
+;$TYPE=
+;$SUBTYPE=
+;$COMMENT=
+
+prosol relations=<triple>
+
+#include <Avance.incl>
+#include <Grad.incl>
+#include <CCR_Params.incl> 
+; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+"d11=30m"
+"d13=4u"
+"d16=200u"
+"p16=0.5m"  ;gradient pulse
+
+; Set up chemical shift evolution times:
+"in1 = inf1"
+"in2 = inf2"
+"in3 = inf3"
+
+define delay T1
+"T1 = 0"
+define delay T2
+"T2 = 0"
+define delay T3
+"T3 = 0"
+
+define delay tmax1
+"tmax1 = td1*in1/2"
+define delay tmax2
+"tmax2 = td2*in2/2"  
+define delay tmax3
+"tmax3 = td3*in3/2"
+
+"spoff4 = bf2*((cnst21 - cnst23)/1000000)"  ; CA with offset on CA/CO middle.
+"spoff6 = spoff4"
+
+define delay Tc
+"Tc=d8"
+;d8: delay for CCR relaxation measurement [28 msec]
+
+define delay maxtmax1
+"maxtmax1=timeCANN-p14*2"
+
+
+; First INEPT Hz -> HzNz
+define delay DELTA11
+"DELTA11 = timeHN/2 - p16 - d16"
+
+; Second INEPT HzNz -> COzNz
+define delay DELTA21
+define delay DELTA22
+define delay DELTA23
+"DELTA21 = timeNH"  ; H refocusing delay in second INEPT
+"DELTA22 = timeNCO/2 - DELTA21 - p1 - d13*2"    ; Compensated for H 90 pulse.
+"DELTA23 = timeNCO/2"
+
+; CCR:
+define delay tauA
+"tauA=(Tc+p14)*0.25-p21/PI"
+define delay tauB
+"tauB=(Tc-p14)*0.25+p21/PI"
+
+
+; COS-INEPT pulse train:
+define delay DELTANandH
+define delay DELTAHN1
+define delay DELTAHN2
+"DELTANandH = timeNandH/2 - p16 - d16"
+"DELTAHN1 = timeHN/2 - p16 - d16 - p21"
+"DELTAHN2 = timeHN/2 - p16 - d16"
+
+define delay ECHOCOMP
+"ECHOCOMP = p21*4/PI"
+
+define delay ECHOTIME
+"ECHOTIME = p16 + d16 + de - p1*2/PI"   ; Compensated for de and last pulse.
+
+
+; ***** Run-time-calculated delays: *****
+
+define delay T1aCO
+define delay T1aN
+define delay T1b
+
+define delay T2aN
+define delay T2b
+define delay T2c
+
+define delay T3aCO
+define delay T3aGRAD
+define delay T3aCA
+define delay T3b
+define delay T3c
+
+ "acqt0 = 0" 
+ baseopt_echo 
+
+
+; ***** Beginning of the pulse sequence *****
+
+1 ze
+
+2 d11  ; Start of loop.
+; ***** Run-time calculations: *****
+
+	"T1aCO = T1/2"
+	"T1aN = timeCANN*0.5 - p14"
+	"T1b = timeCANN*0.5 - T1/2 - p14"
+
+
+; poprawiona wersja deklaracji T2 i T3: edithed by Paulina Bartosinska-Marzec at 06.10.2023
+    "T2aN = T2/2"
+    "if (tmax2 <= timeCOCA) {T2b = 0.0;} else {T2b = T2*(1 - timeCOCA/tmax2)/2;}"
+    "if (tmax2 <= timeCOCA) {T2c = (timeCOCA - T2)/2;} else {T2c = timeCOCA*(1 - T2/tmax2)/2;}"
+
+    "T3aCO = T3/2"
+    "T3aCA = timeNCA/2 - p14"  ; Corrected for CA inversion pulse.
+    "if (T3aCA < (p16+d16)) {T3aGRAD = T3aCA + p14;} else {T3aGRAD = 0;}"
+    "if (tmax3 <= timeNCA) {T3b = 0;} else {T3b = T3*(1 - timeNCA/tmax3)/2;}"
+    "if (tmax3 <= timeNCA) {T3c = (timeNCA - T3)/2 + p14;} else {T3c = timeNCA*(1 - T3/tmax3)/2 + p14;}"
+
+
+    if "tmax1 >= maxtmax1" goto 999
+    
+    d1 fq=cnst23(bf ppm):f2 ; f2 to CA/CO middle
+
+
+    d13 UNBLKGRAD   ; Unblank gradient amplifier and hold lock.
+
+    ; Crush non-proton polarization:
+    (p3 pl2 ph0):f2 
+    (p21 pl3 ph0):f3 
+    p16:gp0
+    d16
+
+    (p3 pl2 ph1):f2 
+    (p21 pl3 ph1):f3 
+    p16:gp0
+    d16 fq=cnst22(bf ppm):f2    ; Switch f2 to CO.
+    
+; Hz -> HzNz:
+    (p1 pl1 ph0):f1
+    DELTA11
+    p16:gp10
+    d16
+    (center (p2 pl1 ph0):f1 (p22 pl3 ph0):f3)
+    DELTA11
+    p16:gp10
+    d16
+    (p1 pl1 ph1):f1
+    (p11:sp1 ph0):f1	; Water flipback.
+    
+    p16:gp1
+    d16
+
+; HzNz -> COz(i-1)Nz(i):
+    (p21 pl3 ph0):f3
+    DELTA21
+    (p1 pl1 ph1):f1 ; H flipdown.
+     d13 pl19:f1
+    (d13 cpds1 ph0):f1
+    DELTA22
+    (center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)  ; N refocussing and CO inversion.
+    DELTA23
+    (p21 pl3 ph0):f3
+
+; Decoupler OFF/ON and gradient.
+    d13 do:f1
+    (p1 pl1 ph3):f1  ; H flipback.
+    p16:gp2
+    d16
+    (p1 pl1 ph1):f1 ; H flipdown.
+    (d13 pl19):f1
+    (d13 cpds1 ph0):f1
+
+; COz(i-1)Nz(i) -> CAz(i-1)Nz(i)COz(i-1), CO evolution (T2):
+    (p13:sp2 ph12):f2
+	T2aN
+	(p22 pl3 ph0):f3 (timeCOCA*0.5)		;pulse 180xN and delay at the same time
+	(p14:sp5 ph0):f2	; Ca refocusing
+    T2b
+    (p14:sp3 ph0):f2	; pulse 180xCO
+    T2c
+    (p14:sp5 ph0):f2    ; Ca BSP compensation.
+    (p13:sp8 ph1):f2
+
+
+; Decoupler OFF/ON and gradient.
+    d13 do:f1
+    (p1 pl1 ph3):f1  ; H flipback.
+	(d13 fq=cnst21(bf ppm)):f2 ; Switch f2 to Ca.
+    p16:gp3
+    d16
+    (p1 pl1 ph1):f1 ; H flipdown.
+    (d13 pl19):f1
+    (d13 cpds1 ph0):f1
+
+
+; CAz(i-1)Nz(i)COz(i-1) -> CAz(i-1)Nz(i-1)COz(i-1), Ca evolution (T1):
+	(p13:sp2 ph11):f2
+	T1aCO
+	(p14:sp7 ph0):f2
+	T1aN
+	(center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)
+	T1b
+	(p14:sp7 ph0):f2
+	(p13:sp8 ph0):f2
+
+
+; Decoupler OFF and gradient.
+    d13 do:f1
+    (p1 pl1 ph3):f1
+    (d13 fq=cnst22(bf ppm)):f2 ; Switch f2 to CO.
+    p16:gp4
+    d16
+
+
+; CCR block:
+	(ralign (p21 pl3 ph10):f3 (p13:sp2 ph0):f2)
+	tauA
+	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simpulse N & H
+    tauB
+    (center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2)   ;simpulse CO & H
+	tauB
+	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simpulse N & H
+    tauA
+
+	if (l0==0)			; auto
+	{
+    (lalign (p21 pl3 ph0):f3 (p13:sp8 ph0):f2)
+	}
+
+	if (l0==1)			; cross
+	{
+    (lalign (p21 pl3 ph1):f3 (p13:sp8 ph1):f2)
+	}
+
+
+	d13
+	p16:gp5
+	d16
+
+
+;  CAz(i-1)COz(i-1)Nz(i-1)(HNz(i-1)) -> CAz(i-1)COz(i-1)Nz(i-1)
+    if (l0==0)			; auto
+    {
+	(p21 pl3 ph0):f3
+	timeNH*0.5
+	(p22 pl3 ph0):f3
+	timeNH*0.5
+	(p21 pl3 ph0):f3
+
+    (p2 pl1 ph0):f1
+    }
+
+
+    if (l0==1)			; cross
+    {
+	(p21 pl3 ph0):f3
+	timeNH*0.5
+	(center (p2 pl1 ph0):f1 (p22 pl3 ph0):f3)
+	timeNH*0.5
+	(p21 pl3 ph1):f3
+
+    
+    }
+
+
+; Decoupler ON
+    d13
+    p16:gp6
+    d16
+    (d13 fq=cnst23(bf ppm)):f2 ; Switch f2 to CA-CO middle
+    (p1 pl1 ph1):f1
+    (d13 pl19):f1
+    (d13 cpds1 ph0):f1
+
+; CAzCOzNz -> CAzNz
+
+    	(p13:sp4 ph0):f2 ; CA_90_ofCACO
+    	timeCACO*0.5
+      	(shaka1 pl2 ph0):f2
+       	(shaka2 pl2 ph2):f2
+       	(shaka3 pl2 ph0):f2
+       	(shaka4 pl2 ph2):f2
+       	(shaka5 pl2 ph0):f2
+       	(shaka6 pl2 ph2):f2
+    	timeCACO*0.5
+    	(p13:sp6 ph1):f2
+
+; Decoupler OFF/ON and gradient.
+    d13 do:f1
+    (p1 pl1 ph3):f1  ; H flipback.
+    p16:gp7
+    d16
+    (d13 fq=cnst21(bf ppm)):f2 ; Switch f2 to CA
+    (p1 pl1 ph1):f1 ; H flipdown.
+    (d13 pl19):f1
+    (d13 cpds1 ph0):f1
+
+; CAzNz -> HzNz + HzNx with N evolution (T3):
+    (p21 pl3 ph21):f3
+    T3c
+    (p22 pl3 ph0):f3
+    T3b 
+    (ralign
+        (d13 do p1 pl1 ph3 timeNH):f1
+        (p14:sp3 ph0 T3aCA p14:sp7 ph0 T3aCO):f2
+        (p16:gp21*EA d16 T3aGRAD):f3
+    )
+    (p21 pl3 ph0):f3
+    
+; COS-INEPT:
+    ECHOCOMP
+    (p1 pl1 ph0):f1
+    p16:gp11
+    d16
+    DELTANandH
+    (center (p2 pl1 ph0):f1 (p22 pl3 ph0):f3)
+    DELTANandH
+    p16:gp11
+    d16
+    
+    (p1 pl1 ph1):f1
+    (p21 pl3 ph13):f3   ; E/A selecting pulse.
+    p16:gp12
+    d16
+    DELTAHN1
+    (center (p2 pl1 ph0):f1 (p22 pl3 ph0):f3)
+    DELTAHN2
+    p16:gp12
+    d16
+
+    (p1 pl1 ph0):f1
+    ECHOTIME
+    (p2 pl1 ph0):f1
+    p16:gp22    ; Coherence selection gradient.
+    
+    d16 pl16:f3 BLKGRAD  ; Set power for decoupling, blank gradient amplifier and sample lock.
+
+go=2 ph31 cpd3:f3 finally do:f3
+d11 mc #0 to 2
+	F1PH(calph(ph11,+90), caldel(T1, +in1))
+	F2PH(calph(ph12,+90), caldel(T2, +in2))
+	F3EA(calph(ph13,+180) & calgrad(EA), caldel(T3, +in3) & calph(ph21, +180) & calph(ph31, +180))
+	
+999 exit
+
+
+
+; Constant phases:
+ph0 = 0
+ph1 = 1
+ph2 = 2
+ph3 = 3
+
+
+; Phases incremented for indirect dimensions:
+ph10 = 0 
+ph11 = 0 2
+ph12 = 0 0 2 2
+ph13 = 3
+
+; Phase at start of INEPT before COS-INEPT - for TPPI shifting in T3:
+ph21 = 0
+
+; Receiver phase:
+ph31 = 0 2 2 0 
+
+

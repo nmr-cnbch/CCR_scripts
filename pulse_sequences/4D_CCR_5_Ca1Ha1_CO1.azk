@@ -1,0 +1,380 @@
+;avance-version (12/01/11)
+;4D_CCR_5_Ca1Ha1_CO1.azk
+;coherence transfer:
+;
+;      F1(Ha) -> F2(Ca) -> F2(C=O) -> F2(Ca,T1) -> CCR ->
+;            -> F2(C=O,T2) -> F3(N,T3) -> F1(H,T4)
+;
+; zgoptns:
+; -DPURGE: purge water magnetization using B1 and gradient pulses.
+; -DPRESAT: Presaturation of water to reduce the water signal 
+;
+;on/off resonance Ca and C=O pulses using shaped pulse
+;CA evolution: constant time or semi-constant time (mode chosen automatically based on tmax2), we recommend not to exceed 10 ms
+;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;phase sensitive using Echo/Antiecho gradient selection (T3)
+;
+;S. Grzesiek & A. Bax, J. Magn. Reson. 96, 432 - 440 (1992)
+;
+;$CLASS=HighRes
+;$DIM=4D
+;$TYPE=
+;$SUBTYPE=
+;$COMMENT=
+
+prosol relations=<triple>
+
+#include <Avance.incl>
+#include <Grad.incl>
+#include <CCR_Params.incl>
+; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+"d11=30m"
+"d13=4u"
+"d16=200u"
+"p16=0.5m"  ;gradient pulse
+
+; Set up chemical shift evolution times:
+"in1 = inf1"
+"in2 = inf2"
+"in3 = inf3"
+
+define delay T1
+"T1 = 0"
+define delay T2
+"T2 = 0"
+define delay T3
+"T3 = 0"
+
+define delay tmax1
+"tmax1 = td1*in1/2"
+define delay tmax2
+"tmax2 = td2*in2/2"  
+define delay tmax3
+"tmax3 = td3*in3/2"
+
+
+"spoff4 = bf2*((cnst22 - cnst21)/1000000)"  ; CO with offset on CA.
+"spoff6 = spoff4"
+
+define delay Tc
+"Tc=28.6m"
+
+; First INEPT Hz -> HzNz
+define delay DELTA11
+"DELTA11 = timeCaHa/2 - p16 - d16"
+
+define delay dpres
+"dpres = d1*cnst5"
+define delay d1_pres
+"d1_pres = d1*(1-cnst5)"
+
+; COS-INEPT pulse train:
+define delay DELTANandH
+define delay DELTAHN1
+define delay DELTAHN2
+"DELTANandH = timeNandH/2 - p16 - d16"
+"DELTAHN1 = timeHN/2 - p16 - d16 - p21"
+"DELTAHN2 = timeHN/2 - p16 - d16"
+
+define delay ECHOCOMP
+"ECHOCOMP = p21*4/PI"
+
+define delay ECHOTIME
+"ECHOTIME = p16 + d16 + de - p1*2/PI"   ; Compensated for de and last pulse.
+
+; ***** Run-time-calculated delays: *****
+define delay T1a
+define delay T1aN
+define delay T1b
+define delay T1c
+	
+define delay T2aN
+define delay T2aCA
+define delay T2b
+define delay T2c
+
+define delay T3aCA
+define delay T3aGRAD
+define delay T3a
+define delay T3b
+define delay T3c
+
+define delay tauA
+
+ "acqt0 = 0" 
+ baseopt_echo
+
+
+; ***** Beginning of the pulse sequence *****
+
+1 ze
+
+2 d11  ; Start of loop.
+; ***** Run-time calculations: *****
+
+     
+	"T1a = T1/2+timeCACOlong/2"
+	"T1aN = T1*0.5"
+	"if (tmax1 <= timeCACOlong) {T1b = 0.0;} else {T1b = T1*(1-timeCACOlong/tmax1)/2;}"
+	"if (tmax1 <= timeCACOlong) {T1c = (timeCACOlong - T1)/2;} else {T1c = timeCACOlong*(1-T1/tmax1)/2;}"
+     
+     
+	"T2aCA = T2/2+timeCOCA/2"
+	"T2aN = timeCON/2-timeCOCA/2 - p22"	;p22 - N pulse
+	"if (tmax2 <= timeCON) {T2b = 0.0;} else {T2b = T2*(1 - timeCON/tmax2)/2;}"
+	"if (tmax2 <= timeCON) {T2c = (timeCON - T2)/2;} else {T2c = timeCON*(1 - T2/tmax2)/2;}"
+
+
+; poprawiona wersja T3 1.02.2024:
+    "T3aCA = T3/2 + p14/2"
+    "T3a = T3/2 + timeNCO/2 - p14/2"  
+    "if (T3aCA < (p16+d16)) {T3aGRAD = T3aCA + p14;} else {T3aGRAD = 0;}"
+    "if (tmax3 <= timeNCO) {T3b = 0;} else {T3b = T3*(1 - timeNCO/tmax3)/2;}"
+    "if (tmax3 <= timeNCO) {T3c = (timeNCO - T3)/2 + p14/2;} else {T3c = timeNCO*(1 - T3/tmax3)/2 + p14/2;}"
+
+    "tauA = Tc/4"
+
+
+#ifdef PRESAT
+
+	d13 pl32:f1
+	dpres cw:f1 ph0
+	4u do:f1
+	d13 pl1:f1
+    d1_pres fq=cnst23(bf ppm):f2 ; f2 to CA/CO middle
+
+#else
+
+	d1 fq=cnst23(bf ppm):f2 ; f2 to CA/CO middle
+
+#endif
+
+
+    d13 UNBLKGRAD   ; Unblank gradient amplifier and hold lock.
+
+    ; Crush non-proton polarization:
+    (p3 pl2 ph0):f2 
+    (p21 pl3 ph0):f3 
+    p16:gp0
+    d16
+
+    (p3 pl2 ph1):f2 
+    (p21 pl3 ph1):f3 
+    p16:gp0
+    d16 fq=cnst21(bf ppm):f2    ; Switch f2 to CA.
+    
+; HAz -> HAzCAz:
+	(p1 pl1 ph0):f1			;pulse 90x HA
+	DELTA11			;timeCaHa/2
+	p16:gp10
+	d16
+	( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )		;together: 180xH, 180xCA
+	DELTA11			;timeCaHa/2
+	p16:gp10
+	d16
+	(p1 pl1 ph1):f1			;pulse 90yH
+	
+	p16:gp1
+	d16
+
+; HAzCAz -> CAzCOz (evol CA T1):
+    (p13:sp2 ph11):f2
+
+    (
+    lalign 
+    (T1a p14:sp7 ph0):f2 
+    (timeCaHashort d13 pl19 d13 cpds1 ph1):f1 ;decoupling +y without pulse before     
+	(T1aN p22 ph0 pl3):f3
+    )
+
+	T1b
+	(p14:sp3 ph0):f2
+	T1c
+	(p14:sp7 ph0):f2
+	(p13:sp8 ph0):f2
+
+
+
+; Decoupler OFF, gradient:
+    d13 do:f1
+    (p1 pl1 ph0):f1   ;decoupling +x pulse 90+xH
+
+# ifdef PURGE
+    (p17*4 ph0 pl10):f1
+    (p17*2 ph1 pl10):f1
+# endif /*PURGE*/
+
+    p16:gp2
+    d16   
+
+
+
+; CCR block (no evol):
+    (p13:sp4 ph10):f2
+
+    (p13:sp2 ph0):f2
+    tauA
+    ( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )
+    tauA
+
+    (shaka1 ph0 pl2):f2
+    (shaka2 ph2 pl2):f2
+    (shaka3 ph0 pl2):f2
+    (shaka4 ph2 pl2):f2
+    (shaka5 ph0 pl2):f2
+    (shaka6 ph2 pl2):f2
+    
+     tauA
+    ( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )
+    tauA
+   
+if " l0 == 0 "
+{
+    (p13:sp8 ph0):f2
+    (p13:sp6 ph0):f2
+}
+if " l0 == 1 "
+{
+    (p13:sp8 ph1):f2
+    (p13:sp6 ph1):f2
+}
+
+	d13
+	p16:gp3
+	d16
+
+
+
+; (HAz(i-1)) CAz(i-1)COz(i-1) -> CAz(i-1)COz(i-1)
+
+if " l0 == 0 "
+{
+	(p13:sp2 ph0):f2
+	timeCaHa*0.5
+	(p14:sp3 ph0):f2
+	timeCaHa*0.5
+	(p13:sp8 ph0):f2
+}
+
+if " l0 == 1 "
+{
+	(p13:sp2 ph0):f2
+	timeCaHa*0.5
+	(center (p2 ph0 pl1):f1 (p14:sp3 ph0):f2)
+	timeCaHa*0.5
+	(p13:sp8 ph1):f2
+    (p2 ph0 pl1):f1
+}
+
+	(d13 fq=cnst22(bf ppm)):f2 ; Switch f2 to CO	d13
+	p16:gp4
+	d16
+
+
+; Decoupler ON
+	(p1 pl1 ph1):f1
+	(d13 pl19):f1
+	(d13 cpds1 ph0):f1
+
+
+; CAz(i-1)COz(i-1)-> COz(i-1)Nz(i) with CO evolution (T2):
+
+	(p13:sp2 ph12):f2    	;pulse 90xCO
+	T2aCA            		;delay varied (t/2)
+   	(p14:sp5 ph0):f2		;pulse 180xCA
+    T2aN           	 		;delay (a-t/2)
+	(p22 pl3 ph0):f3    	;pulse 180xN
+   	T2b            			;delay (b)
+	(p14:sp3 ph0):f2     	;pulse 180xCO
+	T2c            			;delay (c)
+	(p14:sp5 ph0):f2    	;pulse 180xCA
+	(p13:sp8 ph0):f2    	;pulse 90xCO
+
+
+
+; Decoupler OFF/ON and gradient.
+    d13 do:f1
+    (p1 pl1 ph3):f1
+    d13
+    p16:gp5
+    d16
+    (p1 pl1 ph1):f1
+    (d13 pl19):f1
+    (d13 cpds1 ph0):f1
+
+; COzNz -> HzNz + HzNx with N evolution (T3):
+    (p21 pl3 ph21):f3
+    T3c
+    (p22 pl3 ph0):f3
+    T3b
+    (p14:sp3 ph0):f2
+    
+    (
+       refalign (T3a):f3
+       ralign (d13 do p1 pl1 ph3 timeNH):f1
+       ralign (p14:sp5 ph0 T3aCA):f2
+       ralign (p16:gp21*EA d16 T3aGRAD):f1
+    )
+    (p21 pl3 ph0):f3
+    
+; COS-INEPT:
+    ECHOCOMP
+    (p1 pl1 ph0):f1
+    p16:gp11
+    d16
+    DELTANandH
+    (center (p2 pl1 ph2):f1 (p22 pl3 ph0):f3)
+    DELTANandH
+    p16:gp11
+    d16
+    
+    (p1 pl1 ph1):f1
+    (p21 pl3 ph13):f3   ; E/A selecting pulse.
+    p16:gp12
+    d16
+    DELTAHN1
+    (center (p2 pl1 ph0):f1 (p22 pl3 ph0):f3)
+    DELTAHN2
+    p16:gp12
+    d16
+
+    (p1 pl1 ph0):f1
+    ECHOTIME
+    (p2 pl1 ph2):f1
+    p16:gp22    ; Coherence selection gradient.
+    
+    d16 pl16:f3 BLKGRAD  ; Set power for decoupling, blank gradient amplifier and sample lock.
+
+go=2 ph31 cpd3:f3 finally do:f3
+d11 mc #0 to 2
+	F1PH(calph(ph11,+90), caldel(T1, +in1))
+	F2PH(calph(ph12,+90), caldel(T2, +in2))
+	F3EA(calph(ph13,+180) & calgrad(EA), caldel(T3, +in3) & calph(ph21, +180) & calph(ph31, +180))
+	
+999 exit
+
+
+
+; Constant phases:
+ph0 = 0
+ph1 = 1
+ph2 = 2
+ph3 = 3
+
+
+; Phases incremented for indirect dimensions:
+ph11 = 0 2
+ph12 = 0 0 2 2
+ph10 = 0 0 0 0 2 2 2 2
+
+ph13 = 3
+
+; Phase at start of INEPT before COS-INEPT - for TPPI shifting in T3:
+ph21 = 0
+
+; Receiver phase:
+ph31 = 0 2 2 0 2 0 0 2 
+
+;l0: flag for auto (0) and cross (1) versions of the experiment
+

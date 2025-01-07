@@ -227,7 +227,7 @@ class CCRSet:
                 if one_exp.is_reference:
                     print(f"\nComparing CCR rates with calculated for {one_exp.CCRname()}")
                     one_exp.calc_theor_Ix()
-                    one_exp.check_if_fatal_error()
+                    # one_exp.check_if_fatal_error()
                     # one_exp.WriteCCRRate_all_info()
                     # one_exp.WriteCCRRate_all_info_CSV()
                     one_exp.WriteCCRRate_all_info_new(file_type='csv')
@@ -438,9 +438,9 @@ class CCRSet:
                         ax.scatter(exp_ptl_data['fatal'][0],exp_ptl_data['fatal'][1],s=2, color=dot_colours1) #
                         
                         
-                    weighted_reg_dict = WeightedLRegression_expresion_by_hand(x=exp_ptl_data['good'][0],
-                                                                            y=exp_ptl_data['good'][1],
-                                                                            uncertainty_val=exp_ptl_data['good'][2])
+                    weighted_reg_dict = WeightedLRegression_expresion_by_hand(x=exp_ptl_data['good'][0]+exp_ptl_data['fatal'][0],
+                                                                            y=exp_ptl_data['good'][1]+exp_ptl_data['fatal'][1],
+                                                                            uncertainty_val=exp_ptl_data['good'][2]+exp_ptl_data['fatal'][2])
                     
                     label_text = "{}:\t{} peaks,\t{},  delta_a: {:.3f}, delta_b: {:.3f}    r2 = {:.2f}    factor \'a\' = {:.1f}, factor \'b\' = {:.1f}".format(Add_text[1:],
                                                                                                                                                                 weighted_reg_dict["equation"], 
@@ -533,8 +533,8 @@ class CCRSet:
             fig.set_figwidth(ncols*4)
             fig.set_figheight(nrows*4)
             # fig.legend()
-        fig.savefig("{}/{}_all_exp_vs_calc{}.png".format(file_directory,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
-                transparent=transparent_plot, dpi=1200, format='png')
+        # fig.savefig("{}/{}_all_exp_vs_calc{}.png".format(file_directory,str(gamma_cal_file_name)[:-4],add2), bbox_inches="tight", 
+        #         transparent=transparent_plot, dpi=1200, format='png')
         plt.close()
         plt.clf()
 
@@ -687,7 +687,7 @@ class CCRSet:
 
         min_max_value = [+100.0,-100.0]
         fig, axs = plt.subplots(ncols=len((exp_tab)))
-        fig.suptitle("Comparision of intensity of peaks in transfer spectra {}\n(structure-predicted vs experimental) \nwith diffrent number of NUS points".format(ccr_name))
+        fig.suptitle(f"Comparision of intensity of peaks in diffrent transfer spectra {ccr_name}\n(structure-predicted vs experimental)")
         
         set_of_data = []
         for indext, one_exp in enumerate(exp_tab):
@@ -695,7 +695,7 @@ class CCRSet:
             Ix_theory = []
             Ix_experimental = []
             for one_peak in exp_tab[indext].peak_list():
-                if one_peak.is_peak and one_peak.Ix_theor!=0.0:
+                if one_peak.is_peak and one_peak.Ix_theor!=0.0 and one_peak.Ix_theor!='nan':
                     # print ("there is peak {} for spectra {} ({})".format(one_peak.aa_number,ccr_name,add[indexa]))
                     # print("Intensity of Ix_theory: {}, Ix_experimental: {}, min_max_value: {}".format(one_peak.Ix_theor, one_peak.peak_intens[1],min_max_value))
                     Ix_theory.append(deepcopy(one_peak.Ix_theor))
@@ -709,7 +709,7 @@ class CCRSet:
             Add_text = one_exp.Additional_text()
             axs[indext].axline([0,0],slope=1, linestyle=(0, (3, 3)), linewidth=1, color='darkgray', label='x=y') 
             axs[indext].scatter(set_of_data[indext][0],set_of_data[indext][1],s=10,) #
-            axs[indext].set_title(Add_text[indext][1:],fontsize=14)
+            axs[indext].set_title(Add_text[1:],fontsize=14)
             axs[indext] = setup_plot_area(axs[indext],min_max_value)
             axs[indext].tick_params(labelsize=8)
             axs[indext].set_aspect('equal', adjustable='box')
@@ -750,7 +750,7 @@ class CCRSet:
         for indext, one_exp in enumerate(exp_tab):
             Add_text = one_exp.Additional_text()
             axs[0,indext].scatter(set_of_data[indext]["gamma_experimental"], set_of_data[indext]["gamma_calc_error"], s=5, color='#0066ffff')
-            axs[0,indext].set_title("{} {}\n Experimental \u0393 vs Uncertainty value".format(ccr_name,str(Add_text[indext][1:])))
+            axs[0,indext].set_title("{} {}\n Experimental \u0393 vs Uncertainty value".format(ccr_name,str(Add_text[1:])))
             axs[0,indext].set_ylabel('Uncertainty value')
             axs[0,indext].set_xlabel('Experimental \u0393, $s^{-1}$')
 
@@ -828,7 +828,7 @@ class CCRSet:
     def Write_ALL_CCRRate_CSV(self):
         new_list = f"{file_directory}/CCRrates.csv"
         with open(new_list, mode='w', newline='') as csv_file:
-            headers = ['AA']
+            headers = ['AA_num', 'AA']
             for one_exp in self.ccr_set:
                 Add_textt=one_exp.Additional_text()
                 headers.append(deepcopy('{}{}'.format(one_exp.CCRname(),Add_textt)))
@@ -836,14 +836,16 @@ class CCRSet:
             writer = csv.DictWriter(csv_file, fieldnames=headers, delimiter=",")
             writer.writeheader()
             zero_row = {}
-            zero_row['AA'] = 'res'
+            zero_row['AA_num'] = 'resnum'
+            zero_row['AA'] = 'resnam'
             for one_exp in self.ccr_set:
                 Add_textt=one_exp.Additional_text()
                 zero_row['{}{}'.format(one_exp.CCRname(),Add_textt)] = '{}'.format(CCRname2Ratename(one_exp.CCRname()))
             writer.writerow(zero_row)
             for seq_number in self.__protein_seq:
                 one_row = {}
-                one_row["AA"] = str(seq_number)+Res1to3(self.__protein_seq[seq_number])
+                one_row["AA_num"] = str(seq_number)
+                one_row["AA"] = Res1to3(self.__protein_seq[seq_number])
                 for one_exp in self.ccr_set:
                     Add_textt=one_exp.Additional_text()
                     for one_peak in one_exp.peak_list():
@@ -1266,7 +1268,7 @@ other: {self._other}
         return aminoacids_number
 
     def Read_peak_uncertainty(self, peaklist_directory:str, list_verson:str, version:int):
-        peaklistfile = f"{peaklist_directory}/peak_lists/{list_verson}_peaks_noise.list"
+        peaklistfile = f"{peaklist_directory}/{list_verson}_peaks_noise.list"
 
         if os.path.exists(peaklistfile):
             RaportBox.write(f"\n\nLIST:{peaklistfile}\n")
@@ -1399,8 +1401,10 @@ other: {self._other}
         t_critical_val = stats.t.ppf(q=1-.05,df=len(gamma_differences))
         tStudent_1 = avg_distance/(std_distance/math.sqrt(len(gamma_differences))) #type: ignore
 
-        label = f'structure-predicted vs experimental,\nwilcoxon rank = {wilcoxon_rank:.4f}\ntStudent = {tStudent_2:.4f}\ntStudent for y-x = {tStudent_1:.4f}\nT critical val = {t_critical_val:.4f}\ntStudent_3 = {tStudent_3:.4f}'
+        # label = f'structure-predicted vs experimental,\nwilcoxon rank = {wilcoxon_rank:.4f}\ntStudent = {tStudent_2:.4f}\ntStudent for y-x = {tStudent_1:.4f}\nT critical val = {t_critical_val:.4f}\ntStudent_3 = {tStudent_3:.4f}'
         
+        label = f'structure-predicted vs experimental,\nwilcoxon rank = {wilcoxon_rank:.4f}\ntStudent = {tStudent_2:.4f}\n'
+
         # Plotting both the curves simultaneously
         plt.axline([0,0],slope=1, linestyle=(0, (5, 5)), linewidth=1.5, color='darkgray', label='x=y')
         plt.scatter(gamma_calculated, gamma_experimental, s=5, color='#252525ff', 
@@ -1433,20 +1437,23 @@ other: {self._other}
         # Naming the x-axis, y-axis and the whole graph 
         plt.xlabel('structure-predicted \u0393, $s^{-1}$')
         plt.ylabel('experimental \u0393, $s^{-1}$')
-        plt.xlim(min_max_value[0]-5.0,min_max_value[1]+5.0)
-        plt.ylim(min_max_value[0]-5.0,min_max_value[1]+5.0)
+        setup_plot_area(plt,min_max_value)
+        # plt.xlim(min_max_value[0]-5.0,min_max_value[1]+5.0)
+        # plt.ylim(min_max_value[0]-5.0,min_max_value[1]+5.0)
         # plt.ticklabel_format(style='plain')
-        start, end = plt.gca().get_ylim()
-        start = (start//5)*5
-        end = ((end//5)+1)*5
-        if abs(start)+abs(end)<= 30:
-            plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 5))
-            plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 5))
-        else:
-            plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 10))
-            plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 10))
 
-        plt.gca().set_aspect('equal', adjustable='box')
+        
+        # start, end = plt.gca().get_ylim()
+        # start = (start//5)*5
+        # end = ((end//5)+1)*5
+        # if abs(start)+abs(end)<= 30:
+        #     plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 5))
+        #     plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 5))
+        # else:
+        #     plt.gca().yaxis.set_ticks(np.arange(int(start), int(end), 10))
+        #     plt.gca().xaxis.set_ticks(np.arange(int(start), int(end), 10))
+
+        # plt.gca().set_aspect('equal', adjustable='box')
         
         # To load the display window
         # plt.savefig("{}/wykresy2/{}_exp_vs_calc.png".format(Dir, tfn[0].name), bbox_inches="tight", pad_inches=0.3, transparent=transparent_plot)
@@ -2225,7 +2232,7 @@ class CCR_SymRec(CCRClass):
         peak_list_names = ["None","None","None","None"]
         for indexlv, list_verson in enumerate(peak_list_basic_names):
             for i, l in enumerate(list_of_names_ends):
-                peaklistfile = f"{peaklist_directory}/peak_lists/{list_verson}{l}"
+                peaklistfile = f"{peaklist_directory}/{list_verson}{l}"
                 try:
                     f=open(peaklistfile)
                     NameFlag[indexlv] = True
@@ -2317,7 +2324,7 @@ class CCR_SymRec(CCRClass):
         squareDerivativeArcTanh = math.pow(1/(1-math.pow((Ix*NSa)/(Ia*NSx),2)),2)
         sumOfSquaresOfPeakHightDeviation = math.pow(noiseIx/Ia,2) + math.pow(noiseIa*Ix/math.pow(Ia,2),2)
         squareError = math.pow(1/self._tc_vol,2) * squareDerivativeArcTanh * math.pow(NSa/NSx,2) * sumOfSquaresOfPeakHightDeviation
-        self._peaks[peak_number+self._CCR_pos].ccrrate_error_value = math.sqrt(squareError)
+        self._peaks[peak_number+self._CCR_pos].ccrrate_error_value = math.sqrt(squareError)/1000000
 
         print_raport("Calculating gamma uncertainty for peak number: {} \n squareDerivativeArcTanh = {} \n sumOfSquaresOfPeakHightDeviation = {}\n squareError = {}\n \t\t--> {}\n".format(peak_number,
                                                                                                                                                         squareDerivativeArcTanh,
@@ -2332,11 +2339,16 @@ class CCR_SymRec(CCRClass):
                 other_peak = self._peaks[res_num]
                 self.calc_uncertainty_value(indexp)
                 try:
-                    ccr_rate_vol = atanh(math.sqrt((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])))/self._tc_vol
+                    if self._rate_mult:
+                        ccr_rate_vol = atanh(-1*math.sqrt((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])))/self._tc_vol
+                    else:
+                        ccr_rate_vol = atanh(math.sqrt((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])))/self._tc_vol
                     other_peak.is_ccr_rate = True
+                    print(f"{indexp} - Mamy CCR: {ccr_rate_vol}")
                 except:
                     ccr_rate_vol = ((peak.peak_intens[2]*self._ns[0]*peak.peak_intens[3]*self._ns[1])/(peak.peak_intens[0]*self._ns[2]*peak.peak_intens[1]*self._ns[3])) #"atanh(x) - x shoudl be beetween -1 and 1"
                     other_peak.ccrrate_calculation_error = True
+                    print(f"{indexp} - ERROR: {ccr_rate_vol}")
                 other_peak.ccr_rate = ccr_rate_vol
                 
         return
@@ -2489,18 +2501,31 @@ def Read_Reference_Gamma(gamma_cal_file_name:Path)->dict[dict[str:float]]:
                 # print (item)
                 gamma_file_dict[item].append(col[item])
     # print(gamma_file_dict)
-    try:
-        Res3to1(gamma_file_dict["AA"][0][-3:])
-        if gamma_file_dict["AA"][0][:-3].isnumeric():
-            gamma_file_dict["seq_num"]=[gamma_file_dict["AA"][0][:-3]]
-            for i in range(1,len(gamma_file_dict["AA"])):
-                # print ("gamma_file_dict: AA - {}, NUM - {}".format(gamma_file_dict["AA"][i],gamma_file_dict["AA"][i][:-3]))
-                gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["AA"][i][:-3]))
-    except:
-        if gamma_file_dict["AA"][0][:-1].isnumeric():
-            gamma_file_dict["seq_num"]=[gamma_file_dict["AA"][0][:-1]]
-            for i in range(1,len(gamma_file_dict["AA"])):
-                gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["AA"][i][:-1]))
+    if "AA" and "AA_num" in headers:
+        if gamma_file_dict["AA_num"][0].isnumeric():
+            gamma_file_dict["seq_num"]=[gamma_file_dict["AA_num"][0]]
+            for i in range(1,len(gamma_file_dict["AA_num"])):
+                # print ("gamma_file_dict: AA_num - {}, NUM - {}".format(gamma_file_dict["AA_num"][i],gamma_file_dict["AA_num"][i][:-3]))
+                gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["AA_num"][i]))
+    elif "resnum" and "resnam" in headers:
+        if gamma_file_dict["resnum"][0].isnumeric():
+            gamma_file_dict["seq_num"]=[gamma_file_dict["resnum"][0]]
+            for i in range(1,len(gamma_file_dict["resnum"])):
+                # print ("gamma_file_dict: resnum - {}, NUM - {}".format(gamma_file_dict["resnum"][i],gamma_file_dict["resnum"][i][:-3]))
+                gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["resnum"][i]))
+    else:
+        try:
+            Res3to1(gamma_file_dict["AA"][0][-3:])
+            if gamma_file_dict["AA"][0][:-3].isnumeric():
+                gamma_file_dict["seq_num"]=[gamma_file_dict["AA"][0][:-3]]
+                for i in range(1,len(gamma_file_dict["AA"])):
+                    # print ("gamma_file_dict: AA - {}, NUM - {}".format(gamma_file_dict["AA"][i],gamma_file_dict["AA"][i][:-3]))
+                    gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["AA"][i][:-3]))
+        except:
+            if gamma_file_dict["AA"][0][:-1].isnumeric():
+                gamma_file_dict["seq_num"]=[gamma_file_dict["AA"][0][:-1]]
+                for i in range(1,len(gamma_file_dict["AA"])):
+                    gamma_file_dict["seq_num"].append(deepcopy(gamma_file_dict["AA"][i][:-1]))
     # print(gamma_file_dict)
     return gamma_file_dict
 
@@ -2654,10 +2679,15 @@ def check_if_min_max(suspect_min:Union[int,float],
     
 
 def setup_plot_area(plot, min_max_list:list[Union[int,float]]):
-    additional_space = (abs(min_max_list[1])+abs(min_max_list[0]))/4
-    plot.set_xlim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
-    plot.set_ylim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
-    plot.set_aspect('equal', adjustable='box')
+    additional_space = math.sqrt((min_max_list[1])**2+(min_max_list[0])**2)/10
+    try:
+        plot.set_xlim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
+        plot.set_ylim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
+        plot.set_aspect('equal', adjustable='box')
+    except:
+        plot.xlim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
+        plot.ylim(min_max_list[0]-additional_space,min_max_list[1]+additional_space)
+        plot.gca().set_aspect('equal', adjustable='box')
     return plot
 
 def set_nrow_ncol(number_of_experiment):

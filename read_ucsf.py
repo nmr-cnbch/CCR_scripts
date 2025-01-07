@@ -699,7 +699,7 @@ class CSpectrum:
         average_noise_level = round(sum(Points_intens)/len(Points_intens), 1)
         sum_of_squares=0.0
         for val in Points_intens:
-            sum_of_squares+=(val-average_noise_level)**2
+            sum_of_squares+=(val)**2
         noise_val = math.sqrt(sum_of_squares/len(Points_intens))
         
         if peak_number != -1:
@@ -889,7 +889,7 @@ class CSpectrum:
         if noise_type == "artifacts":
             self.__noise_level = round(sum(noise_list)/len(noise_list), 1)
         if UserPeakLevelFlag==False:
-            signal_to_noise = average_peaks_level/self.__noise_level
+            signal_to_noise = abs(average_peaks_level/self.__noise_level)
             print_report(f"Minimal signal-to-noise: {self.__minimal_signal_to_noise}")
             print_report("Signal to noise ratio = {:.2f}".format(signal_to_noise))
         print_report("\n", in_terminal=False)
