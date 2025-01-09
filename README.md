@@ -1,10 +1,25 @@
-# CCR_scripts   
-A set of Python scripts for analyzing NMR spectra  for cross-correlated relaxation (CCR) effect measurements. The set includes:
+# CCR pulse sequences and analysis scripts   
+A set of Bruker pulse sequences for cross-correlated relaxation (CCR) NMR experiments and Python scripts for analyzing the resulting spectra.
+The pulse sequences (in the 'pulse_seqences' folder) include:  
+|   |   |
+|---|---|   
+| CCR_1 | H<sup>N</sup><sub>i</sub>N<sub>i</sub> DD – C<sup>α</sup><sub>i-1</sub>H<sup>α</sup><sub>i-1</sub> DD |      
+| CCR_2 | H<sup>N</sup><sub>i</sub>N<sub>i</sub> DD – C<sup>α</sup><sub>i</sub>H<sup>α</sup><sub>i</sub> DD |      
+| CCR_3 | H<sup>N</sup><sub>i</sub>N<sub>i</sub> DD - H<sup>N</sup><sub>i-1</sub>N<sub>i-1</sub> DD |     
+| CCR_4 | H<sup>N</sup><sub>i</sub>H<sup>α</sup><sub>i-1</sub> DD – C'<sub>i-1</sub> CSA |    
+| CCR_5 | C<sup>α</sup><sub>i-1</sub>H<sup>α</sup><sub>i-1</sub> DD – C'<sub>i-1</sub> CSA |    
+| CCR_6 | C<sup>α</sup><sub>i</sub>H<sup>α</sup><sub>i</sub> DD – C'<sub>i-1</sub> CSA |    
+| CCR_7 | H<sup>N</sup><sub>i</sub>N<sub>i</sub> DD – C'<sub>i</sub> CSA |     
+| CCR_8 | C'<sub>i-1</sub> CSA –  C'<sub>i</sub> CSA |      
+
+The description of the pulse sequences with guidelines on how to run them on the spectrometer is in the file 'pulse_sequence_info.pdf' (in the 'pulse_seqences' folder).
+
+The analysis scripts set includes:
   - read_ucsf.py (adjusting the positions of peaks in the peak list, to fit the spectral peaks' positions)
   - calc_CCR_rates.py (calculating the CCR rates, using peak intensities)
 
 
-### software required:
+### Software required for the analysis scripts:
   - [Python 3.6](https://www.python.org/) with libraries:
     - [NumPy](https://www.numpy.org/) 
     - [Matplotlib](https://matplotlib.org/)
