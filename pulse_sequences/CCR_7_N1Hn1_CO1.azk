@@ -1,21 +1,13 @@
 ;avance-version (12/01/11)
-;4D_CCR_7_N1Hn1_CO1.azk
-;coherence transfer:
+;CCR_7_N1Hn1_CO1.azk
 ;
-;      F1(H) -> F3(N) -> F2(C=O,T2) -> F2(Ca,T1) -> F2(N) 
-;			-> CCR -> F2(Ca) -> F3(N,T3) -> F1(H,T4)
-;
-;on/off resonance Ca and C=O pulses using shaped pulse
-;phase sensitive using States-TPPI selections (CA, CO dimensions) and Echo/Antiecho gradient selection (N dimension)
-;
-
-;experiment should be run in reference (l0=0) and cross (l0=1) versions
+;experiment should be run in reference (l0=0) and transfer (l0=1) versions
 ;CCR evolution time: d8
 ;on/off resonance Ca, C=O pulses using shaped pulses: call getprosol
 ;
-;CA evolution: constant time, tmax1 cannot exceed maxtmax1
-;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
-;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;CA (i) evolution: constant time, do not exceed maxtmax1
+;CO (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
 ;$CLASS=HighRes
@@ -29,7 +21,7 @@ prosol relations=<triple>
 #include <Avance.incl>
 #include <Grad.incl>
 #include <CCR_Params.incl> 
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -130,8 +122,6 @@ define delay T3c
 	"T1aN = timeCANN*0.5 - p14"
 	"T1b = timeCANN*0.5 - T1/2 - p14"
 
-
-; poprawiona wersja deklaracji T2 i T3: edithed by Paulina Bartosinska-Marzec at 06.10.2023
     "T2aN = T2/2"
     "if (tmax2 <= timeCOCA) {T2b = 0.0;} else {T2b = T2*(1 - timeCOCA/tmax2)/2;}"
     "if (tmax2 <= timeCOCA) {T2c = (timeCOCA - T2)/2;} else {T2c = timeCOCA*(1 - T2/tmax2)/2;}"
@@ -241,19 +231,19 @@ define delay T3c
 ; CCR block:
 	(ralign (p21 pl3 ph10):f3 (p13:sp2 ph0):f2)
 	tauA
-	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simpulse N & H
+	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simultaneous: N & H
     tauB
-    (center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2)   ;simpulse CO & H
+    (center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2)   ;simultaneous: CO & H
 	tauB
-	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simpulse N & H
+	(center (p22 pl3 ph0):f3 (p2 pl1 ph0):f1)   ;simultaneous: N & H
     tauA
 
-	if (l0==0)			; auto
+	if (l0==0)			; reference
 	{
     (lalign (p21 pl3 ph0):f3 (p13:sp8 ph0):f2)
 	}
 
-	if (l0==1)			; cross
+	if (l0==1)			; transfer
 	{
     (lalign (p21 pl3 ph1):f3 (p13:sp8 ph1):f2)
 	}
@@ -265,7 +255,7 @@ define delay T3c
 
 
 ;  CAz(i-1)COz(i-1)Nz(i-1)(HNz(i-1)) -> CAz(i-1)COz(i-1)Nz(i-1)
-    if (l0==0)			; auto
+    if (l0==0)			; reference
     {
 	(p21 pl3 ph0):f3
 	timeNH*0.5
@@ -277,7 +267,7 @@ define delay T3c
     }
 
 
-    if (l0==1)			; cross
+    if (l0==1)			; transfer
     {
 	(p21 pl3 ph0):f3
 	timeNH*0.5
@@ -390,4 +380,5 @@ ph21 = 0
 ; Receiver phase:
 ph31 = 0 2 2 0 
 
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 

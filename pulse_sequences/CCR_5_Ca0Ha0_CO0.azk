@@ -1,21 +1,19 @@
 ;avance-version (12/01/11)
-;4D_CCR_5_Ca0Ha0_CO0.azk
-;coherence transfer:
-;
-;      F1(Ha) -> F2(Ca) -> F2(C=O) -> F2(Ca,T1) -> CCR ->
-;            -> F2(C=O,T2) -> F3(N,T3) -> F1(H,T4)
+;CCR_5_Ca0Ha0_CO0.azk
 ;
 ; zgoptns:
-; -DPURGE: purge water magnetization using B1 and gradient pulses.
-; -DPRESAT: Presaturation of water to reduce the water signal 
+; -DPURGE: purge water magnetization using B1 and gradient pulses
+; -DPRESAT: presaturation of water
 ;
-;on/off resonance Ca and C=O pulses using shaped pulse
-;CA evolution: constant time or semi-constant time (mode chosen automatically based on tmax2), we recommend not to exceed 10 ms
-;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
-;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;experiment should be run in reference (l0=0) and transfer (l0=1) versions
+;CCR evolution time: Tc=28.6 ms
+;on/off resonance Ca and C=O pulses using shaped pulse: call getprosol
+;
+;CA (i-1) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2), we recommend not to exceed 10 ms
+;CO (i-1) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
-;S. Grzesiek & A. Bax, J. Magn. Reson. 96, 432 - 440 (1992)
 ;
 ;$CLASS=HighRes
 ;$DIM=4D
@@ -28,7 +26,7 @@ prosol relations=<triple>
 #include <Avance.incl>
 #include <Grad.incl>
 #include <CCR_Params.incl>
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -126,7 +124,6 @@ define delay tauA
 	"if (tmax2 <= timeCON) {T2c = (timeCON - T2)/2;} else {T2c = timeCON*(1 - T2/tmax2)/2;}"
 
 
-; poprawiona wersja T3 1.02.2024:
     "T3aCA = T3/2 + p14/2"
     "T3a = T3/2 + timeNCO/2 - p14/2"  
     "if (T3aCA < (p16+d16)) {T3aGRAD = T3aCA + p14;} else {T3aGRAD = 0;}"
@@ -169,7 +166,7 @@ define delay tauA
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
-	( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )		;together: 180xH, 180xCA
+	( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )		;simultaneous: 180xH, 180xCA
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
@@ -281,7 +278,7 @@ if " l0 == 1 "
 ; CAz(i-1)COz(i-1)-> COz(i-1)Nz(i) with CO evolution (T2):
 
 	(p13:sp2 ph12):f2    	;pulse 90xCO
-	T2aCA            		;delay varied (t/2)
+	T2aCA            		;delay (t/2)
    	(p14:sp5 ph0):f2		;pulse 180xCA
     T2aN           	 		;delay (a-t/2)
 	(p22 pl3 ph0):f3    	;pulse 180xN
@@ -376,5 +373,5 @@ ph21 = 0
 ; Receiver phase:
 ph31 = 0 2 2 0 2 0 0 2 
 
-;l0: flag for auto (0) and cross (1) versions of the experiment
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 

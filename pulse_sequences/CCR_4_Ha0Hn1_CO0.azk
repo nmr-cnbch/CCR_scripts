@@ -1,17 +1,14 @@
 ;avance-version (12/01/11)
-;4D_CCR_4_Ha0Hn1_CO0.azk
-;coherence transfer:
+;CCR_4_Ha0Hn1_CO0.azk
 ;
-;      F1(H) -> F3(N) -> F2(C=O) -> F2(Ca,T1) -> CCR with CO evol T2 ->
-;            -> F2(C=O) -> F3(N,T3) -> F1(H,T4)
-;
-;experiment should be run in reference (l0=0) and cross (l0=1) versions
+;experiment should be run in reference (l0=0) and transfer (l0=1) versions
 ;CCR evolution time: d8
 ;on/off resonance Ca, C=O and HN pulses using shaped pulses: call getprosol and then "wvm -al"
 ;cnst18 and cnst19 are specific to a given protein, so they should be set to affect only HN and not HA (otherwise, the CCR evolution will be different than we assume)
-;CA evolution: real time
-;CO evolution: constant time, tmax2 cannot exceed maxtmax2 evolution time = 17.6 ms
-;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3)
+;
+;CA (i-1) evolution: real time
+;CO (i-1) evolution: constant time, do not exceed maxtmax2 evolution time
+;N (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax3)
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
 ;$CLASS=HighRes
@@ -25,7 +22,7 @@ prosol relations=<triple>
 #include <Avance.incl>
 #include <Grad.incl>
 #include <CCR_Params.incl> 
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -114,7 +111,6 @@ define delay maxtmax2
 ; ***** Run-time calculations: *****
 
 
-; poprawiona wersja deklaracji T3:
  "T3aCA = T3/2"
  "T3aCO = timeNCO/2 - p14"  ; Corrected for CA inversion pulse.
  "if (T3aCA < (p16+d16)) {T3aGRAD = T3aCA + p14;} else {T3aGRAD = 0;}"
@@ -244,11 +240,11 @@ define delay maxtmax2
     (center (tauB) (p14:sp5 ph2):f2  (p22 pl3 ph2):f3)	;tauB with N & CO 180 in the middle
     if (l0==0)
     {
-	(center (p41:sp27 ph0):f1 (p13:sp8 ph0):f2)		;HN & CO 90 - auto version
+	(center (p41:sp27 ph0):f1 (p13:sp8 ph0):f2)		;HN & CO 90 - reference version
     }
     if (l0==1)
     {
-	(center (p41:sp27 ph1):f1 (p13:sp8 ph1):f2)		;HN & CO 90 - cross version
+	(center (p41:sp27 ph1):f1 (p13:sp8 ph1):f2)		;HN & CO 90 - transfer version
     }
 
     (d13 fq=cnst21(bf ppm)):f2 ; Switch f2 to CA.

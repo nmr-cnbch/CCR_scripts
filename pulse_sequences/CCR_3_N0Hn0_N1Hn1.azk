@@ -1,18 +1,16 @@
 ;avance-version (12/01/11)
-;4D_CCR_3_N0Hn0_N1Hn1.azk
-;coherence transfer:
+;CCR_3_N0Hn0_N1Hn1.azk
 ;
-;  	F1(HAi-1) -> F2(CAi-1) -> F3(Ni,Ni-1) -> CCR -> F2(CAi-1, T1) -> F2(C=O i-1,T2) -> F3(Ni,T3) -> F1(Hi,T4)
-
 ; zgoptns:
 ; -DPURGE: purge water magnetization using B1 and gradient pulses.
-
-;experiment should be run in reference (l0=0) and cross (l0=1) versions
+;
+;experiment should be run in reference (l0=0) and transfer (l0=1) versions
 ;CCR evolution time: d8
 ;on/off resonance Ca, C=O pulses using shaped pulses: call getprosol
-;CA evolution: constant time, tmax1 cannot exceed maxtmax1
-;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
-;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;
+;CA (i-1) evolution: constant time, do not exceed maxtmax1
+;CO (i-1) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
 ;$CLASS=HighRes
@@ -25,8 +23,8 @@ prosol relations=<triple>
 
 #include <Avance.incl>
 #include <Grad.incl>
-#include <CCR_Params.incl>  
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+#include <CCR_Params.incl>   
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -129,23 +127,6 @@ define delay maxtmax1
 	"T1c = timeCANN/2-T1/2-p14"
 
 
-;	"T2aCA = T2/2+timeCOCA/2"
-;	"T2aN = timeCON/2-timeCOCA/2 - p22"	;p22 - N pulse
-;	"T2b = T2*(1 - timeCON/tmax2)/2"
-;	"if (tmax2 <= timeCON) {T2b = 0.0;}"
-;	"T2c = timeCON*(1 - T2/tmax2)/2"    
-;	"if (tmax2 <= timeCON) {T2c = (timeCON - T2)/2;}"
-;
- ;   "T3aCA = T3/2"
-;	"T3aCO = timeNCO/2 - p14"  ; Corrected for CA inversion pulse.
-;    "T3aGRAD = 0"
-;	"if (T3aCA < (p16+d16)) {T3aGRAD = T3aCA + p14;}"
-;	"T3b = T3*(1 - timeNCO/tmax3)/2"
-;	"if (tmax3 <= timeNCO) {T3b = 0;}"
-;	"T3c = timeNCO*(1 - T3/tmax3)/2"
-;	"if (tmax3 <= timeNCO) {T3c = (timeNCO - T3)/2;}"
-;	"T3c += p14"	; Compensate for length of CO inversion pulse.
-
     "T2aCA = T2/2+timeCOCA/2"	
     "T2aN = timeCON/2-timeCOCA/2 - p22"	
     "if (tmax2 <= timeCON) {T2b = 0.0;} else {T2b = T2*(1 - timeCON/tmax2)/2;}"
@@ -183,7 +164,7 @@ define delay maxtmax1
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
-	(center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2)		;together: 180xH, 180xCA
+	(center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2)		;simultaneous: 180xH, 180xCA
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
@@ -200,7 +181,7 @@ define delay maxtmax1
 	(d13 pl19):f1
 	(d13 cpds1 ph1):f1		;decoupling +y without pulse before        
 	DELTA22			;timeNCA/2-timeCaHa
-	(center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)		;together: 180xCA, 180xN
+	(center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)		;simultaneous: 180xCA, 180xN
 	DELTA23			;timeNCA/2
 	(p13:sp8 ph1):f2		;pulse 90xCA
 
@@ -247,7 +228,7 @@ define delay maxtmax1
 
 	if (l0==0)
 	{
-	(p2 pl1 ph0):f1     ; 180xH
+	(p2 pl1 ph0):f1     ; pulse 180xH
 	tau
     }
 
@@ -273,14 +254,14 @@ define delay maxtmax1
 
 ; CAz(i-1)N(i-1)N(i) -> CAz(i-1)COz(i-1) with CA evolution (T1):
 
-	(p13:sp2 ph11):f2		;pulse 90xCA
-	T1aCO				;timeCOCA/2+t/2
-	(p14:sp7 ph0):f2		;pulse 180xCO
-	T1aCAN			;timeNCA/2-timeCOCA/2
-	(center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)		;together 180xCA, 180xN
-	T1c				;timeNCA/2-t/2
-	(p14:sp7 ph0):f2		;pulse 180xCO
-	(p13:sp8 ph1):f2		;pulse 90yCA
+	(p13:sp2 ph11):f2		            ;pulse 90xCA
+	T1aCO				                ;timeCOCA/2+t/2
+	(p14:sp7 ph0):f2		            ;pulse 180xCO
+	T1aCAN			                    ;timeNCA/2-timeCOCA/2
+	(center (p14:sp3 ph0):f2 (p22 pl3 ph0):f3)		;simultaneous 180xCA, 180xN
+	T1c				                    ;timeNCA/2-t/2
+	(p14:sp7 ph0):f2		            ;pulse 180xCO
+	(p13:sp8 ph1):f2		            ;pulse 90yCA
     
     ; Decoupler OFF/ON and gradient.
     d13 do:f1
@@ -294,14 +275,14 @@ define delay maxtmax1
 ; CAz(i-1)COz(i-1)-> COz(i-1)Nz(i) with CO evolution (T2):
 
 	(p13:sp2 ph12):f2    	;pulse 90xCO
-    	T2aCA            		;delay varied (t/2)
-   	(p14:sp5 ph0):f2	;pulse 180xCA
+    	T2aCA            	;delay (t/2)
+   	(p14:sp5 ph0):f2	    ;pulse 180xCA
     	T2aN           	 	;delay (a-t/2)
-    	(p22 pl3 ph0):f3    	;pulse 180xN
-   	T2b            		;delay (b)
-    	(p14:sp3 ph0):f2     	;pulse 180xCO
+    	(p22 pl3 ph0):f3    ;pulse 180xN
+   	T2b            		    ;delay (b)
+    	(p14:sp3 ph0):f2    ;pulse 180xCO
     	T2c            		;delay (c)
-    	(p14:sp5 ph0):f2    	;pulse 180xCA
+    	(p14:sp5 ph0):f2    ;pulse 180xCA
 	(p13:sp8 ph0):f2    	;pulse 90xCO
 
 
@@ -386,7 +367,7 @@ ph21 = 0
 ph31 = 0 2 2 0
 
 
-;l0: flag for auto (0) and cross (1) versions of the experiment
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 
 
 

@@ -1,21 +1,19 @@
 ;avance-version (12/01/11)
-;4D_CCR_6_Ca1Ha1_CO0.azk
-;coherence transfer:
-;
-;      F1(Ha) -> F2(Ca,T1) -> F3(N) -> F2(C=O) -> CCR ->
-;            -> F2(C=O,T2) -> F3(N,T3) -> F1(H,T4)
+;CCR_6_Ca1Ha1_CO0.azk
 ;
 ; zgoptns:
 ; -DPURGE: purge water magnetization using B1 and gradient pulses.
-; -DPRESAT: Presaturation of water to reduce the water signal
+; -DPRESAT: Presaturation of water 
 ;
-;on/off resonance Ca and C=O pulses using shaped pulse
-;CA evolution: constant timeor semi-constant time (mode chosen automatically based on tmax1), we recommend not to exceed constant time (27,2 ms)
-;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
-;N evolution: constant time mode, tmax3 cannot exceed maxtmax3
+;experiment should be run in reference (l0=0) and transfer (l0=1) versions
+;CCR evolution time: Tc=28.6 ms
+;on/off resonance Ca and C=O pulses using shaped pulse: call getprosol
+;
+;CA (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax1), we recommend not to exceed constant time (27,2 ms)
+;CO (i-1) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N (i) evolution: constant time mode, do not exceed maxtmax3
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
-;S. Grzesiek & A. Bax, J. Magn. Reson. 96, 432 - 440 (1992)
 ;
 ;$CLASS=HighRes
 ;$DIM=4D
@@ -28,7 +26,7 @@ prosol relations=<triple>
 #include <Avance.incl>
 #include <Grad.incl>
 #include <CCR_Params.incl> 
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -169,7 +167,7 @@ define delay maxtmax3
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
-	( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )		;together: 180xH, 180xCA
+	( center (p2 pl1 ph0):f1 (p14:sp3 ph0):f2 )		;simultaneous: 180xH, 180xCA
 	DELTA11			;timeCaHa/2
 	p16:gp10
 	d16
@@ -290,16 +288,16 @@ if " l0 == 1 "
 
 
 ; CAz(i)N(i)CO(i-1) + CAz(i)N(i+1)CO(i) -> COz(i-1)CAz(i-1)Nz(i)CAz(i) + N(i+1)CO(i) + evol CO (T2)
-	(p13:sp2 ph12):f2	;impuls90xCO
-	T2aN        		;delay zmienny (t/2)
-	(p22 pl3 ph0):f3 	;impuls180xN
+	(p13:sp2 ph12):f2	;pulse 90xCO
+	T2aN        		;delay (t/2)
+	(p22 pl3 ph0):f3 	;pulse 180xN
 	T2aCA        		;delay (a-t/2)
-	(p14:sp5 ph0):f2	;impuls 180xCA
+	(p14:sp5 ph0):f2	;pulse 180xCA
 	T2b        			;delay (b)
-	(p14:sp3 ph0):f2 	;impuls 180xCO
+	(p14:sp3 ph0):f2 	;pulse 180xCO
 	T2c        			;delay (c)
-	(p14:sp5 ph0):f2	;impuls 180xCA
-	(p13:sp8 ph1):f2	;impuls 90xCO
+	(p14:sp5 ph0):f2	;pulse 180xCA
+	(p13:sp8 ph1):f2	;pulse 90xCO
 
 
 
@@ -385,5 +383,5 @@ ph21 = 0
 ; Receiver phase:
 ph31 = 0 2 2 0 2 0 0 2 
 
-;l0: flag for auto (0) and cross (1) versions of the experiment
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 

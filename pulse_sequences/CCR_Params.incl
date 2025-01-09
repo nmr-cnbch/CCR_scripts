@@ -2,16 +2,16 @@
 ;Includes:
 ;   - Shaka6 pulse definition
 ;   - delays for transfers
-;   - spoff: 1, 2, 3, 8, 5, 7
+;   - spoff1, spoff2, spoff3, spoff8, spoff5, spoff7
 ;   - p2, p4, p22
 ;   - cnst23
 ;
 ;
-;Not includes (add those to you :
-;   - COS-INEPT, ECHOCOMP, ECHOTIME
-;   - spoff: 4, 6
+;Does not include (add those to your pulse sequence) :
+;   - COS-INEPT delays (DELTANandH, DELTAHN1, DELTAHN2, ECHOCOMP, ECHOTIME)
+;   - spoff4, spoff6
 ;   - p16, d16, d11, d13
-;   - cnst21, cnst22 - only sugested values, set up in Topspin
+;   - cnst21, cnst22 - only suggested values, set up in Topspin
 ;
 ;
 ;===============================================
@@ -42,8 +42,6 @@ define delay shakaLength
 
 ;cnst21: CA offset in ppm [56]
 ;cnst22: CO offset in ppm [176]
-;cnst19: HA offset in ppm [4.3]
-;cnst18: HA bandwidth in ppm [3.0]
 
 "cnst23 = (cnst22+cnst21)/2"	; Middle between CA and CO.
 
@@ -53,13 +51,8 @@ define delay shakaLength
 "spoff5 = bf2*((cnst21 - cnst22)/1000000)"  ; CA with offset on CO.
 "spoff7 = bf2*((cnst22 - cnst21)/1000000)"  ; CO with offset on CA.
 
-;removed 18.04.2024 by Paulina Bartosińska-Marzec
-;"spoff4 = bf2*((cnst22 - cnst23)/1000000)"  ; CO with offset on CA/CO middle.
-;"spoff6 = spoff4"
-
 
 "p2=p1*2"
-;"p16=0.5m"  ;gradient pulse ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
 "p4=p3*2"
 "p22=p21*2"
 
@@ -153,27 +146,7 @@ define delay time_noCACB ;compensation of CA-CB evolution
 "time_noCACB = d35"
 
 
-;"d11=30m" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
-;"d13=4u" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
-;"d16=200u" ----> removed 18.04.2024 by Paulina Bartosińska-Marzec
-
-
-; COS-INEPT pulse train:
-;define delay DELTANandH
-;define delay DELTAHN1
-;define delay DELTAHN2
-;"DELTANandH = timeNandH/2 - p16 - d16"
-;"DELTAHN1 = timeHN/2 - p16 - d16 - p21"
-;"DELTAHN2 = timeHN/2 - p16 - d16"
-
-;define delay ECHOCOMP
-;"ECHOCOMP = p21*4/PI"
-
-;define delay ECHOTIME
-;"ECHOTIME = p16 + d16 + de - p1*2/PI"   ; Compensated for de and last pulse.
-
-
-; ***** Other things description: *****
+; ***** Other descriptions: *****
 
 ;p1: f1 channel -  90 degree high power pulse
 ;p2: f1 channel - 180 degree high power pulse
@@ -249,6 +222,6 @@ define delay time_noCACB ;compensation of CA-CB evolution
 ;sp7: f2 channel, 180 Q3 CO with offset on CA.
 ;sp8: f2 channel, 90 Q5 Cali/CO on resonance time reversed.
 
-;l0: flag for auto (0) and cross (1) versions of the experiment
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 
 

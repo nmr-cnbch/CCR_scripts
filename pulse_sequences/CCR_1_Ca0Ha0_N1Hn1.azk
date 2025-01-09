@@ -1,17 +1,14 @@
 ;avance-version (12/01/11)
-;4D_CCR_1_Ca0Ha0_N1Hn1.azk 
-;coherence transfer:
-;
-;  	F1(H) -> F3(N) -> F2(C=O i-1) -> F2(CAi-1) -> CCR with CA evol T1 ->
-;        	-> F2(C=O,T2) -> F3(N,T3) -> F1(H,T4)
+;CCR_1_Ca0Ha0_N1Hn1.azk 
 ;
 ;experiment should be run in reference (l0=0) and cross (l0=1) versions
 ;CCR evolution time: Tc=28.6 ms
 ;on/off resonance Ca, C=O and HN pulses using shaped pulses: call getprosol and then "wvm -al"
 ;cnst18 and cnst19 are specific to a given protein, so they should be set to affect only HA and not HN (otherwise, the CCR evolution will be different than we assume)
-;CA evolution: constant time during CCR block, tmax1 cannot exceed maxtmax1
-;CO evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
-;N evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
+;
+;CA (i-1) evolution: constant time during CCR block, do not exceed maxtmax1
+;CO (i-1) evolution: constant time or semi-constant time (mode chosen automatically based on tmax2)
+;N (i) evolution: constant time or semi-constant time (mode chosen automatically based on tmax3) 
 ;phase sensitive using Echo/Antiecho gradient selection (T3)
 ;
 ;
@@ -26,7 +23,7 @@ prosol relations=<triple>
 #include <Avance.incl>
 #include <Grad.incl>
 #include <CCR_Params.incl> 
-; inlude edithed by Paulina Bartosinska-Marzec at 17.01.2024
+
 "d11=30m"
 "d13=4u"
 "d16=200u"
@@ -119,9 +116,8 @@ define delay maxtmax1
 	"tauB = (Tc-T1)/4"
 
 
-; poprawiona wersja deklaracji T2 i T3:
  "T2aN = T2/2"
- "T2aCA = timeCOCA/2 - p22"	;p22-impuls azotowy
+ "T2aCA = timeCOCA/2 - p22"	
  "if (tmax2 <= timeCOCA) {T2b = 0.0;} else {T2b = T2*(1 - timeCOCA/tmax2)/2;}"
  "if (tmax2 <= timeCOCA) {T2c = (timeCOCA - T2)/2;} else {T2c = timeCOCA*(1 - T2/tmax2)/2;}"
 
@@ -214,31 +210,31 @@ define delay maxtmax1
 
 ; CCR block with CA evol (T1) -> 'a': CAzCOzNzHz, 'x': CAzCOzNzHzHAz
 
-	(ralign (p21 pl3 ph0):f3 (p13:sp2 ph11):f2)        	;jednocześnie: impuls 90xN, impuls90xCA
+	(ralign (p21 pl3 ph0):f3 (p13:sp2 ph11):f2)        	;simultaneously: pulse 90xN, pulse 90xCA
 	(center (tauA) (p14:sp7 ph0):f2)            	;tauA with CO 180x in the middle
-	(center (p22 pl3 ph0):f3 (p42:sp26 ph0):f1)        	;jednocześnie: impuls180xN, impuls180xHA sel
+	(center (p22 pl3 ph0):f3 (p42:sp26 ph0):f1)        	;simultaneously: pulse 180xN, pulse 180xHA sel
 
 	(                            	;tauA with CO 180x in the middle and grad left
 	refalign ( tauA )
 	lalign ( p16:gp4 d16 )
 	center (p14:sp7 ph0):f2
 	)
-	(center (p14:sp3 ph10):f2 (p22 pl3 ph0):f3)  	; jednocześnie: impuls180xCA, impuls180xN
+	(center (p14:sp3 ph10):f2 (p22 pl3 ph0):f3)  	; simultaneously: pulse 180xCA, pulse 180xN
 	(                            	;tauB with CO 180x in the middle and grad right
 	refalign ( tauB )
 	ralign ( p16:gp4 d16 )
 	center (p14:sp7 ph0):f2
 	)
-	(center (p22 pl3 ph0):f3 (p42:sp26 ph0):f1)        	;jednocześnie: impuls180xN, impuls180xHA sel
+	(center (p22 pl3 ph0):f3 (p42:sp26 ph0):f1)        	;simultaneously: pulse 180xN, pulse 180xHA sel
 
 	(center (tauB) (p14:sp7 ph0):f2)         	;tauB with CO 180x in the middle
-	if (l0==0)                      	;jednocześnie: impuls 90(fi)N, impuls 90(fi)CA
+	if (l0==0)                      	;simultaneously: pulse 90N, pulse 90CA
 	{
-	(lalign (p21 pl3 ph0):f3 (p13:sp8 ph0):f2)    	;N & CA 90 - auto version
+	(lalign (p21 pl3 ph0):f3 (p13:sp8 ph0):f2)    	;N & CA 90 - reference version
 	}
 	if (l0==1)
 	{
-	(lalign (p21 pl3 ph1):f3 (p13:sp8 ph1):f2)    	;N & CA 90 - cross version
+	(lalign (p21 pl3 ph1):f3 (p13:sp8 ph1):f2)    	;N & CA 90 - transfer version
 	}
 
 
@@ -302,16 +298,16 @@ define delay maxtmax1
 	(d13 cpds1 ph0):f1
 
 ; CAz(i-1)COz(i-1)Nz -> COz(i-1)Nz(i) + evol CO (T2)
-	(p13:sp2 ph12):f2	;impuls90xCO
-	T2aN        		;delay zmienny (t/2)
-	(p22 pl3 ph0):f3 	;impuls180xN
+	(p13:sp2 ph12):f2	;pulse90xCO
+	T2aN        		;delay (t/2)
+	(p22 pl3 ph0):f3 	;pulse 180xN
 	T2aCA        		;delay (a-t/2)
-	(p14:sp5 ph0):f2	;impuls 180xCA
+	(p14:sp5 ph0):f2	;pulse 180xCA
 	T2b        		;delay (b)
-	(p14:sp3 ph0):f2 	;impuls 180xCO
+	(p14:sp3 ph0):f2 	;pulse 180xCO
 	T2c        		;delay (c)
-	(p14:sp5 ph0):f2	;impuls 180xCA
-(p13:sp8 ph1):f2	;impuls 90xCO
+	(p14:sp5 ph0):f2	;pulse 180xCA
+(p13:sp8 ph1):f2	;pulse 90xCO
 
 
 ; Decoupler OFF/ON and gradient.
@@ -399,7 +395,7 @@ ph31 = 0 2 2 0 2 0 0 2
 
 ;sp26:wvm: reburp(cnst18 ppm, cnst19 ppm)
 
-;l0: flag for auto (0) and cross (1) versions of the experiment
+;l0: flag for reference (0) and transfer (1) versions of the experiment
 
 
 
